@@ -1,0 +1,21 @@
+{
+    "actions": {
+      "create": "Tạo mới",
+      "read": "Xem",
+      "update": "Cập nhật",
+      "delete": "Xóa",
+      "submit": "Gửi",
+      "reset": "Đặt lại",
+      "close": "Đóng",
+      "back": "Quay lại",
+      "next": "Tiếp theo",
+      "previous": "Trước",
+      "finish": "Hoàn thành"
+    },
+    "validations": {
+      "required": "Trường này là bắt buộc",
+      "email_invalid": "Email không hợp lệ",
+      "password_min": "Mật khẩu phải có ít nhất 6 ký tự",
+      "password_mismatch": "Mật khẩu không khớp"
+    }
+  }

@@ -1,0 +1,143 @@
+/* Email Verification Form Styles */
+.email-verification-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 20px;
+}
+
+.verification-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.verification-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+.verification-content h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.verification-content p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.verification-note {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #007bff;
+    font-size: 14px;
+    margin: 20px 0;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.btn-resend {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-resend:hover:not(:disabled) {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-resend:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-back {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-back:hover {
+    background: #545b62;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+@media (max-width: 600px) {
+    .verification-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .verification-content h3 {
+        font-size: 20px;
+    }
+    
+    .verification-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-resend,
+    .btn-back {
+        width: 100%;
+        max-width: 300px;
+    }
+}

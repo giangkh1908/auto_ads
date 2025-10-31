@@ -1,0 +1,242 @@
+/* Adset Step Styles */
+.adset-step { height: 100%; background: #fff; overflow: auto; }
+.adset-config-panel { padding: 0; }
+.adset-config-layout { display: flex; height: 100%; padding: 0; }
+.adset-configuration { flex: 1; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+
+/* Scroll container fills remaining height */
+.config-scroll-container { flex: 1; height: auto; overflow-y: auto; padding: 20px; }
+.config-scroll-container::-webkit-scrollbar { width: 6px; }
+.config-scroll-container::-webkit-scrollbar-track { background: #f1f1f1; }
+.config-scroll-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.config-scroll-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+.config-section-ads { margin-bottom: 2px; }
+.config-section-datetime { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 32px; gap: 20px; }
+.left-custom, .right-custom { flex: 1; }
+.section-header-adset { display: flex; align-items: center; gap: 10px; }
+.section-title-ads { font-size: 17px; font-weight: 600; color: #111827; }
+
+.field-label { color: #19212e; font-size: 16px; font-weight: 500; }
+.adset-name-input { width: 94%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; }
+.conversion-select, .performance-select, .gender-select, .language-select { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; }
+
+.budget-row { display: flex; gap: 12px; align-items: center; }
+.budget-input-group { display: flex; align-items: center; border: 2px solid #d1d5db; border-radius: 4px; overflow: hidden; }
+.budget-input-text { padding: 12px 16px; border: none; font-size: 14px; width: 150px; }
+.money-currency { padding: 12px 16px; background: #f9fafb; color: #6b7280; font-size: 14px; border-left: 1px solid #d1d5db; }
+
+/* Audience */
+.audience-fields { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.field-group { display: flex; flex-direction: column; gap: 8px; }
+.age-inputs { display: flex; align-items: center; gap: 2px; }
+.age-input-adset { width: 65px; height: 43px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; text-align: center; }
+.location-input, .targeting-input { width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
+.location-tags, .targeting-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+
+/* Datetime overlay */
+.datetime-overlay-wrapper { position: relative; }
+.datetime-input-ads { width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+.datetime-input-ads--masked { color: transparent; caret-color: #111; }
+.datetime-overlay { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #111; font-size: 14px; width: 90%}
+
+/* Suggestions dropdown for locations */
+.location-input-wrapper { position: relative; width: 100%; }
+.location-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  max-height: 220px;
+  overflow: auto;
+}
+.location-suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.location-suggestion-item:hover { background: #f3f4f6; }
+
+/* Removable tags */
+.tag { display: inline-flex; align-items: center; gap: 6px; }
+.tag-remove-btn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.tag-remove-btn:hover { color: #111827; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .config-section-datetime { flex-direction: column; gap: 16px; }
+}
+
+/* Vùng chứa dropdown */
+.targeting-suggestions {
+    background: #fff;
+    border: 1px solid #d1d5db;
+  }
+  
+  /* Item trong dropdown */
+  .targeting-suggestion-item {
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+.config-section {
+    padding: 5px 0px;
+}
+
+.optimization-select, .text-input-pixel, .conversion-event-select {
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Khi hover */
+.optimization-select:hover,
+.text-input-pixel:hover,
+.conversion-event-select:hover {
+  border-color: #3275db;
+}
+
+.optimization-select:focus, .text-input-pixel:focus, .conversion-event-select:focus{
+  outline: none; 
+  border-color: #1a56db; /* màu đậm hơn khi click */
+  box-shadow: 0 0 0 3px rgba(71, 131, 221, 0.2); /* hiệu ứng nổi bật */
+}
+
+/* Disabled state cho conversion-event-select */
+.conversion-event-select:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.bid-strategy-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.bid-amount-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bid-strategy-input {
+  width: 30%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+  color: #000000; 
+}
+
+.currency-suffix {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* File: frontend/src/components/feature/CreateAdsWizard/AdsetStep/AdsetStep.css */
+
+.field-locked-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.datetime-input-ads:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.datetime-overlay-wrapper:has(input:disabled) {
+  opacity: 0.7;
+}
+
+/* Styles for Traffic Destination Options */
+.traffic-destination-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.traffic-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.traffic-option:hover {
+  border-color: #9ca3af;
+}
+
+.traffic-option.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.traffic-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.traffic-option-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.traffic-option.selected .traffic-option-content {
+  color: #1e40af;
+}
+
+.app-details-fields {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+

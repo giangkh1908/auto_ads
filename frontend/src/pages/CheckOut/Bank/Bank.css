@@ -1,0 +1,356 @@
+/* ============================================
+   BANK TRANSFER PAGE - Scoped with 'bk-' prefix
+   ============================================ */
+
+/* Page Wrapper */
+.bk-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 100px 20px 60px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Container */
+.bk-container {
+  width: 100%;
+  max-width: 600px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: bkFadeInUp 0.6s ease-out;
+  overflow: hidden;
+}
+
+/* Header Section */
+.bk-header {
+  text-align: center;
+  padding: 40px 30px 30px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.bk-success-icon {
+  display: inline-flex;
+  color: #10b981;
+  margin-bottom: 15px;
+  animation: bkBounceIn 0.8s ease-out;
+}
+
+.bk-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 15px;
+}
+
+.bk-timer {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.bk-timer strong {
+  color: #ef4444;
+  font-size: 1.1rem;
+}
+
+/* Info Card */
+.bk-info-card {
+  padding: 30px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.bk-instruction {
+  font-size: 1rem;
+  color: #4b5563;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Details Section */
+.bk-details {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.bk-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.bk-detail-row:last-child {
+  border-bottom: none;
+}
+
+.bk-detail-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.bk-detail-value {
+  font-size: 0.95rem;
+  color: #1f2937;
+  font-weight: 600;
+  text-align: right;
+  flex: 1;
+}
+
+.bk-bank-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.bk-content-highlight {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.bk-detail-value-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Copy Button */
+.bk-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bk-copy-btn:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.bk-copy-btn svg {
+  flex-shrink: 0;
+}
+
+/* Amount Row */
+.bk-amount-row {
+  padding-top: 15px;
+  margin-top: 10px;
+  border-top: 2px solid #f3f4f6;
+}
+
+.bk-amount {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+/* QR Code Section */
+.bk-qr-section {
+  padding: 30px;
+  text-align: center;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.bk-qr-title {
+  font-size: 1rem;
+  color: #4b5563;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.bk-qr-container {
+  display: inline-block;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+
+.bk-qr-code {
+  width: 300px;
+  height: 300px;
+  margin: 0 auto 15px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.bk-qr-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  position: relative;
+}
+
+/* QR Pattern (Simplified placeholder) */
+.bk-qr-pattern {
+  width: 90%;
+  height: 90%;
+  background-image: 
+    repeating-linear-gradient(0deg, #000, #000 3px, transparent 3px, transparent 6px),
+    repeating-linear-gradient(90deg, #000, #000 3px, transparent 3px, transparent 6px);
+  opacity: 0.8;
+}
+
+/* Confirmation Section */
+.bk-confirm-section {
+  padding: 30px;
+  text-align: center;
+}
+
+.bk-confirm-text {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.bk-confirm-btn {
+  width: 100%;
+  max-width: 350px;
+  padding: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.bk-confirm-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+}
+
+.bk-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes bkFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bkBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .bk-page-wrapper {
+    padding: 80px 15px 40px;
+  }
+
+  .bk-header {
+    padding: 30px 20px 20px;
+  }
+
+  .bk-success-icon svg {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bk-title {
+    font-size: 1.3rem;
+  }
+
+  .bk-info-card,
+  .bk-qr-section,
+  .bk-confirm-section {
+    padding: 25px 20px;
+  }
+
+  .bk-detail-row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .bk-detail-label {
+    min-width: auto;
+  }
+
+  .bk-detail-value {
+    text-align: left;
+  }
+
+  .bk-detail-value-copy {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .bk-qr-code {
+    width: 200px;
+    height: 200px;
+  }
+
+  .bk-confirm-btn {
+    font-size: 1rem;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bk-qr-code {
+    width: 180px;
+    height: 180px;
+  }
+
+  .bk-detail-value {
+    font-size: 0.9rem;
+  }
+
+  .bk-copy-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+}
+

@@ -1,0 +1,488 @@
+/* Layout container - Override animations từ các trang khác */
+.dashboard-layout {
+    display: block;
+}
+
+/* Override Header animations trong Dashboard */
+.dashboard-layout .app-header,
+.dashboard-layout .header-content,
+.dashboard-layout .app-nav,
+.dashboard-layout .nav-btn,
+.dashboard-layout .header-actions,
+.dashboard-layout .user-menu {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Override tất cả animation và transition trong Dashboard */
+.dashboard-layout * {
+    transition: none !important;
+    animation: none !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transform: none !important;
+}
+
+/* Content area */
+.dashboard-content {
+    padding: 14px 0px;
+    margin-top: 55px;
+}
+
+/* Center content area */
+.dashboard-center {
+    max-width: 100%;
+}
+
+/* Header section */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0px auto;
+    flex-wrap: wrap;
+}
+
+/* Tabs */
+.dashboard-tabs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.tab-button-dashboard {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    /* transition: all 0.2s ease; */ /* Tắt animation */
+    margin-left: 15px;
+}
+
+.tab-button-dashboard:hover {
+    color: #374151;
+}
+
+.tab-button-dashboard.active {
+    color: #1f2937;
+    border-bottom-color: #3b82f6;
+    font-weight: 600;
+}
+
+/* Controls section */
+.dashboard-controls {
+    display: flex;
+    align-items: right;
+    gap: 10px;
+    margin-right: 10px;
+    margin-top: -7px;
+}
+
+.filter-dropdown {
+    padding: 5px 10px;
+    border: 1px solid #bec0c5;
+    border-radius: 4px;
+    background: white;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    height: 35px;
+    width: 140px;
+}
+
+.filter-dropdown:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+/* Search box */
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+ .search-input-dashboard {
+    padding: 5px 10px 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 200px;
+    height: 35px;
+    border: 1px solid #bec0c5;
+}
+/*
+.search-input-dashboard:focus {
+    outline: none;
+    border-color: #3b82f6;
+    width: 250px;
+} */
+
+.search-button {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-button:hover {
+    color: #374151;
+}
+
+/* Action buttons */
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    /* transition: background 0.2s ease; */ /* Tắt animation */
+}
+
+.btn-refresh:hover {
+    background: #079d6e;
+}
+
+.btn-contribute {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    /* transition: background 0.2s ease; */ /* Tắt animation */
+}
+
+.btn-contribute:hover {
+    background: #2563eb;
+}
+
+/* Pages grid */
+.dashboard-content-body {
+    padding: 0 10px;
+    background-color: #e8e8e8;
+    height: 100%;
+    position: relative;
+    min-height: 90vh;          /* ✅ Chiều cao bằng toàn màn hình */
+    width: 100%;                /* ✅ Chiếm hết chiều ngang */
+    padding: 10px;              /* có thể tùy chỉnh */
+    box-sizing: border-box;
+}
+
+.pages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px 0px;
+}
+
+/* Page card base styles */
+.page-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+    /* transition: all 0.2s ease; */ /* Tắt animation */
+    cursor: pointer;
+    overflow: visible; /* đảm bảo dropdown không bị cắt */
+}
+
+.page-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    /* transform: translateY(-2px); */ /* Tắt hiệu ứng di chuyển */
+}
+
+/* Add new page card */
+.add-page-card {
+    background: linear-gradient(135deg, #208ef0 100%, #a5d5ff 0%);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    height: 80px;
+    margin-top: 20px;
+}
+
+.add-page-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    color: white;
+}
+
+.add-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-page-text {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Connected page card */
+.connected-page-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 270px;
+    height: 80px;
+    margin-top: 20px;
+    padding: 10px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.page-card-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Avatar section with dark green background */
+.page-avatar-dashboard {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.page-avatar-dashboard img {
+    width: 60px;
+    height: 60px;
+}
+
+/* Text information section */
+.page-info-dashboard {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    gap: 2px;
+    margin-top: 6px;
+}
+
+.page-name-dashboard {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+    line-height: 1.1;
+}
+
+.page-id-dashboard {
+    margin: 0;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-id-dashboard a {
+    color: #6b7280;
+    font-size: 11px;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.page-id-dashboard a:hover {
+    color: #2563eb;
+}
+
+/* Bottom stats row */
+.page-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 5px;
+}
+
+/* Left side: Facebook icon and follower count */
+.page-stats-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.follower-count {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.fb_icon {
+    height: 14px;
+    width: 14px;
+}
+
+/* Right side: Status and menu button */
+.page-stats-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.page-status.active {
+    color: #059669;
+    background: transparent;
+}
+
+.page-menu-button {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    /* transition: all 0.2s ease; */ /* Tắt animation */
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.page-menu-button:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* Dropdown menu container */
+.page-menu-container {
+    position: relative;
+    display: inline-block;
+    z-index: 1; /* tạo stacking context cho dropdown */
+}
+
+/* Dropdown menu */
+.page-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999; /* nổi lên trên các phần khác */
+    min-width: 200px;
+    padding: 8px 0;
+    margin-top: 4px;
+    pointer-events: auto; /* đảm bảo nhận click */
+    will-change: transform; /* hint tối ưu */
+}
+
+/* Dropdown menu items */
+.dropdown-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 5px 10px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+    /* transition: background-color 0.2s ease; */ /* Tắt animation */
+    user-select: none; /* tránh bôi đen gây mất focus */
+}
+
+.dropdown-menu-item:hover {
+    background-color: #f3f4f6;
+}
+
+.dropdown-menu-item:active {
+    background-color: #e5e7eb;
+}
+
+/* Menu item icon */
+.menu-item-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Menu item text */
+.menu-item-text {
+    flex: 1;
+    font-weight: 400;
+}
+
+/* Responsive design */
+/* @media (max-width: 1024px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .pages-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-content {
+        margin-left: 84px;
+        padding: 12px;
+    }
+
+    .pages-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-input {
+        width: 150px;
+    }
+
+    .search-input:focus {
+        width: 180px;
+    }
+} */

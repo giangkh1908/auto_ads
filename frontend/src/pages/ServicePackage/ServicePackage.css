@@ -1,0 +1,679 @@
+/* ============================================
+   SERVICE PACKAGE PAGE - Scoped with 'sp-' prefix
+   ============================================ */
+
+/* Page Wrapper */
+.sp-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding-bottom: 60px;
+}
+
+/* Hero Section */
+.sp-hero {
+  padding: 80px 20px 60px;
+  text-align: center;
+  color: white;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
+}
+
+.sp-hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  animation: spFadeInDown 0.8s ease-out;
+}
+
+.sp-hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.sp-hero-subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  opacity: 0.95;
+}
+
+.sp-hero-description {
+  font-size: 1rem;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.sp-hero-cta {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 14px 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  animation: spPulse 2s infinite;
+}
+
+.sp-hero-cta:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+}
+
+/* Container */
+.sp-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Pricing Section */
+.sp-pricing {
+  padding: 40px 0;
+}
+
+/* Tabs */
+.sp-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: -50px;
+  margin-bottom: 50px;
+  margin-left: -12px;
+  animation: spFadeIn 1s ease-out;
+}
+
+.sp-tab-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.sp-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.sp-tab-btn.sp-tab-active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+}
+
+.sp-tab-check {
+  color: #10b981;
+}
+
+/* Pricing Cards Grid */
+.sp-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin-bottom: 60px;
+}
+
+/* Pricing Card */
+.sp-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: spFadeInUp 0.6s ease-out backwards;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sp-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.sp-card.sp-card-popular {
+  border: 3px solid #fbbf24;
+  background: linear-gradient(135deg, #fef3c7 0%, white 50%);
+}
+
+.sp-card.sp-card-popular::before {
+  content: "🔥 PHỔ BIẾN";
+  position: absolute;
+  top: 20px;
+  right: -35px;
+  background: #fbbf24;
+  color: white;
+  padding: 5px 40px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Card Badge */
+.sp-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: spSlideInLeft 0.5s ease-out;
+}
+
+.sp-badge.sp-badge-cyan {
+  background: #06b6d4;
+  color: white;
+}
+
+.sp-badge.sp-badge-green {
+  background: #10b981;
+  color: white;
+}
+
+.sp-badge.sp-badge-blue {
+  background: #3b82f6;
+  color: white;
+}
+
+.sp-badge.sp-badge-purple {
+  background: #a855f7;
+  color: white;
+}
+
+/* Card Header */
+.sp-card-header {
+  text-align: center;
+  margin-bottom: 25px;
+  animation: spFadeIn 0.8s ease-out;
+  flex-shrink: 0;
+}
+
+.sp-card-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 15px;
+  min-height: 2em;
+}
+
+.sp-card-price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sp-price-value {
+  font-size: 2.0rem;
+  font-weight: 800;
+  color: #667eea;
+  line-height: 1;
+}
+
+.sp-price-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+/* Card Stats */
+.sp-card-stats {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.sp-stat {
+  text-align: center;
+}
+
+.sp-stat-num {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sp-stat-text {
+  display: block;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+/* Card Features */
+.sp-card-features {
+  margin-bottom: 25px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-feature {
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  animation: spFadeInRight 0.5s ease-out backwards;
+}
+
+.sp-feature:last-child {
+  border-bottom: none;
+  margin-bottom: auto;
+}
+
+.sp-feature-text {
+  font-size: 0.9rem;
+  color: #4b5563;
+  display: block;
+}
+
+/* Card Button */
+.sp-card-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sp-card-btn.sp-btn-primary {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.sp-card-btn.sp-btn-primary:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.sp-card-btn.sp-btn-secondary {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.sp-card-btn.sp-btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Features Section */
+.sp-features {
+  padding: 60px 0;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.sp-section-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 40px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  animation: spFadeInDown 0.6s ease-out;
+}
+
+.sp-table-wrapper {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: spFadeInUp 0.8s ease-out;
+}
+
+.sp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sp-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.sp-th {
+  padding: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sp-th-name {
+  padding: 20px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 300px;
+}
+
+.sp-tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.3s ease;
+  animation: spFadeIn 0.5s ease-out backwards;
+}
+
+.sp-tr:hover {
+  background: #f9fafb;
+  transform: scale(1.01);
+}
+
+.sp-td {
+  padding: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.sp-td-name {
+  padding: 18px;
+  text-align: left;
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.sp-check {
+  color: #10b981;
+  animation: spScaleIn 0.3s ease-out;
+}
+
+/* Additional Services */
+.sp-services {
+  padding: 60px 0;
+}
+
+.sp-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 25px;
+}
+
+.sp-service-card {
+  background: white;
+  border-radius: 15px;
+  padding: 25px 20px;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  animation: spFadeInUp 0.6s ease-out backwards;
+
+  /* THÊM: Flexbox để căn chỉnh */
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Đảm bảo tất cả cards cùng chiều cao trong grid */
+}
+
+.sp-service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.sp-service-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 10px;
+  min-height: 2.5em; /* THÊM: Chiều cao tối thiểu cho 2 dòng */
+}
+
+.sp-service-duration {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 15px;
+}
+
+.sp-service-price {
+  margin-bottom: 20px;
+  flex-grow: 1; /* THÊM: Chiếm không gian còn lại */
+}
+
+.sp-service-amount {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #667eea;
+  line-height: 1;
+}
+
+.sp-service-period {
+  display: block;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+.sp-service-btn {
+  width: 100%;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  margin-top: auto; /* THÊM: Đẩy button xuống dưới cùng */
+}
+
+.sp-service-btn:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+/* Usage Section */
+.sp-usage {
+  padding: 60px 0;
+}
+
+.sp-usage-wrapper {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: spFadeInUp 0.8s ease-out;
+}
+
+.sp-usage-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sp-usage-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.sp-usage-th {
+  padding: 20px 15px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.sp-usage-th-name {
+  padding: 20px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.sp-usage-tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.3s ease;
+}
+
+.sp-usage-tr:hover {
+  background: #f9fafb;
+}
+
+.sp-usage-td {
+  padding: 18px 15px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.sp-usage-td-name {
+  padding: 18px 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+/* ============================================
+   ANIMATIONS - Scoped with 'sp' prefix
+   ============================================ */
+
+@keyframes spFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spFadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spFadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes spSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes spScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .sp-hero-title {
+    font-size: 2rem;
+  }
+
+  .sp-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sp-table-wrapper,
+  .sp-usage-wrapper {
+    overflow-x: auto;
+  }
+
+  .sp-table,
+  .sp-usage-table {
+    min-width: 600px;
+  }
+
+  .sp-section-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sp-services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-tabs {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sp-tab-btn {
+    width: 200px;
+  }
+}

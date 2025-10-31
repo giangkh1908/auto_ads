@@ -1,0 +1,66 @@
+.page-content {
+  width: 100%;
+  margin: 0 auto;
+  /* padding: 100px 24px 60px 24px; top to clear fixed header, bottom for footer spacing */
+  min-height: calc(100vh - 140px);
+}
+
+/* Full-width layout used when a fixed sidebar is present */
+.page-with-sidebar {
+  padding: 100px 24px 60px 24px; /* clear fixed header */
+  min-height: calc(100vh - 140px);
+}
+
+/* Auth page layout */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body {
+  margin: 0px auto;
+  background: #ffffff;
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  /* user-select: none; */
+}
+
+/* html {
+    scroll-behavior: smooth; // Giúp cuộn mượt hơn
+} */ /* Tắt smooth scroll để tránh animation */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 1px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}

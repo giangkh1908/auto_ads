@@ -1,0 +1,194 @@
+/* Objectives Panel Layout */
+.objectives-panel { padding: 0; }
+.objectives-layout { display: flex; height: 100%; }
+.objectives-sidebar { width: 300px; height: 74vh; border-right: 1px solid #e5e7eb; padding: 20px; background: #fafafa; }
+.objectives-title { font-weight: 600; font-size: 17px; margin-bottom: 20px; color: #111827; }
+.objectives-list { display: flex; flex-direction: column; gap: 0; }
+
+/*Objective Item*/
+.objective-item { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    padding: 12px 16px; 
+    cursor: pointer; 
+    border-radius: 8px; 
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+    position: relative;
+    font-size: 15px;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+}
+.objective-item:hover { background: #f3f4f6; border: 1px solid #d1d5db; }
+.objective-item.selected { 
+    background: #e0f2fe; 
+    border: 1px solid #0ea5e9;
+    box-shadow: 0 0 0 1px #0ea5e9;
+}
+.objective-item input[type="radio"] { 
+    width: 16px; 
+    height: 16px; 
+    margin: 0; 
+    accent-color: #0ea5e9;
+}
+.objective-item .objective-icon { 
+    font-size: 20px; 
+    width: 24px; 
+    text-align: center;
+}
+.objective-label { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    flex: 1;
+}
+.objective-name { 
+    font-weight: 500; 
+    color: #111827;
+}
+.recommended-tag { 
+    background: #0ea5e9; 
+    color: white; 
+    font-size: 10px; 
+    padding: 2px 6px; 
+    border-radius: 10px; 
+    font-weight: 500;
+}
+
+/* Objective Details Panel */
+.objective-details { 
+    flex: 1; 
+    padding: 40px; 
+    display: flex; 
+    flex-direction: column; 
+
+}
+.objective-image-placeholder { 
+    margin-bottom: 24px;
+}
+.placeholder-circle { 
+    width: 120px; 
+    height: 120px; 
+    background: #f3f4f6; 
+    border-radius: 50%; 
+    margin: 0 auto;
+}
+.image-ads{
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+}
+
+.objective-detail-title { 
+    font-size: 24px; 
+    font-weight: 700; 
+    color: #111827; 
+    margin-bottom: 16px;
+    text-align: center;
+}
+.objective-description { 
+    font-size: 14px; 
+    color: #6b7280; 
+    line-height: 1.5; 
+    margin-bottom: 32px; 
+    max-width: 400px;
+    text-align: center;
+    margin: 0 auto;
+}
+.suitable-for-section { 
+    width: 100%; 
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+.suitable-for-title { 
+    font-weight: 600; 
+    color: #111827; 
+    margin-bottom: 12px; 
+    text-align: center;
+    margin-top: 20px;
+}
+.suitable-tags { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+    justify-content: center;
+}
+.suitable-tag { 
+    background: #f3f4f6; 
+    color: #374151; 
+    padding: 6px 12px; 
+    border-radius: 16px; 
+    font-size: 13px; 
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .objectives-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .objectives-sidebar {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding-left: 0;
+    padding-bottom: 16px;
+  }
+  
+  .objective-details {
+    padding: 16px;
+  }
+  
+  .placeholder-circle {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .objective-detail-title {
+    font-size: 20px;
+  }
+  
+  .objective-description {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .objectives-panel {
+    padding: 16px;
+  }
+  
+  .objectives-sidebar {
+    padding-bottom: 12px;
+  }
+  
+  .objective-item {
+    padding: 10px 12px;
+  }
+  
+  .objective-name {
+    font-size: 13px;
+  }
+  
+  .placeholder-circle {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .objective-detail-title {
+    font-size: 18px;
+  }
+  
+  .objective-description {
+    font-size: 13px;
+  }
+  
+  .suitable-tag {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}

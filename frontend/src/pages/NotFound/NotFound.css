@@ -1,0 +1,7 @@
+.notfound-title {
+    display: flex; /* Bật Flexbox */
+    justify-content: center; /* Căn giữa theo chiều ngang */
+    align-items: center; /* Căn giữa theo chiều dọc */
+    min-height: 100vh; /* Đảm bảo thẻ cha chiếm toàn bộ chiều cao của viewport */
+    margin: 0; /* Xóa margin mặc định của body */
+}

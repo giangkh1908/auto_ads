@@ -1,0 +1,256 @@
+/* CreateChild Modal Styles */
+.create-child-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.create-child-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Header with Tabs */
+.create-child-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.create-child-tabs {
+  display: flex;
+  gap: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Content */
+.create-child-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* Form Sections */
+.form-section-campaign {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-section-adset {
+  display: flex;
+  flex-direction: column;
+  width: 660px;
+  margin-left: auto; /* đẩy sát phải */
+}
+
+.form-section-ad {
+  display: flex;
+  flex-direction: column;
+  width: 630px;
+  margin-left: auto; /* đẩy sát phải */
+}
+
+.section-header-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.section-icon {
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+}
+
+.section-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Input Styles */
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input-child {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #c0c0c0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-input-child:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input-child::placeholder {
+  color: #9ca3af;
+}
+
+.clear-button {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.clear-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Form Row (for select + input) */
+.form-row-child {
+  gap: 12px;
+  display: flex;
+}
+
+.form-select-child {
+  flex: 0 0 200px;
+  padding: 12px 16px;
+  border: 1px solid #c0c0c0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.form-select-child:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-row .form-input {
+  flex: 1;
+}
+
+/* Footer - Synced with FooterWizard */
+.create-child-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    background-color: #ffffff;
+    min-height: 60px;
+    gap: 8px;
+}
+
+.create-child-footer .spacer {
+  flex: 1;
+}
+
+.create-child-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.create-child-footer button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Full Mode Styles */
+.create-child-full-mode {
+  width: 100%;
+  height: 55vh;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 15px 20px;
+}
+
+.create-child-full-mode .create-child-content {
+  padding: 0;
+}
+
+.create-child-full-mode .create-child-footer {
+  flex-shrink: 0;
+  padding: 16px 0;
+  border-top: 1px solid #e5e7eb;
+  background: transparent;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .create-child-modal {
+    width: 95%;
+    margin: 16px;
+  }
+  
+  .create-child-header {
+    padding: 12px 16px;
+  }
+  
+  .create-child-content {
+    padding: 16px;
+    gap: 20px;
+  }
+  
+  .form-row-child {
+    gap: 8px;
+  }
+  
+  .form-select {
+    flex: none;
+  }
+  
+  .create-child-footer {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .create-child-footer button {
+    min-width: 70px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}

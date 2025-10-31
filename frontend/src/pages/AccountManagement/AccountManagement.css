@@ -1,0 +1,301 @@
+/* Layout container - sidebar is now global */
+.account-management-layout {
+    display: block;
+    margin-top: -15px;
+}
+
+/* Content area */
+.account-management-content {
+    /* leave room for fixed sidebar, center the remaining content */
+    padding: 16px 20px;
+    margin-left: 240px; /* expanded width sync with sidebar */
+    transition: margin-left 0.25s ease;
+}
+.sidebar-collapsed .account-management-content { margin-left: 84px; }
+
+/* center content area within remaining space */
+.account-management-center {
+    max-width: 1500px;
+    margin: 0 auto;
+    background-color: #DDDDDD;
+}
+
+.account-management-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.account-management-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+}
+
+.account-management-header h3 {
+    font-size: 25px;
+    margin-top: 1px;
+}
+
+.account-management-header p {
+    font-size: 15px;
+    margin-top: -10px;
+}
+
+.search-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.btn-find {
+    background-color: #337AB7;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.search-input {
+    width: 340px;
+    padding: 10px 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-account {
+    background: #10b981;
+    border-color: #10b981;
+    margin-top: 80px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 10px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 15px 20px;
+    text-align: center;
+    font-size: 15px;
+}
+
+.table td {
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 15px 20px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.table thead {
+    background-color: #DDDDDD;
+}
+
+.status-active {
+    color: #10b981;
+}
+
+.text-right { text-align: right; }
+
+/* Action buttons styling */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-active-account,
+.btn-inactive-account,
+.btn-archive-account,
+.btn-disconnect-account {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-active-account {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-active-account:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-inactive-account {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.btn-inactive-account:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
+.btn-archive-account {
+  background-color: #6b7280;
+  color: white;
+}
+
+.btn-archive-account:hover:not(:disabled) {
+  background-color: #4b5563;
+}
+
+.btn-disconnect-account {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-disconnect-account:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.btn-active-account:disabled,
+.btn-inactive-account:disabled,
+.btn-archive-account:disabled,
+.btn-disconnect-account:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal styling */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: #374151;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.btn-secondary:disabled,
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

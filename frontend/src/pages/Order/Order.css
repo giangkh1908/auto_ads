@@ -1,0 +1,425 @@
+/* ============================================
+   ORDER PAGE - Scoped with 'or-' prefix
+   ============================================ */
+
+/* Page Wrapper */
+.or-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 100px 20px 60px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Container */
+.or-container {
+  width: 100%;
+  max-width: 700px;
+  animation: orFadeInUp 0.6s ease-out;
+}
+
+/* Header Section */
+.or-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.or-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1px;
+}
+
+/* Shop Selector */
+.or-shop-select {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 15px;
+  font-size: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: white;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+  outline: none;
+}
+
+.or-shop-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.or-shop-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Current Package Info */
+.or-current-package {
+  color: white;
+  font-size: 0.95rem;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.or-current-package strong {
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+/* Order Card */
+.or-order-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: orScaleIn 0.5s ease-out;
+}
+
+.or-order-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid #f3f4f6;
+}
+
+/* Form Grid */
+.or-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Form Row */
+.or-form-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 5px;
+  align-items: center;
+}
+
+.or-form-row.or-discount-row {
+  grid-template-columns: 1fr auto;
+}
+
+.or-form-row.or-vat-row,
+.or-form-row.or-total-row {
+  grid-template-columns: 180px 1fr;
+}
+
+/* Label */
+.or-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #4b5563;
+  text-align: left;
+}
+
+/* Select & Input */
+.or-select,
+.or-input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #1f2937;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.or-select:hover,
+.or-input:hover {
+  border-color: #d1d5db;
+}
+
+.or-select:focus,
+.or-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Input Group (for Pages, Customers, Employees) */
+.or-input-group {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.or-input-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.or-input-item .or-input,
+.or-input-item .or-select {
+  flex: 0 0 140px;
+}
+
+.or-input-label {
+  font-size: 0.95rem;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* Price Display */
+.or-price-display {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #667eea;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+}
+
+/* Total Price */
+.or-total-row {
+  padding-top: 15px;
+  border-top: 2px solid #f3f4f6;
+  margin-top: 10px;
+}
+
+.or-total-price {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-align: left;
+}
+
+/* Discount Code */
+.or-discount-input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.or-discount-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.or-discount-btn {
+  padding: 12px 30px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.or-discount-btn:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* VAT Checkbox */
+.or-vat-row {
+  grid-template-columns: 1fr;
+}
+
+.or-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  color: #4b5563;
+  cursor: pointer;
+  user-select: none;
+}
+
+.or-checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.or-checkbox-label:hover {
+  color: #1f2937;
+}
+
+/* VAT Input Fields Animation */
+.or-form-row:has(input[placeholder*="mã số thuế"]),
+.or-form-row:has(input[placeholder*="tên đơn vị"]) {
+  animation: orSlideDown 0.3s ease-out;
+}
+
+@keyframes orSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 100px;
+  }
+}
+
+/* Upgrade Button */
+.or-upgrade-btn {
+  width: 200px;
+  padding: 8px;
+  padding-bottom: 15px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  margin-top: 20px;
+}
+
+.or-upgrade-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(59, 130, 246, 0.5);
+}
+
+.or-upgrade-btn:active {
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes orFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .or-page-wrapper {
+    padding: 80px 15px 40px;
+  }
+
+  .or-title {
+    font-size: 1.5rem;
+  }
+
+  .or-order-card {
+    padding: 25px 20px;
+  }
+
+  .or-order-title {
+    font-size: 1.4rem;
+    margin-bottom: 25px;
+  }
+
+  .or-form-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .or-form-row.or-discount-row {
+    grid-template-columns: 1fr;
+  }
+
+  .or-discount-btn {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .or-label {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .or-input-group {
+    flex-direction: column;
+  }
+
+  .or-input-item {
+    width: 100%;
+  }
+
+  .or-input-item .or-input,
+  .or-input-item .or-select {
+    flex: 1;
+  }
+
+  .or-total-price {
+    font-size: 1.5rem;
+  }
+
+  .or-upgrade-btn {
+    font-size: 1rem;
+    padding: 16px;
+  }
+
+  .or-current-package {
+    font-size: 0.85rem;
+    padding: 10px 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .or-title {
+    font-size: 1.2rem;
+  }
+
+  .or-order-title {
+    font-size: 1.2rem;
+  }
+
+  .or-order-card {
+    padding: 20px 15px;
+  }
+}
+

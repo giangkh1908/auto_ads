@@ -1,0 +1,357 @@
+/* Control Component Styles */
+
+/* Unified Wizard Sidebar */
+.wizard-sidebar { 
+    width: 400px; 
+    border-right: 1px solid #e5e7eb; 
+    padding: 0; 
+    background: #f9fafb; 
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.hierarchy-container {
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.hierarchy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.hierarchy-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border-left: 1px solid #0ea5e9;
+}
+
+.hierarchy-item:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.hierarchy-item.current {
+    background: #e0f2fe;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 1px #0ea5e9;
+}
+
+/* .hierarchy-item.completed {
+    background: #f0fdf4;
+    border-color: #22c55e;
+} */
+
+/* .hierarchy-item.completed:hover {
+    background: #dcfce7;
+} */
+
+.hierarchy-icon {
+    font-size: 18px;
+    width: auto;
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.expand-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+}
+
+.expand-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.hierarchy-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.hierarchy-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.hierarchy-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.hierarchy-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.paused {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.draft {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.date-info, .budget-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hierarchy-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: relative;
+}
+
+.dropdown-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.more-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.more-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.dropdown-content {
+    position: absolute;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    min-width: 160px;
+    margin-left: 8px;
+}
+
+/* Dropdown content is controlled by JavaScript state, not CSS hover */
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: right;
+    cursor: pointer;
+    color: #374151;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: #f3f4f6;
+}
+
+.dropdown-item.delete-item {
+    color: #dc2626;
+}
+
+.dropdown-item.delete-item:hover {
+    background: #fef2f2;
+}
+
+.hierarchy-status {
+    font-size: 16px;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.hierarchy-status-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.actions-trigger {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.actions-trigger:hover {
+    background: #e5e7eb;
+}
+
+.actions-menu {
+    position: absolute;
+    right: 0;
+    top: 24px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 180px;
+    z-index: 10;
+    padding: 6px;
+}
+
+.actions-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #111827;
+    font-size: 14px;
+}
+
+.actions-menu-item:hover {
+    background: #f3f4f6;
+}
+
+.hierarchy-item.current .hierarchy-status {
+    color: #0ea5e9;
+}
+
+.hierarchy-item.completed .hierarchy-status {
+  color: #22c55e;
+}
+
+/* Disabled state */
+.hierarchy-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.hierarchy-item.disabled:hover {
+  background: transparent;
+  border-color: #0ea5e9;
+}
+
+.hierarchy-item.disabled .hierarchy-name {
+  color: #9ca3af;
+}
+
+.hierarchy-item.disabled .hierarchy-label {
+  color: #9ca3af;
+}
+
+.hierarchy-item.disabled .hierarchy-icon {
+  color: #9ca3af;
+}
+
+/* Hierarchy indentation for visual hierarchy */
+.campaign-item {
+    margin-left: 0;
+}
+
+.adset-item {
+    margin-left: 16px;
+    padding-left: 8px;
+}
+
+.ad-item {
+    margin-left: 32px;
+    padding-left: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .wizard-sidebar {
+    width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .wizard-sidebar {
+    width: 200px;
+  }
+  
+  .hierarchy-container {
+    padding: 16px;
+  }
+  
+  .hierarchy-item {
+    padding: 8px 16px;
+  }
+  
+  .hierarchy-name {
+    font-size: 13px;
+  }
+  
+  .hierarchy-label {
+    font-size: 11px;
+  }
+}

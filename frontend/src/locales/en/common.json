@@ -1,0 +1,21 @@
+{
+    "actions": {
+      "create": "Create",
+      "read": "Read",
+      "update": "Update",
+      "delete": "Delete",
+      "submit": "Submit",
+      "reset": "Reset",
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "finish": "Finish"
+    },
+    "validations": {
+      "required": "This field is required",
+      "email_invalid": "Invalid email",
+      "password_min": "Password must be at least 6 characters",
+      "password_mismatch": "Passwords do not match"
+    }
+  }

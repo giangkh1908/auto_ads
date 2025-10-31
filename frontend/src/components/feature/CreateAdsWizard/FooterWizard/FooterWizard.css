@@ -1,0 +1,84 @@
+/* Footer Wizard Styles */
+.ads-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  min-height: 60px;
+}
+
+.ads-modal-footer .spacer {
+  flex: 1;
+}
+
+.ads-modal-footer button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  min-width: 80px;
+}
+
+.ads-modal-footer .btn-secondary {
+  background-color: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.ads-modal-footer .btn-secondary:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.ads-modal-footer .btn-primary {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.ads-modal-footer .btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.ads-modal-footer .btn-post {
+  background-color: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  font-weight: 600;
+}
+
+.ads-modal-footer .btn-post:hover:not(:disabled) {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+.ads-modal-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ads-modal-footer button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ads-modal-footer {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .ads-modal-footer button {
+    min-width: 70px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}

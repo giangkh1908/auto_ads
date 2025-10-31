@@ -1,0 +1,100 @@
+.app-footer {
+    background: #2f3030;
+    color: #e5e7eb;
+    width: 100%;
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 24px;
+}
+
+.footer-col h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.brand-col .brand-logo {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 28px;
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+
+.contact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.contact-list li { 
+    margin: 8px 0;
+    color: #d1d5db;
+    font-size: 14px;
+}
+.contact-list .icon { margin-right: 8px; }
+
+.links-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.links-col li { margin: 8px 0; }
+.links-col a {
+    color: #d1d5db;
+    text-decoration: none;
+    font-size: 14px;
+}
+.links-col a:hover { color: #ffffff; text-decoration: underline; }
+
+.store-col .store-badges { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.store-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+}
+.store-badge.play { background: #111827; color: #ffffff; }
+.store-badge.app { background: #111827; color: #ffffff; }
+
+.socials { display: flex; gap: 12px; margin: 12px 0 16px; }
+.social {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #111827;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+.social.fb { background: #1877f2; }
+.social.yt { background: #ff0000; }
+
+.partner-badges { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.badge {
+    background: #111827;
+    color: #e5e7eb;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+}
+.badge.notify { background: #0b74de; color: #ffffff; }
+.badge.meta { background: #ffffff; color: #111827; }
+
+@media (max-width: 900px) {
+    .footer-inner { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+    .footer-inner { grid-template-columns: 1fr; }
+}

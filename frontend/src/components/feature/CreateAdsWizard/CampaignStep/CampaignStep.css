@@ -1,0 +1,33 @@
+/* Campaign Step Styles */
+.campaign-step { height: 100%; background: #fff; overflow: hidden; }
+.campaign-details-panel { padding: 0; }
+.campaign-details-layout { display: flex; height: 100%; padding: 0; }
+.campaign-configuration { flex: 1; padding: 40px; background: #fff; }
+
+/* Sections */
+.config-section-ads { margin-bottom: 5px; }
+.section-header-campaign { display: flex; align-items: center; gap: 10px; }
+.section-title-ads { font-size: 17px; font-weight: 600; color: #111827; }
+
+/* Inputs */
+.campaign-name-input { width: 94%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; }
+
+/* Facebook Page Selector */
+.facebook-page-selector { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; }
+.page-logo { width: 40px; height: 40px; background: #1877f2; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+.page-info { flex: 1; }
+.page-type { font-size: 12px; color: #6b7280; }
+.page-name { font-weight: 500; color: #111827; }
+.page-edit-campaign { color: #6b7280; cursor: pointer; }
+
+/* Budget Options */
+.budget-options { display: flex; flex-direction: column; gap: 16px; }
+.budget-option { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }
+.budget-option:hover { border-color: #d1d5db; background: #f9fafb; }
+.budget-option input[type="radio"] { margin-top: 2px; accent-color: #2563eb; }
+.option-content { flex: 1; }
+.option-title { font-weight: 600; color: #111827; margin-bottom: 4px; }
+.option-description { font-size: 14px; color: #6b7280; line-height: 1.5; }
+
+/* Layout helpers */
+.left-custom, .center-custom, .right-custom { flex: 1; padding: 0px; }

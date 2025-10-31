@@ -1,0 +1,618 @@
+/* Layout container - sidebar is now global */
+.ads-management-layout {
+  display: block;
+  margin-top: -15px;
+}
+
+/* Content area */
+.ads-management-content {
+  /* leave room for fixed sidebar, center the remaining content */
+  padding: 16px 20px;
+  margin-left: 240px; /* expanded width sync with sidebar */
+  transition: margin-left 0.25s ease;
+}
+.sidebar-collapsed .ads-management-content {
+  margin-left: 84px;
+}
+
+/* center content area within remaining space */
+.ads-management-center {
+  max-width: 1500px;
+  margin: 0 auto;
+  background-color: #dddddd;
+}
+
+.ads-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.ads-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+}
+
+.ads-main-tool {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-select select {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.btn-refresh-ads {
+  background: #6b7280;
+  color: #fff;
+  border: 1px solid #6b7280;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  height: 35px;
+}
+
+.btn-refresh-ads:hover:not(:disabled) {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.btn-refresh-ads:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-refresh-ads .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-create-ads {
+  background: #10b981;
+  color: #fff;
+  border: 1px solid #10b981;
+  padding: 9px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 20px;
+  transition: all 0.2s ease;
+}
+
+.btn-create-ads:hover:not(:disabled) {
+  background: #059669;
+  border-color: #059669;
+}
+
+.btn-create-ads:disabled,
+.btn-create-ads.disabled {
+  background: #6b7280;
+  border-color: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filters input {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+.filters span {
+  margin-left: 5px;
+  padding: 5px 6px;
+  font-size: 14px;
+}
+.btn-filter {
+  margin-left: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+}
+
+/* Breadcrumb Navigation */
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.breadcrumb-item {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.breadcrumb-item:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* .breadcrumb-item.active {
+  color: #2563eb;
+  font-weight: 600;
+} */
+
+.breadcrumb-separator {
+  color: #9ca3af;
+  margin: 0 4px;
+}
+
+/* Style riêng cho tên trong breadcrumb */
+.breadcrumb-name {
+  font-weight: 600;
+  color: #1e40af;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  padding: 0 4px;
+  border-radius: 4px;
+  position: relative;
+}
+
+/* Hiệu ứng cho active breadcrumb name */
+.breadcrumb-item.active .breadcrumb-name {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+/* Hover effect cho breadcrumb name */
+.breadcrumb-item:hover .breadcrumb-name {
+  text-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Ads Tabs */
+.ads-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.ads-tabs .icon-beside-tab {
+  display: flex;
+  align-items: center; /* căn giữa theo trục dọc */
+  justify-content: center; /* căn giữa theo trục ngang (tùy bạn muốn giữa hay không) */
+  gap: 8px; /* khoảng cách giữa 2 button, có thể chỉnh 8 → 12px tùy mắt nhìn */
+  margin-left: 10px;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid #d3d3d3;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab.active {
+  background: #ffffff;
+  border-top: 2px solid #2563eb;
+  font-weight: 600;
+}
+
+.ads-table-wrapper {
+  padding: 0 10px 10px;
+}
+.ads-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ads-table td {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  font-size: 13px;
+  text-align: center;
+}
+.ads-table th {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  background: #d3d3d3;
+  font-size: 15px;
+  text-align: center;
+}
+/* Alignments: first two data cols (2-3) left, middle two (4-5) center, last two (6-7) right */
+.ads-table th:nth-child(1),
+.ads-table td:nth-child(1) {
+  text-align: left;
+}
+.ads-table th:nth-child(2),
+.ads-table td:nth-child(2),
+.ads-table th:nth-child(3),
+.ads-table td:nth-child(3) {
+  text-align: left;
+}
+
+/* .ads-table th:nth-child(4),
+.ads-table td:nth-child(4),
+.ads-table th:nth-child(5),
+.ads-table td:nth-child(5) {
+  text-align: center;
+}
+
+.ads-table th:nth-child(6),
+.ads-table td:nth-child(6),
+.ads-table th:nth-child(7),
+.ads-table td:nth-child(7) {
+  text-align: right;
+}
+
+.ads-table th:nth-child(8),
+.ads-table td:nth-child(8),
+.ads-table th:nth-child(9),
+.ads-table td:nth-child(9) {
+  text-align: right;
+} */
+
+/* Utility classes */
+.ads-table .text-right {
+  text-align: right;
+}
+.ads-table .text-center {
+  text-align: center;
+}
+
+.cell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.name-text {
+  flex: 1;
+  cursor: default;
+  color: #111827;
+}
+
+/* Campaign & AdSet: Màu xanh, có thể click */
+.name-text.clickable {
+  cursor: pointer;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.name-text.clickable:hover {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+/* Ad: Màu đen, không clickable */
+.name-text.ad-name {
+  color: #111827;
+  cursor: default;
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.row-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.name-cell:hover .row-actions {
+  opacity: 1;
+}
+
+.status-active-ads {
+  color: #059669;
+  text-align: center;
+}
+.status-inactive-ads {
+  color: #6b7280;
+  text-align: center;
+}
+
+.action-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.copy-btn {
+  color: #6b7280;
+}
+
+.create-adset-btn,
+.create-ad-btn {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.create-adset-btn:hover,
+.create-ad-btn:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8f9fa;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 20px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.switch {
+  width: 30px;
+  height: 16px;
+  background: #d1d5db;
+  border-radius: 999px;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 999px;
+  transition: left 0.2s;
+}
+.switch.on {
+  background: #60a5fa;
+}
+.switch.on::after {
+  left: 16px;
+}
+
+.switch.loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.switch.loading::after {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-active {
+  color: #059669;
+  font-weight: 500;
+}
+
+.status-inactive {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Additional status colors */
+.status-paused {
+  color: #d97706;
+  font-weight: 500;
+  background-color: #fff7ed;
+}
+
+.status-deleted {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.status-archived {
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.status-disapproved {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.ads-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.ads-update-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.ads-update-btn:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.ads-archive-btn {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.ads-archive-btn:hover {
+  background-color: #fde68a;
+  color: #78350f;
+}
+
+.ads-delete-btn {
+  background-color: #fa6f60;
+  color: #ffffff;
+}
+
+.ads-delete-btn:hover {
+  background-color: #4794f3;
+  color: #ffffff;
+}
+
+/* Modal footer buttons */
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.btn-secondary:disabled,
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
