@@ -45,6 +45,13 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Connect database
+connectDB();
+
+// Add a root route to check deployment status
+app.get("/", (req, res) => {
+  res.send("Backend deployed successfully!");
+});
 
 //Routes
 app.use("/api/users", userRoutes);
@@ -62,9 +69,4 @@ app.use("/api/ads-wizard", adsWizardRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
 
-// Connect database & start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server bắt đầu chạy trên cổng ${PORT}`);
-  });
-});
+export default app;
