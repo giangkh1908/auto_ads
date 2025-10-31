@@ -21,7 +21,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
     
     // Facebook Business Login Configuration
     const FB_CONFIG_ID = '812719094956340'
-    const API_BASE_URL = 'http://localhost:5001' // Backend URL
+    const API_BASE_URL = 'https://auto-ads-khaki.vercel.app' // Backend URL
 
     const validateForm = () => {
         const newErrors = {}
