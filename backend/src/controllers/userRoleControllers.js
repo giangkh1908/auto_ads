@@ -1,7 +1,7 @@
 import UserRole from "../models/userRole.model.js";
 import Role from "../models/role.model.js";
 import User from "../models/user.model.js";
-import Shop from "../models/shop.model.js";
+import Shop from "../models/shops/shop.model.js";
 
 /**
  * 🎯 Gán role cho user
@@ -63,7 +63,7 @@ export const assignRole = async (req, res) => {
       data: populated,
     });
   } catch (error) {
-    console.error("❌ assignRole error:", error);
+    console.error("assignRole error:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi hệ thống, vui lòng thử lại sau.",
@@ -87,7 +87,7 @@ export const getUserRoles = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error("❌ getUserRoles error:", error);
+    console.error("getUserRoles error:", error);
     res.status(500).json({
       success: false,
       message: "Không thể lấy danh sách UserRole.",
@@ -114,7 +114,7 @@ export const getUserRoleById = async (req, res) => {
 
     res.status(200).json({ success: true, data: userRole });
   } catch (error) {
-    console.error("❌ getUserRoleById error:", error);
+    console.error("getUserRoleById error:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi hệ thống.",
@@ -138,13 +138,13 @@ export const getRolesByUser = async (req, res) => {
 
     res.status(200).json({ success: true, data: roles });
   } catch (error) {
-    console.error("❌ getRolesByUser error:", error);
+    console.error("getRolesByUser error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
 /**
- * ✏️ Cập nhật UserRole (đổi role hoặc shop)
+ * Cập nhật UserRole (đổi role hoặc shop)
  */
 export const updateUserRole = async (req, res) => {
   try {
@@ -170,13 +170,13 @@ export const updateUserRole = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Cập nhật UserRole thành công!", data: userRole });
   } catch (error) {
-    console.error("❌ updateUserRole error:", error);
+    console.error("updateUserRole error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
 /**
- * 🗑️ Xóa UserRole
+ * Xóa UserRole
  */
 export const deleteUserRole = async (req, res) => {
   try {
@@ -187,7 +187,7 @@ export const deleteUserRole = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Đã xóa UserRole thành công." });
   } catch (error) {
-    console.error("❌ deleteUserRole error:", error);
+    console.error("deleteUserRole error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };

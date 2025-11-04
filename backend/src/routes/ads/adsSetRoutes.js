@@ -6,6 +6,7 @@ import {
   getAdSetsLiveCtrl,
   toggleAdsetStatusCtrl,
   deleteAdsetCascadeCtrl,
+  archiveAdsetCascadeCtrl,
   getAdsetFromDatabase,
   copyAdsetCascadeCtrl,
   getAdsetInsightsCtrl,
@@ -25,6 +26,7 @@ router.get("/", listAdSetsCtrl);
 
 // Routes với tham số động
 router.post("/:id/copy", copyAdsetCascadeCtrl);
+router.post("/:id/archive", archiveAdsetCascadeCtrl);
 router.patch("/:id/status", toggleAdsetStatusCtrl);
 router.delete("/:id", deleteAdsetCascadeCtrl);
 

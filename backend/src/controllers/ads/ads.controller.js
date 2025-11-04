@@ -94,48 +94,83 @@ export async function getAdFromDatabase(req, res) {
  */
 export async function listAdsCtrl(req, res) {
   try {
-    const { account_id, adset_id, q, status, page = 1, limit = 10 } = req.query;
+    const { account_id, adset_id, q, status, page = 1, limit = 10, fetch_all = false } = req.query;
 
     // Xây dựng filter
     const filter = {};
 
-    filter.status = { $ne: "DELETED" };
-    if (account_id) {
+    // ✅ Lấy tất cả items (không filter theo status) - Frontend sẽ filter
+    if (account_id && !adset_id) {
+      // Chỉ áp dụng filter account_id khi KHÔNG có adset_id (vì adset_id đã filter cụ thể rồi)
       // Hỗ trợ cả định dạng có act_ và không có act_
       const normalizedId = account_id.startsWith("act_")
         ? account_id.substring(4)
         : account_id;
-      filter.external_account_id = {
-        $in: [normalizedId, `act_${normalizedId}`],
-      };
-      filter.external_account_id = {
-        $in: [normalizedId, `act_${normalizedId}`],
-      };
+      
+      // ✅ Tìm ads theo account_id: Cả trực tiếp (external_account_id) và thông qua adset relationship
+      // Tìm các adsets thuộc account này
+      const accountAdsets = await AdsSet.find({
+        external_account_id: { $in: [normalizedId, `act_${normalizedId}`] }
+      }).distinct('_id');
+      
+      // Ads có external_account_id trực tiếp HOẶC có set_id thuộc một trong các adsets này
+      filter.$or = [
+        { external_account_id: { $in: [normalizedId, `act_${normalizedId}`] } },
+        { set_id: { $in: accountAdsets } }
+      ];
     }
 
     if (adset_id) filter.set_id = adset_id;
-    // Nếu có filter status cụ thể, ghi đè filter mặc định
-    if (status) filter.status = status;
+    // Nếu có filter status cụ thể, áp dụng filter đó (bao gồm cả DELETED nếu query)
+    if (status) {
+      filter.status = status;
+    }
+    // Nếu không có status parameter, lấy tất cả (bao gồm cả DELETED)
+    
     if (q) filter.name = new RegExp(q, "i");
 
-    // Lấy dữ liệu có phân trang
-    const skip = (Number(page) - 1) * Number(limit);
-    const [items, total] = await Promise.all([
-      Ads.find(filter)
-        .populate('created_by', 'full_name email')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      Ads.countDocuments(filter),
-    ]);
-
-    return res.status(200).json({
-      items,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      pages: Math.ceil(total / Number(limit)) || 1,
-    });
+    // Hỗ trợ fetch_all hoặc limit lớn để Frontend có thể sort và phân trang
+    const limitNum = Number(limit);
+    const shouldFetchAll = fetch_all === 'true' || fetch_all === true || limitNum === 0 || limitNum > 10000;
+    
+    let items, total;
+    
+    if (shouldFetchAll) {
+      // Fetch tất cả (không phân trang) - để Frontend sort và phân trang
+      [items, total] = await Promise.all([
+        Ads.find(filter)
+          .populate('created_by', 'full_name email')
+          .sort({ createdAt: -1 }), // Sort ở Backend trước
+        Ads.countDocuments(filter)
+      ]);
+      
+      return res.status(200).json({
+        items,
+        total,
+        page: 1,
+        limit: total,
+        pages: 1,
+      });
+    } else {
+      // Phân trang như cũ (nếu cần)
+      const skip = (Number(page) - 1) * Number(limit);
+      [items, total] = await Promise.all([
+        Ads.find(filter)
+          .populate('created_by', 'full_name email')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit)),
+        Ads.countDocuments(filter),
+      ]);
+      
+      return res.status(200).json({
+        items,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)) || 1,
+      });
+    }
   } catch (err) {
     console.error("GET Ads error:", err);
     return res
@@ -326,6 +361,63 @@ export async function deleteAdCtrl(req, res) {
     console.error("❌ Xoá Ad lỗi:", err);
     return res.status(500).json({
       message: "Xoá thất bại",
+      error: err.message,
+    });
+  }
+}
+
+/**
+ * POST /api/ads/:id/archive
+ * Archive ad (set status ARCHIVED thay vì DELETED)
+ */
+export async function archiveAdCtrl(req, res) {
+  try {
+    const { id } = req.params;
+    const ad = await Ads.findById(id);
+    if (!ad)
+      return res.status(404).json({ message: "Không tìm thấy quảng cáo." });
+
+    // ✅ Lấy access token từ user hoặc query (ưu tiên query)
+    let accessToken = req.user?.facebookAccessToken || req.query.access_token || null;
+
+    // Nếu chưa có token trong user, thử lấy từ DB
+    if (!accessToken && req.user?._id) {
+      const user = await User.findById(req.user._id).select("+facebookAccessToken");
+      accessToken = user?.facebookAccessToken || null;
+    }
+
+    if (!accessToken) {
+      return res.status(400).json({
+        message:
+          "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
+        missingToken: true,
+      });
+    }
+
+    // ✅ Thực hiện xóa trên Facebook nếu có token & external_id (giống delete)
+    if (accessToken && ad.external_id) {
+      try {
+        await deleteEntity(ad.external_id, accessToken);
+        console.log(`📦 Đã xóa (archive) quảng cáo ${ad.name} (${ad.external_id}) trên Facebook`);
+      } catch (fbErr) {
+        console.warn("⚠️ Lỗi khi xóa (archive) trên Facebook:", fbErr?.response?.data || fbErr.message);
+      }
+    }
+
+    // ✅ Cập nhật status ARCHIVED trong DB
+    await Ads.findByIdAndUpdate(id, {
+      status: "ARCHIVED",
+      updated_at: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã lưu trữ quảng cáo "${ad.name}".`,
+    });
+  } catch (err) {
+    console.error("❌ Archive Ad lỗi:", err);
+    return res.status(500).json({
+      message: "Lưu trữ thất bại",
       error: err.message,
     });
   }

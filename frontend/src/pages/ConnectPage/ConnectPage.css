@@ -63,7 +63,7 @@
 }
 
 /* Search and Filter Bar */
-.search-filter-bar {
+.search-filter-bar-connect-page {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -94,7 +94,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 500px;
+  justify-content: space-between;
+  width: 100%;
 } 
 
 .status-filter {
@@ -106,11 +107,15 @@
   cursor: pointer;
 }
 
-.page-count {
+.page-count-connect {
   font-size: 14px;
-  color: #6b7280;
+  color: #ffffff;
   font-weight: 500;
-  margin-right: 30px;
+  text-align: right;
+  background-color: #2563EB;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid #2563EB;
 }
 
 .connect-section {

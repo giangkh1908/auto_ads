@@ -1,17 +1,31 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MessageCircle, Globe, Settings,ShoppingCart,DollarSign,Package,TrendingUp,Users,Briefcase,Calendar,Megaphone,
         MessageSquare,Reply,Bell,Key,List,ShoppingBag,Truck,Play,Mail,ArrowRight,Sparkles,
 } from "lucide-react";
 import "./Home.css";
 import laptop_white from "../../assets/macbook-white.png";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../hooks/useAuth";
+import { ROUTES } from "../../constants/app.constants";
+
 function Home({ onLoginClick }) {
   const [email, setEmail] = useState("");
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Email submitted:", email);
+  };
+
+  const handleButtonClick = () => {
+    if (isAuthenticated) {
+      navigate(ROUTES.DASHBOARD);
+    } else {
+      onLoginClick();
+    }
   };
 
   return (
@@ -27,9 +41,20 @@ function Home({ onLoginClick }) {
               <p className="hero-description">
                 {t("home.hero_description")}
               </p>
-              <button className="cta-button-home" onClick={onLoginClick}>
-                <span>{t("home.get_started")}</span>
-                <ArrowRight size={20} />
+              <button className="cta-button-home" onClick={handleButtonClick}>
+                {isAuthenticated && user?.avatar && (
+                  <img 
+                    src={user.avatar} 
+                    alt={user?.full_name || "Avatar"} 
+                    className="cta-avatar"
+                  />
+                )}
+                {isAuthenticated ? (
+                  <span>SỬ DỤNG NGAY</span>
+                ):(
+                  <span>{t("home.get_started")}</span>
+                )}
+                {/* <ArrowRight size={20} /> */}
               </button>
             </div>
             <div className="hero-visual">

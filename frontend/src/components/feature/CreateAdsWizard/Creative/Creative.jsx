@@ -2,16 +2,21 @@ import React from 'react';
 import { Play, ExternalLink, MessageCircle, ThumbsUp, Share, MoreHorizontal, Globe } from 'lucide-react';
 import './Creative.css';
 
-function Creative({ ad, campaign, adset: _adset }) { // eslint-disable-line no-unused-vars
+function Creative({ ad, campaign, adset }) { // eslint-disable-line no-unused-vars
   const getCTAColor = (cta) => {
     const ctaColors = {
-      'Gửi tin nhắn': '#0084ff',
       'Tìm hiểu thêm': '#1877f2',
+      'Đăng ký ngay': '#ff6b6b',
+      'Liên hệ ngay': '#ab47bc',
+      'Nhận ưu đãi': '#f59e0b',
+      'Đặt ngay': '#10b981',
       'Mua ngay': '#42b883',
-      'Đăng ký': '#ff6b6b',
-      'Xem ngay': '#ffa726',
-      'Truy cập ngay': '#26c6da',
-      'Liên hệ ngay': '#ab47bc'
+      'Tải xuống': '#3b82f6',
+      'Xem khuyến mãi': '#ef4444',
+      'Xem suất chiếu': '#8b5cf6',
+      'Nghe ngay': '#ec4899',
+      'Nhận quyền truy cập': '#14b8a6',
+      'Xem menu': '#f97316'
     };
     return ctaColors[cta] || '#1877f2';
   };
@@ -27,6 +32,11 @@ function Creative({ ad, campaign, adset: _adset }) { // eslint-disable-line no-u
     }
   };
 
+  // ✅ Lấy page info từ adset (ưu tiên facebookPage/facebookPageId từ UI, fallback page_name/page_id từ DB)
+  const pageName = adset?.facebookPage || adset?.page_name || null;
+  const pageId = adset?.facebookPageId || adset?.page_id || null;
+  const pageAvatar = adset?.facebookPageAvatar || null;
+
   return (
     <div className="creative-preview">
       <div className="creative-container">
@@ -37,26 +47,26 @@ function Creative({ ad, campaign, adset: _adset }) { // eslint-disable-line no-u
           <div className="post-header">
             <div className="page-info">
               <div className="page-avatar">
-                {campaign?.facebookPageAvatar ? (
+                {pageAvatar ? (
                   <img
-                    src={campaign.facebookPageAvatar}
-                    alt={campaign.facebookPage || "Facebook Page"}
+                    src={pageAvatar}
+                    alt={pageName || "Facebook Page"}
                     className="avatar-circle-creative"
                   />
-                ) : campaign?.facebookPageId ? (
+                ) : pageId ? (
                   <img
-                    src={`https://graph.facebook.com/${campaign.facebookPageId}/picture?type=square`}
-                    alt={campaign.facebookPage || "Facebook Page"}
+                    src={`https://graph.facebook.com/${pageId}/picture?type=square`}
+                    alt={pageName || "Facebook Page"}
                     className="avatar-circle-creative"
                   />
                 ) : (
                   <div className="avatar-circle-creative">
-                    {(campaign?.facebookPage || ad?.page || "").charAt(0) || "F"}
+                    {(pageName || ad?.page || "").charAt(0) || "F"}
                   </div>
                 )}
               </div>
               <div className="page-details">
-                <div className="page-name">{campaign?.facebookPage || ad?.page || "Facebook Page"}</div>
+                <div className="page-name">{pageName || ad?.page || "Facebook Page"}</div>
                 <div className="post-meta">
                   <span className="sponsored-badge">Được tài trợ</span>
                   <span className="post-time"><Globe size = {14}/></span>
@@ -113,7 +123,7 @@ function Creative({ ad, campaign, adset: _adset }) { // eslint-disable-line no-u
               className="cta-button"
               style={{ backgroundColor: getCTAColor(ad.cta) }}
             >
-              {ad.cta || "Gửi tin nhắn"}
+              {ad.cta || "Tìm hiểu thêm"}
             </div>
           </div>
 

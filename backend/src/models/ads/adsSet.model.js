@@ -17,6 +17,10 @@ const adsSetSchema = new mongoose.Schema(
 
     name: { type: String, trim: true },
 
+    // 📄 Thông tin trang Page chạy quảng cáo (di chuyển từ Campaign)
+    page_id: { type: String, trim: true, default: null },
+    page_name: { type: String, trim: true, default: null },
+
     // ⚙️ Trạng thái
     status: {
       type: String,

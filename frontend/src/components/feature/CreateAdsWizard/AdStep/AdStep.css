@@ -307,6 +307,27 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 12px;
+}
+
+.btn-ai-settings {
+  padding: 10px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: #6b7280;
+}
+
+.btn-ai-settings:hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+  transform: translateY(-2px);
 }
 
 .btn-generate-ai {
@@ -558,6 +579,7 @@
 .loading-wave-text span {
   display: inline-block;
   animation: wave-animation 1.6s infinite ease-in-out;
+  /* animation-delay sẽ được set inline vì là giá trị động phụ thuộc vào index */
 }
 
 @keyframes wave-animation {
@@ -570,4 +592,93 @@
   75% {
     transform: translateY(8px) rotate(15deg);
   }
+}
+
+/* Guidance Banner */
+.guidance-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.guidance-banner-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.guidance-banner-box {
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.guidance-banner-box-header {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.guidance-banner-requirement {
+  font-size: 13px;
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.guidance-banner-cta-box {
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.guidance-banner-note {
+  margin-top: 12px;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* Field Label Container */
+.field-label-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* AI Generate Button */
+.ai-generate-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Media Description */
+.media-description-hint {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Video Preview */
+.video-preview {
+  width: 100%;
+  border-radius: 8px;
 }

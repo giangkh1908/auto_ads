@@ -147,6 +147,12 @@ export async function softDeleteAdsAccount(id) {
   );
 }
 
+/** Hard delete = xóa thật account khỏi DB, giữ nguyên dữ liệu liên quan */
+export async function hardDeleteAdsAccount(id) {
+  const deleted = await AdsAccount.findByIdAndDelete(id);
+  return deleted;
+}
+
 /**
  * Lấy thống kê số lượng campaigns, adsets, ads cho một account
  */

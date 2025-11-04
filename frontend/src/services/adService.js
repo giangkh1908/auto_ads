@@ -112,6 +112,42 @@ export const deleteAd = async (id, accessToken = null) => {
   }
 };
 
+// Archive Campaign
+export const archiveCampaign = async (id, accessToken = null) => {
+  try {
+    const url = API_ENDPOINTS.CAMPAIGNS.ARCHIVE(id, accessToken);
+    const response = await axiosInstance.post(url, {}, { timeout: 120000 });
+    return response.data;
+  } catch (error) {
+    console.error('Error archiving campaign:', error);
+    throw error;
+  }
+};
+
+// Archive AdSet
+export const archiveAdSet = async (id, accessToken = null) => {
+  try {
+    const url = API_ENDPOINTS.ADSETS.ARCHIVE(id, accessToken);
+    const response = await axiosInstance.post(url, {}, { timeout: 60000 });
+    return response.data;
+  } catch (error) {
+    console.error('Error archiving ad set:', error);
+    throw error;
+  }
+};
+
+// Archive Ad
+export const archiveAd = async (id, accessToken = null) => {
+  try {
+    const url = API_ENDPOINTS.ADS.ARCHIVE(id, accessToken);
+    const response = await axiosInstance.post(url, {}, { timeout: 30000 });
+    return response.data;
+  } catch (error) {
+    console.error('Error archiving ad:', error);
+    throw error;
+  }
+};
+
 // Copy Campaign (DB only)
 export const copyCampaign = async (id) => {
   try {

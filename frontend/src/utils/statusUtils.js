@@ -76,6 +76,10 @@ export const translateStatus = (status) => {
       case 'Đang xử lý':
       case 'Có vấn đề':
         return 'status-inactive';
+      case 'Thất bại':
+        return 'status-failed';
+      case 'Bản nháp':
+        return 'status-draft';
       default:
         return 'status-inactive';
     }

@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
-import axiosInstance from '../../../../utils/axios'; // Import axios instance
+import React, { useState, useEffect } from 'react';
+import { Eye } from 'lucide-react';
+import axiosInstance from '../../../../utils/axios';
+import { aiConfigService } from '../../../../services/aiConfigService';
+import { useToast } from '../../../../hooks/useToast';
+import PromptPreviewModal from '../PromptPreview/PromptPreviewModal';
 
-const AiPopup = ({ isOpen, onClose, onConfirm }) => {
+const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
+  const toast = useToast();
+  const [savedConfigs, setSavedConfigs] = useState([]);
+  const [selectedConfigId, setSelectedConfigId] = useState(defaultConfigId || '');
+  const [selectedConfigModel, setSelectedConfigModel] = useState(null);
+  const [selectedConfig, setSelectedConfig] = useState(null);
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [aiConfig, setAiConfig] = useState({
     language: 'Tiếng Việt',
     tone: 'Chuyên Nghiệp',
@@ -12,6 +23,121 @@ const AiPopup = ({ isOpen, onClose, onConfirm }) => {
   });
 
   const [isGeneratingKeywords, setIsGeneratingKeywords] = useState(false);
+  const [showSaveConfig, setShowSaveConfig] = useState(false);
+  const [configName, setConfigName] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      loadConfigs();
+      if (defaultConfigId) {
+        loadConfig(defaultConfigId);
+      }
+    }
+  }, [isOpen, defaultConfigId]);
+
+  const loadConfigs = async () => {
+    setIsLoadingConfigs(true);
+    try {
+      const response = await aiConfigService.getConfigs('own,templates');
+      if (response.success) {
+        setSavedConfigs(response.configs || []);
+        const defaultConfig = response.configs?.find(c => c.is_default);
+        if (defaultConfig && !defaultConfigId) {
+          setSelectedConfigId(defaultConfig._id);
+          loadConfig(defaultConfig._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading configs:', error);
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  };
+
+  const loadConfig = async (configId) => {
+    try {
+      const response = await aiConfigService.getConfig(configId);
+      if (response.success && response.config) {
+        const config = response.config;
+        const model = config.model || 'gpt-4o-mini';
+        setSelectedConfigModel(model);
+        setSelectedConfig(config);
+        setAiConfig({
+          language: config.metadata?.language === 'vi' ? 'Tiếng Việt' : 
+                   config.metadata?.language === 'en' ? 'English' : '中文',
+          tone: config.metadata?.tone?.replace(/_/g, ' ') || 'Chuyên Nghiệp',
+          personalization: config.metadata?.personalization || '',
+          mainKeywords: '',
+          synonymousKeywords: '',
+          aiModel: model.includes('gemini') ? 'gemini' : 'openai'
+        });
+      }
+    } catch (error) {
+      console.error('Error loading config:', error);
+      toast.error('Không thể tải config');
+    }
+  };
+
+  const handleConfigSelect = (e) => {
+    const configId = e.target.value;
+    setSelectedConfigId(configId);
+    setSelectedConfigModel(null);
+    setSelectedConfig(null);
+    if (configId) {
+      loadConfig(configId);
+    } else {
+      setAiConfig({
+        language: 'Tiếng Việt',
+        tone: 'Chuyên Nghiệp',
+        personalization: '',
+        mainKeywords: '',
+        synonymousKeywords: '',
+        aiModel: 'openai'
+      });
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!configName.trim()) {
+      toast.warning('Vui lòng nhập tên config');
+      return;
+    }
+
+    try {
+      const languageMap = {
+        'Tiếng Việt': 'vi',
+        'English': 'en',
+        '中文': 'zh'
+      };
+
+      await aiConfigService.createConfig({
+        name: configName,
+        character: 'Bạn là 1 chuyên gia marketing quảng cáo Facebook với nhiều năm kinh nghiệm.',
+        skills: [
+          'Bạn có kỹ năng viết nội dung quảng cáo hấp dẫn và hiệu quả',
+          'Bạn có kỹ năng tối ưu hóa từ khóa cho Facebook Ads',
+        ],
+        limitations: [
+          'Chỉ trả lời những câu hỏi liên quan đến quảng cáo Facebook',
+          'Giữ kết luận trong khoảng 100 từ',
+        ],
+        model: aiConfig.aiModel === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini',
+        metadata: {
+          language: languageMap[aiConfig.language] || 'vi',
+          tone: aiConfig.tone.toLowerCase().replace(/\s+/g, '_'),
+          personalization: aiConfig.personalization,
+        },
+      });
+
+      toast.success('Đã lưu config thành công');
+      setShowSaveConfig(false);
+      setConfigName('');
+      loadConfigs();
+    } catch (error) {
+      console.error('Error saving config:', error);
+      toast.error('Không thể lưu config');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -53,17 +179,38 @@ const AiPopup = ({ isOpen, onClose, onConfirm }) => {
   };
 
   const handleConfirm = () => {
-    // Chuẩn bị dữ liệu cho backend
-    const configData = {
-      language: aiConfig.language === 'Tiếng Việt' ? 'vi' : aiConfig.language === 'English' ? 'en' : 'zh',
-      tone: aiConfig.tone.toLowerCase().replace(/\s+/g, '_'),
-      personalization: aiConfig.personalization,
-      main_keywords: [
-        ...aiConfig.mainKeywords.split(',').map(k => k.trim()).filter(Boolean),
-        ...aiConfig.synonymousKeywords.split(',').map(k => k.trim()).filter(Boolean)
-      ],
-      ai_provider: aiConfig.aiModel
-    };
+    const toArray = (v) =>
+      Array.isArray(v)
+        ? v
+        : String(v || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+    
+    const mainKeywords = [
+      ...toArray(aiConfig.mainKeywords),
+      ...toArray(aiConfig.synonymousKeywords),
+    ];
+
+    if (mainKeywords.length === 0) {
+      toast.warning('Vui lòng nhập ít nhất một từ khóa chính');
+      return;
+    }
+
+    // Nếu có selectedConfigId, gửi config_id, nếu không gửi prompt fields
+    const configData = selectedConfigId
+      ? { 
+          config_id: selectedConfigId, 
+          main_keywords: mainKeywords,
+          ai_provider: selectedConfigModel?.includes('gemini') ? 'gemini' : 'openai'
+        }
+      : {
+          language: aiConfig.language === 'Tiếng Việt' ? 'vi' : aiConfig.language === 'English' ? 'en' : 'zh',
+          tone: aiConfig.tone.toLowerCase().replace(/\s+/g, '_'),
+          personalization: aiConfig.personalization,
+          main_keywords: mainKeywords,
+          ai_provider: aiConfig.aiModel
+        };
     
     onConfirm(configData);
     onClose();
@@ -83,6 +230,71 @@ const AiPopup = ({ isOpen, onClose, onConfirm }) => {
         </div>
         
         <div className="ai-config-form">
+          {/* Chọn Config đã lưu */}
+          <div className="ai-config-field">
+            <label className="ai-config-label">Chọn config đã lưu (tùy chọn)</label>
+            <select
+              className="ai-config-select"
+              value={selectedConfigId}
+              onChange={handleConfigSelect}
+              disabled={isLoadingConfigs}
+            >
+              <option value="">-- Tạo mới --</option>
+              {savedConfigs.map(config => (
+                <option key={config._id} value={config._id}>
+                  {config.is_system_template ? '📋 ' : config.is_default ? '⭐ ' : ''}
+                  {config.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedConfigId && selectedConfig && (
+            <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div>
+                  <strong>Đang sử dụng config: {selectedConfig.name}</strong>
+                  {selectedConfig.character && (
+                    <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: '#dbeafe', color: '#1e40af', borderRadius: '4px', fontSize: '11px' }}>
+                      ✨ Custom Prompt
+                    </span>
+                  )}
+                  {!selectedConfig.character && (
+                    <span style={{ marginLeft: '8px', padding: '2px 6px', backgroundColor: '#f3f4f6', color: '#6b7280', borderRadius: '4px', fontSize: '11px' }}>
+                      📝 Default Prompt
+                    </span>
+                  )}
+                </div>
+                {selectedConfig.character && (
+                  <button
+                    onClick={() => setShowPreviewModal(true)}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Eye size={14} />
+                    Xem prompt
+                  </button>
+                )}
+              </div>
+              {selectedConfig.character && (
+                <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'white', borderRadius: '4px', fontSize: '12px', color: '#374151', fontStyle: 'italic' }}>
+                  <strong>Character:</strong> {selectedConfig.character.substring(0, 100)}
+                  {selectedConfig.character.length > 100 ? '...' : ''}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Ngôn Ngữ */}
           <div className="ai-config-field">
             <label className="ai-config-label">Ngôn Ngữ</label>
@@ -240,6 +452,54 @@ const AiPopup = ({ isOpen, onClose, onConfirm }) => {
             /> */}
           </div>
 
+          {/* Save Config */}
+          {!selectedConfigId && (
+            <div className="ai-config-field">
+              <button
+                type="button"
+                onClick={() => setShowSaveConfig(!showSaveConfig)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#6f42c1',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                💾 {showSaveConfig ? 'Ẩn' : 'Lưu config này'}
+              </button>
+              {showSaveConfig && (
+                <div style={{ marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    className="ai-config-input"
+                    value={configName}
+                    onChange={(e) => setConfigName(e.target.value)}
+                    placeholder="Nhập tên config"
+                    style={{ marginBottom: '8px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveConfig}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    Lưu
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Confirm Button */}
           <div className="ai-config-actions">
             <button 
@@ -262,6 +522,13 @@ const AiPopup = ({ isOpen, onClose, onConfirm }) => {
           </div>
         </div>
       </div>
+
+      <PromptPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        configId={selectedConfig?._id}
+        config={selectedConfig}
+      />
     </div>
   );
 };

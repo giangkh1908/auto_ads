@@ -46,7 +46,7 @@ export const INITIAL_DATA = {
             headline: "Sản phẩm/Dịch vụ chất lượng cao",
             description:
               "Đội ngũ chuyên nghiệp, kinh nghiệm lâu năm trong lĩnh vực.",
-            cta: "LEARN_MORE",
+            cta: "Tìm hiểu thêm",
             destinationUrl: "https://fchat.vn",
           },
         ],
@@ -83,7 +83,7 @@ export const INITIAL_DATA = {
     primaryText: "Khám phá sản phẩm/dịch vụ tuyệt vời của chúng tôi!",
     headline: "Sản phẩm/Dịch vụ chất lượng cao",
     description: "Đội ngũ chuyên nghiệp, kinh nghiệm lâu năm trong lĩnh vực.",
-    cta: "LEARN_MORE",
+    cta: "Tìm hiểu thêm",
     destinationUrl: "https://fchat.vn",
   },
 };
@@ -156,7 +156,7 @@ export const INITIAL_CAMPAIGN_STATE = {
           headline: "Sản phẩm/Dịch vụ chất lượng cao",
           description:
             "Đội ngũ chuyên nghiệp, kinh nghiệm lâu năm trong lĩnh vực.",
-          cta: "LEARN_MORE",
+          cta: "Tìm hiểu thêm",
           destinationUrl: "https://fchat.vn",
         },
       ],

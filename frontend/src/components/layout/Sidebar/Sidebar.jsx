@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, FileText, BarChart3, ChartLine } from 'lucide-react'
+import { Plus, FileText, BarChart3, ChartLine, Archive } from 'lucide-react'
 import './Sidebar.css'
 
 function Sidebar() {
@@ -56,7 +56,7 @@ function Sidebar() {
                             <span className="sidebar-label">{t('sidebar.ads_management')}</span>
                         </button>
                     </li>
-                    <li>
+                    {/* <li>
                         <button 
                             className={`sidebar-item ${currentRoute === 'reports' ? 'active' : ''}`} 
                             onClick={() => navigate('/reports')}
@@ -72,6 +72,15 @@ function Sidebar() {
                         >
                             <span className="sidebar-icon"><ChartLine size={16} /></span>
                             <span className="sidebar-label">{t('sidebar.statistics')}</span>
+                        </button>
+                    </li> */}
+                    <li>
+                        <button 
+                            className={`sidebar-item ${currentRoute === 'archive-ads' ? 'active' : ''}`} 
+                            onClick={() => navigate('/archive-ads')}
+                        >
+                            <span className="sidebar-icon"><Archive size={16} /></span>
+                            <span className="sidebar-label">Lưu trữ</span>
                         </button>
                     </li>
                 </ul>

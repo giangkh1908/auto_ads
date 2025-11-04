@@ -158,41 +158,67 @@ function Control({
     }
   };
 
-  // Add new adset
-  const addAdset = (campaignIndex) => {
-    setCampaignsList((prev) => {
-      // ✅ Deep clone để tránh mutation và shared references
-      const next = JSON.parse(JSON.stringify(prev));
-
-      // Lấy campaign hiện tại
-      const currentCampaign = next[campaignIndex];
-      if (!currentCampaign) return next;
-
-      // ✅ Generate ID cho adset mới
-      const newAdsetId = `temp_adset_${Date.now()}`;
-
-      // ✅ Tạo adset mới với _id và ad có adset_id
-      const newAdset = {
-        ...INITIAL_DATA.adset,
-        id: Date.now(),
-        _id: newAdsetId,
-        name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
-        ads: [
-          {
-            ...INITIAL_DATA.ad,
-            id: Date.now() + 1,
-            name: "Quảng cáo mới",
-            adset_id: newAdsetId, // ✅ Link ad với adset
-          },
-        ],
-      };
-
-      // ✅ Thêm adset vào campaign
-      currentCampaign.adsets = [...(currentCampaign.adsets || []), newAdset];
-
-      return next;
-    });
-  };
+    // Add new adset
+    const addAdset = (campaignIndex) => {
+      setCampaignsList((prev) => {
+        // ✅ Deep clone để tránh mutation và shared references
+        const next = JSON.parse(JSON.stringify(prev));
+  
+        // Lấy campaign hiện tại
+        const currentCampaign = next[campaignIndex];
+        if (!currentCampaign) return next;
+  
+        // ✅ Generate ID cho adset mới
+        const newAdsetId = `temp_adset_${Date.now()}`;
+  
+        // ✅ Tìm adset đầu tiên có Facebook Page để copy
+        const firstAdsetWithPage = (currentCampaign.adsets || []).find(
+          (adset) => adset.facebookPageId || adset.promoted_object?.page_id
+        );
+  
+        // ✅ Copy Facebook Page từ adset đầu tiên hoặc từ campaign
+        const sourceFacebookPageId =
+          firstAdsetWithPage?.facebookPageId ||
+          firstAdsetWithPage?.promoted_object?.page_id ||
+          currentCampaign.facebookPageId;
+        const sourceFacebookPage =
+          firstAdsetWithPage?.facebookPage || currentCampaign.facebookPage;
+        const sourceFacebookPageAvatar =
+          firstAdsetWithPage?.facebookPageAvatar ||
+          currentCampaign.facebookPageAvatar;
+  
+        // ✅ Tạo adset mới với _id và ad có adset_id
+        const newAdset = {
+          ...INITIAL_DATA.adset,
+          id: Date.now(),
+          _id: newAdsetId,
+          name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
+          // ✅ Copy Facebook Page từ adset đầu tiên hoặc campaign
+          ...(sourceFacebookPageId && {
+            facebookPageId: sourceFacebookPageId,
+            facebookPage: sourceFacebookPage,
+            facebookPageAvatar: sourceFacebookPageAvatar,
+            promoted_object: {
+              ...(firstAdsetWithPage?.promoted_object || {}),
+              page_id: sourceFacebookPageId,
+            },
+          }),
+          ads: [
+            {
+              ...INITIAL_DATA.ad,
+              id: Date.now() + 1,
+              name: "Quảng cáo mới",
+              adset_id: newAdsetId, // ✅ Link ad với adset
+            },
+          ],
+        };
+  
+        // ✅ Thêm adset vào campaign
+        currentCampaign.adsets = [...(currentCampaign.adsets || []), newAdset];
+  
+        return next;
+      });
+    };
 
   // Delete adset
   const deleteAdset = (campaignIndex, adsetIndex) => {

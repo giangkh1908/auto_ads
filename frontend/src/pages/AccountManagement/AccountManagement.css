@@ -1,121 +1,132 @@
 /* Layout container - sidebar is now global */
 .account-management-layout {
-    display: block;
-    margin-top: -15px;
+  display: block;
+  margin-top: -15px;
 }
 
 /* Content area */
 .account-management-content {
-    /* leave room for fixed sidebar, center the remaining content */
-    padding: 16px 20px;
-    margin-left: 240px; /* expanded width sync with sidebar */
-    transition: margin-left 0.25s ease;
+  /* leave room for fixed sidebar, center the remaining content */
+  padding: 16px 20px;
+  margin-left: 240px; /* expanded width sync with sidebar */
+  transition: margin-left 0.25s ease;
 }
-.sidebar-collapsed .account-management-content { margin-left: 84px; }
+.sidebar-collapsed .account-management-content {
+  margin-left: 84px;
+}
 
 /* center content area within remaining space */
 .account-management-center {
-    max-width: 1500px;
-    margin: 0 auto;
-    background-color: #DDDDDD;
+  max-width: 1500px;
+  margin: 0 auto;
+  background-color: #dddddd;
 }
 
 .account-management-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .account-management-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
 }
 
 .account-management-header h3 {
-    font-size: 25px;
-    margin-top: 1px;
+  font-size: 25px;
+  margin-top: 1px;
 }
 
 .account-management-header p {
-    font-size: 15px;
-    margin-top: -10px;
+  font-size: 15px;
+  margin-top: -10px;
 }
 
 .search-row {
-    display: flex;
-    gap: 5px;
-    align-items: center;
+  display: flex;
+  gap: 5px;
+  align-items: center;
 }
 
 .btn-find {
-    background-color: #337AB7;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 15px;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    cursor: pointer;
-    color: #ffffff;
-    font-size: 14px;
+  background-color: #337ab7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 14px;
 }
 
 .search-input {
-    width: 340px;
-    padding: 10px 15px;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    font-size: 14px;
+  width: 340px;
+  padding: 10px 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .add-account {
-    background: #10b981;
-    border-color: #10b981;
-    margin-top: 80px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 10px;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    cursor: pointer;
-    color: #ffffff;
-    font-size: 14px;
+  background: #10b981;
+  border-color: #10b981;
+  margin-top: 80px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 10px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 14px;
 }
 
 .table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .table th {
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 15px 20px;
-    text-align: center;
-    font-size: 15px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 15px 20px;
+  text-align: center;
+  font-size: 15px;
 }
 
 .table td {
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 15px 20px;
-    text-align: center;
-    font-size: 13px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 15px;
+  text-align: center;
+  font-size: 13px;
 }
 
 .table thead {
-    background-color: #DDDDDD;
+  background-color: #dddddd;
 }
 
-.status-active {
-    color: #10b981;
+.status-active-account {
+  background-color: #46c298;
+  color: #ffffff;
+  font-weight: 500;
 }
 
-.text-right { text-align: right; }
+.status-inactive-account {
+  background-color: #eaa52f;
+  color: #ffffff;
+  font-weight: 500;
+}
+.text-right {
+  text-align: right;
+}
 
 /* Action buttons styling */
 .action-buttons {

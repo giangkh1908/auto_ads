@@ -3,18 +3,23 @@ import mongoose from "mongoose";
 const adPerformanceSchema = new mongoose.Schema(
   {
     ads_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ads", required: true },
-    date: { type: Date, required: true },
+    set_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsSet", index: true },
+    campaign_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsCampaign", index: true },
+    account_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsAccount", index: true },
+    date: { type: Date, required: true, index: true },
 
     impressions: { type: Number, default: 0 },
     reach: { type: Number, default: 0 },
     clicks: { type: Number, default: 0 },
     spend: { type: Number, default: 0 },
     conversions: { type: Number, default: 0 },
+    frequency: { type: Number, default: 0 },
 
     cpc: { type: Number },
     cpm: { type: Number },
     ctr: { type: Number },
     conversion_rate: { type: Number },
+    cost_per_conversion: { type: Number },
 
     actions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     breakdowns: { type: mongoose.Schema.Types.Mixed, default: {} },
@@ -26,6 +31,9 @@ const adPerformanceSchema = new mongoose.Schema(
 );
 
 adPerformanceSchema.index({ ads_id: 1, date: 1 }, { unique: true });
+adPerformanceSchema.index({ campaign_id: 1, date: 1 });
+adPerformanceSchema.index({ set_id: 1, date: 1 });
+adPerformanceSchema.index({ account_id: 1, date: 1 });
 adPerformanceSchema.index({ date: 1 });
 
 const AdPerformance = mongoose.model("AdPerformance", adPerformanceSchema);

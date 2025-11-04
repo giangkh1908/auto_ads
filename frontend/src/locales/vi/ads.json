@@ -116,7 +116,8 @@
       "age_label": "Tuổi",
       "location_label": "Vị trí",
       "language_label": "Ngôn ngữ",
-      "goal_label": "Mục tiêu"
+      "goal_label": "Mục tiêu",
+      "view": "Xem chi tiết"
     },
     "toasts": {
       "toggle_success": "đã",
@@ -127,6 +128,7 @@
       "delete_partial": "Đã xóa {{successCount}}/{{total}} {{entity}}. Có {{errorCount}} lỗi.",
       "delete_failed": "Xóa thất bại!",
       "archive_success": "Đã lưu trữ {{count}} {{entity}} thành công!",
+      "archive_partial": "Đã lưu trữ {{successCount}}/{{total}} {{entity}}. Có {{errorCount}} lỗi.",
       "archive_failed": "Lưu trữ thất bại, vui lòng thử lại!",
       "refresh_success": "Làm mới dữ liệu thành công!",
       "refresh_error": "Lỗi khi làm mới dữ liệu",
@@ -148,9 +150,13 @@
       "deleting": "Đang xóa {{entity}}",
       "deleting_progress": "Đang xóa {{entity}} {{current}}/{{total}}...",
       "deleted": "Đã xóa {{current}}/{{total}} {{entity}}",
+      "archiving": "Đang lưu trữ {{entity}}",
+      "archiving_progress": "Đang lưu trữ {{entity}} {{current}}/{{total}}...",
+      "archived": "Đã lưu trữ {{current}}/{{total}} {{entity}}",
       "completed": "Hoàn thành!",
       "completed_with_errors": "Hoàn thành với {{errorCount}} lỗi",
-      "delete_failed": "Xóa thất bại"
+      "delete_failed": "Xóa thất bại",
+      "archive_failed": "Lưu trữ thất bại"
     },
     "entity_names": {
       "campaign": "chiến dịch",

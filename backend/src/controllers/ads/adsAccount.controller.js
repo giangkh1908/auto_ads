@@ -6,6 +6,7 @@ import {
   getAdsAccountByExternalId,
   updateAdsAccount,
   softDeleteAdsAccount,
+  hardDeleteAdsAccount,
 } from "../../services/adsAccountService.js";
 import User from "../../models/user.model.js";
 // Thêm imports
@@ -144,15 +145,16 @@ export async function updateAdsAccountCtrl(req, res) {
 
 /**
  * DELETE /api/ads-accounts/:id
+ * Hard delete: xóa thật account khỏi DB, giữ nguyên dữ liệu liên quan (campaigns, adsets, ads)
  */
 export async function deleteAdsAccountCtrl(req, res) {
   try {
-    const doc = await softDeleteAdsAccount(req.params.id);
+    const doc = await hardDeleteAdsAccount(req.params.id);
     if (!doc) return res.status(404).json({ message: "Không tìm thấy tài khoản quảng cáo" });
-    return res.status(200).json({ message: "Đã vô hiệu hóa tài khoản quảng cáo", account: doc });
+    return res.status(200).json({ message: "Đã ngắt kết nối tài khoản quảng cáo", account: doc });
   } catch (err) {
     console.error("DELETE AdsAccount error:", err.message);
-    return res.status(500).json({ message: "Lỗi xóa tài khoản quảng cáo", error: err.message });
+    return res.status(500).json({ message: "Lỗi ngắt kết nối tài khoản quảng cáo", error: err.message });
   }
 }
 

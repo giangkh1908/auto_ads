@@ -66,6 +66,7 @@ const ICON_MAP = {
   Smartphone,
   MessageSquare,
   Phone,
+  Facebook,
 };
 
 function getValue(obj, path) {
@@ -142,9 +143,11 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
   }
 
   const isDisabled =
-    typeof field.disabled === "function"
+  typeof field.disabled === "function"
+    ? field.disabled.length === 2 
       ? field.disabled(adset, mode)
-      : field.disabled;
+      : field.disabled(mode)
+    : field.disabled; 
   const hint =
     typeof field.hint === "function" ? field.hint(adset) : field.hint;
 
@@ -326,9 +329,6 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
       );
     }
     case "datetime": {
-      const lockMsg =
-        typeof field.lockMessage === "string" ? field.lockMessage : null;
-
       const isStartField = String(field.name || "").endsWith("start_time");
       const isEndField = String(field.name || "").endsWith("end_time");
       const startIso = adset.start_time || null;
@@ -337,7 +337,9 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
       const handleDateChange = (newIsoString) => {
         if (isEndField) {
           if (!isEndAtLeastOneDayAfterStart(startIso, newIsoString)) {
-            toast.warning("Thời gian kết thúc phải lớn hơn thời gian bắt đầu ít nhất 1 ngày");
+            toast.warning(
+              "Thời gian kết thúc phải lớn hơn thời gian bắt đầu ít nhất 1 ngày"
+            );
             return;
           }
           handleChange(newIsoString);
@@ -347,10 +349,13 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
         if (isStartField) {
           // set start_time and coerce end_time if needed
           handleChange(newIsoString);
-          const coercedEnd = ensureEndAfterStartPlusOneDay(newIsoString, endIso);
+          const coercedEnd = ensureEndAfterStartPlusOneDay(
+            newIsoString,
+            endIso
+          );
           if (coercedEnd !== endIso) {
             setAdset((prev) => ({ ...prev, end_time: coercedEnd }));
-            toast.info("Đã tự động cập nhật thời gian kết thúc (+1 ngày)");
+            // toast.info("Đã tự động cập nhật thời gian kết thúc (+1 ngày)");
           }
           return;
         }
@@ -359,7 +364,10 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
       };
 
       // Min for end_time input (start_time + 1 day)
-      const minForEnd = isEndField && startIso ? toInputDateTimeLocal(getOneDayAfter(startIso)) : undefined;
+      const minForEnd =
+        isEndField && startIso
+          ? toInputDateTimeLocal(getOneDayAfter(startIso))
+          : undefined;
 
       return (
         <div className="datetime-overlay-wrapper" key={field.name}>
@@ -370,11 +378,9 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
             onChange={(e) => handleDateChange(e.target.value)}
             min={minForEnd}
             disabled={isDisabled}
-            title={isDisabled && lockMsg ? lockMsg : ""}
           />
           <span className="datetime-overlay">
-            {formatDisplay(value) ||
-              new Date().toISOString().split("T")[0] + " 00:00"}
+            {formatDisplay(value) || formatDisplay(new Date().toISOString())}
           </span>
         </div>
       );
@@ -406,7 +412,7 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
                 }
               }}
             />
-            <span>--</span>
+            <span>-</span>
             <input
               type="number"
               className="age-input-adset"
@@ -646,6 +652,8 @@ const AdsetStepInner = forwardRef(
         objective === "ENGAGEMENT" ||
         objective === "LEADS" ||
         objective === "AWARENESS" ||
+        objective === "TRAFFIC" ||
+        objective === "APP_PROMOTION" ||
         objective === "SALES";
 
       if (needsPage && facebookPages.length > 0 && !adset.facebookPageId) {
@@ -807,45 +815,44 @@ const AdsetStepInner = forwardRef(
               >
                 {isHorizontal ? (
                   <>
-                    {section.fields[0] && (!section.fields[0].visibleIf || section.fields[0].visibleIf(adset)) && (
-                      <div className="left-custom">
-                        <div className="section-header-ads">
-                          {IconComp && <IconComp size={16} color="#2563eb" />}
-                          <h3 className="section-title-ads">
-                            {section.fields[0]?.label || section.title}
-                          </h3>
-                          {mode === "edit" && section.fields[0]?.lockMessage && (
-                            <span className="field-locked-badge">
-                              {section.fields[0].lockMessage}
-                            </span>
-                          )}
+                    {section.fields[0] &&
+                      (!section.fields[0].visibleIf ||
+                        section.fields[0].visibleIf(adset)) && (
+                        <div className="left-custom">
+                          <div className="section-header-ads">
+                            {IconComp && <IconComp size={16} color="#2563eb" />}
+                            <h3 className="section-title-ads">
+                              {section.fields[0]?.label || section.title}
+                            </h3>
+                          </div>
+                          <FieldRenderer
+                            field={section.fields[0]}
+                            adset={adset}
+                            setAdset={setAdset}
+                            objective={objective}
+                            mode={mode}
+                          />
                         </div>
-                        <FieldRenderer
-                          field={section.fields[0]}
-                          adset={adset}
-                          setAdset={setAdset}
-                          objective={objective}
-                          mode={mode}
-                        />
-                      </div>
-                    )}
-                    {section.fields[1] && (!section.fields[1].visibleIf || section.fields[1].visibleIf(adset)) && (
-                      <div className="right-custom">
-                        <div className="section-header-ads">
-                          {IconComp && <IconComp size={16} color="#2563eb" />}
-                          <h3 className="section-title-ads">
-                            {section.fields[1]?.label || ""}
-                          </h3>
+                      )}
+                    {section.fields[1] &&
+                      (!section.fields[1].visibleIf ||
+                        section.fields[1].visibleIf(adset)) && (
+                        <div className="right-custom">
+                          <div className="section-header-ads">
+                            {IconComp && <IconComp size={16} color="#2563eb" />}
+                            <h3 className="section-title-ads">
+                              {section.fields[1]?.label || ""}
+                            </h3>
+                          </div>
+                          <FieldRenderer
+                            field={section.fields[1]}
+                            adset={adset}
+                            setAdset={setAdset}
+                            objective={objective}
+                            mode={mode}
+                          />
                         </div>
-                        <FieldRenderer
-                          field={section.fields[1]}
-                          adset={adset}
-                          setAdset={setAdset}
-                          objective={objective}
-                          mode={mode}
-                        />
-                      </div>
-                    )}
+                      )}
                   </>
                 ) : (
                   <>

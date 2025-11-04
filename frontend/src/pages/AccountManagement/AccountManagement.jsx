@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Archive, Trash2, Play, Pause } from "lucide-react
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup";
 
 function AccountManagement() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   // UI states
@@ -128,22 +128,18 @@ function AccountManagement() {
   /** Chuẩn hóa dữ liệu hiển thị */
   const accounts = useMemo(() => {
     return (items || []).map((acc, idx) => {
-      const fbAccountStatus = Number(acc?.account_status);
-      const fbStatusLabel =
-        fbAccountStatus === 1
-          ? t('account_management.status_active')
-          : fbAccountStatus === 2
-          ? t('account_management.status_disabled')
-          : fbAccountStatus === 3
-          ? t('account_management.status_unverified')
-          : t('account_management.status_inactive');
-
       const accountId = acc.external_id;
       const stats = accountStats[accountId] || {
         campaigns: 0,
         adsets: 0,
         ads: 0,
       };
+
+      // Lấy status từ DB và hiển thị trực tiếp
+      const internalStatus = acc.status || 'ACTIVE';
+      const displayStatus = internalStatus === 'ACTIVE' 
+        ? t('account_management.status_active')
+        : t('account_management.status_inactive');
 
       return {
         id: acc._id || idx,
@@ -152,13 +148,14 @@ function AccountManagement() {
         campaignCount: stats.campaigns,
         adsetCount: stats.adsets,
         adCount: stats.ads,
-        status: fbStatusLabel,
+        status: displayStatus,
+        internalStatus: internalStatus,
         updatedAt: new Date(
           acc.last_updated_at || acc.updated_at || acc.created_at || Date.now()
-        ).toLocaleString("vi-VN"),
+        ).toLocaleString(i18n.language === 'en' ? 'en-US' : 'vi-VN'),
       };
     });
-  }, [items, accountStats]);
+  }, [items, accountStats, t, i18n.language]);
 
   /** Tìm kiếm */
   const onSearch = () => {
@@ -173,19 +170,19 @@ function AccountManagement() {
       
       switch (action) {
         case 'activate':
-          await axiosInstance.patch(`/api/ads-accounts/${accountId}/activate`);
+          await axiosInstance.patch(`/api/ads-accounts/${accountId}`, { status: 'ACTIVE' });
           toast.success(t('account_management.activate_success'), {
             description: t('account_management.activate_description', { name: accountName })
           });
           break;
         case 'deactivate':
-          await axiosInstance.patch(`/api/ads-accounts/${accountId}/deactivate`);
+          await axiosInstance.patch(`/api/ads-accounts/${accountId}`, { status: 'INACTIVE' });
           toast.success(t('account_management.deactivate_success'), {
             description: t('account_management.deactivate_description', { name: accountName })
           });
           break;
         case 'archive':
-          await axiosInstance.patch(`/api/ads-accounts/${accountId}/archive`);
+          await axiosInstance.patch(`/api/ads-accounts/${accountId}`, { status: 'INACTIVE' });
           toast.success(t('account_management.archive_success'), {
             description: t('account_management.archive_description', { name: accountName })
           });
@@ -225,13 +222,13 @@ function AccountManagement() {
       },
       deactivate: {
         type: 'deactivate',
-        title: t('account_management.confirm_disconnect_title'),
-        message: t('account_management.confirm_disconnect_message', { name: accountName })
+        title: t('account_management.confirm_deactivate_title'),
+        message: t('account_management.confirm_deactivate_message', { name: accountName })
       },
       archive: {
         type: 'archive',
-        title: t('account_management.confirm_disconnect_title'),
-        message: t('account_management.confirm_disconnect_message', { name: accountName })
+        title: t('account_management.confirm_archive_title'),
+        message: t('account_management.confirm_archive_message', { name: accountName })
       },
       disconnect: {
         type: 'delete',
@@ -342,17 +339,17 @@ function AccountManagement() {
                       <td className="text-right">{acc.campaignCount}</td>
                       <td className="text-right">{acc.adsetCount}</td>
                       <td className="text-right">{acc.adCount}</td>
-                      <td className="status-active">{acc.status}</td>
+                      <td className={acc.internalStatus === 'ACTIVE' ? 'status-active-account' : 'status-inactive-account'}>{acc.status}</td>
                       <td>{acc.updatedAt}</td>
                       <td>
                         <div className="action-buttons">
-                          {/* Hiển thị button dựa trên trạng thái */}
-                          {acc.status === t('account_management.status_active') ? (
+                          {/* Hiển thị button dựa trên trạng thái internal (ACTIVE/INACTIVE) */}
+                          {acc.internalStatus === 'ACTIVE' ? (
                             <button 
                               className="btn-inactive-account"
                               onClick={() => showConfirmDialog(acc.id, acc.name, 'deactivate')}
                               disabled={loading}
-                              title={t('account_management.disconnect')}
+                              title={t('account_management.deactivate')}
                             >
                               <Pause size={15} />
                             </button>
@@ -371,7 +368,7 @@ function AccountManagement() {
                             className="btn-archive-account"
                             onClick={() => showConfirmDialog(acc.id, acc.name, 'archive')}
                             disabled={loading}
-                            title={t('account_management.disconnect')}
+                            title={t('account_management.archive')}
                           >
                             <Archive size={15} />
                           </button>

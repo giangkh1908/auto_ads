@@ -127,6 +127,7 @@ function FooterWizard({
           )}
           {wizardStep === 4 && (
             <>
+            {!(campaign?.status === "ARCHIVED" || adset?.status === "ARCHIVED" || ad?.status === "ARCHIVED") && (
               <button
                 className="btn-post"
                 onClick={handlePublish}
@@ -140,6 +141,7 @@ function FooterWizard({
                   ? "Cập nhật"
                   : "Đăng quảng cáo"}
               </button>
+            )}
             </>
           )}
         </>

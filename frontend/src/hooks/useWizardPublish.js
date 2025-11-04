@@ -9,6 +9,8 @@ import {
   FB_OBJECTIVE_MAP,
   FB_ADSET_DEFAULTS_BY_OBJECTIVE,
 } from "../constants/wizardConstants";
+import { convertCountryNamesToCodes, convertLanguageCodeToLocaleId } from "../utils/locationUtils";
+import { convertCTAToFacebookType } from "../utils/ctaUtils";
 import axiosInstance from "../utils/axios";
 
 /**
@@ -137,6 +139,7 @@ export function useFlexibleWizardPublish() {
     campaignsList,
     selectedAccountId,
     onSuccess,
+    onError, // ✅ Callback khi publish thất bại (để refresh data)
     onClose,
     updateProgress,
   }) => {
@@ -311,6 +314,9 @@ export function useFlexibleWizardPublish() {
               description: fbErrorMsg,
             });
             
+            // ✅ Refresh data để hiển thị items FAILED
+            onError?.();
+            
             // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
             setTimeout(() => {
               setLoading(false);
@@ -353,6 +359,9 @@ export function useFlexibleWizardPublish() {
           description: "Có lỗi xảy ra khi tạo quảng cáo",
         });
       }
+
+      // ✅ Refresh data để hiển thị items FAILED
+      onError?.();
 
       // Đóng wizard sau khi hiển thị lỗi
       setTimeout(() => {
@@ -562,6 +571,7 @@ export function useFlexibleWizardPublish() {
     campaignsList,
     selectedAccountId,
     onSuccess,
+    onError, // ✅ Callback khi update thất bại (để refresh data)
     onClose,
     updateProgress,
   }) => {
@@ -615,9 +625,10 @@ export function useFlexibleWizardPublish() {
       const payload = {
         ad_account_id: selectedAccountId,
         campaignsList: campaignsList.map((campaign) => ({
-          _id: campaign._id, // MongoDB _id để update
-          external_id: campaign.external_id, // Facebook ID để update
-          draftId: campaign.draftId,
+          // ✅ CHỈ GỬI _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
+          ...(campaign._id && !isTempId(campaign._id) && isValidMongoId(campaign._id) && { _id: campaign._id }),
+          ...(campaign.external_id && { external_id: campaign.external_id }),
+          // ✅ buildCampaignPayload đã filter draftId (temp ID)
           ...buildCampaignPayload(campaign, selectedAccountId),
           adsets: (campaign.adsets || []).map((adset) => {
             console.log(
@@ -635,14 +646,14 @@ export function useFlexibleWizardPublish() {
             console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
 
             return {
-              _id: adset._id,
-              external_id: adset.external_id,
-              draftId: adset.draftId,
+              // ✅ CHỈ GỬI external_id NẾU CÓ (buildAdsetPayload đã handle _id và draftId)
+              ...(adset.external_id && { external_id: adset.external_id }),
+              // ✅ buildAdsetPayload đã filter _id và draftId (temp ID)
               ...buildAdsetPayload(adset, campaign),
               ads: filteredAds.map((ad) => ({
-                _id: ad._id,
-                external_id: ad.external_id,
-                draftId: ad.draftId,
+                // ✅ CHỈ GỬI external_id NẾU CÓ (buildAdPayload đã handle _id và draftId)
+                ...(ad.external_id && { external_id: ad.external_id }),
+                // ✅ buildAdPayload đã filter _id và draftId (temp ID)
                 ...buildAdPayload(ad),
                 creative: buildCreativePayload(ad, campaign, adset),
               })),
@@ -788,6 +799,9 @@ export function useFlexibleWizardPublish() {
         });
       }
 
+      // ✅ Refresh data để hiển thị items FAILED
+      onError?.();
+
       // Đóng wizard sau khi hiển thị lỗi
       setTimeout(() => {
         setLoading(false);
@@ -810,6 +824,45 @@ export function useFlexibleWizardPublish() {
 // 🛠️ HELPER FUNCTIONS FOR PAYLOAD BUILDING
 // ========================================
 
+// Helper function để check xem ID có phải temp ID không
+function isTempId(id) {
+  if (!id || typeof id !== 'string') return false;
+  return id.startsWith('temp_');
+}
+
+// Helper function để check xem ID có phải MongoDB ObjectId hợp lệ không
+function isValidMongoId(id) {
+  if (!id) return false;
+  // MongoDB ObjectId là chuỗi 24 ký tự hex
+  if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) return true;
+  // Nếu là ObjectId object
+  if (typeof id === 'object' && id.toString) return true;
+  return false;
+}
+
+// Helper function để lấy draftId hợp lệ
+// ✅ CHỈ SET draftId KHI:
+// 1. Đã có external_id (đã publish) → có thể update draft
+// 2. HOẶC _id là MongoDB ObjectId hợp lệ (đã lưu trong DB)
+function getValidDraftId(entity) {
+  if (!entity) return null;
+  
+  // ✅ Item đã publish → có thể có draftId để update
+  const hasExternalId = entity.external_id != null && entity.external_id !== '';
+  
+  // ✅ Item đã lưu trong DB (có MongoDB ObjectId hợp lệ)
+  const validId = entity._id && !isTempId(entity._id) && isValidMongoId(entity._id);
+  const validIdAlt = entity.id && !isTempId(entity.id) && isValidMongoId(entity.id);
+  
+  // ✅ CHỈ SET draftId NẾU item đã publish HOẶC đã lưu trong DB
+  if (hasExternalId || validId || validIdAlt) {
+    return entity._id || entity.id || null;
+  }
+  
+  // ❌ Item mới (temp ID) → không set draftId → backend sẽ tạo mới
+  return null;
+}
+
 /**
  * Xây dựng payload cho Campaign
  */
@@ -818,12 +871,14 @@ function buildCampaignPayload(campaign) {
     FB_OBJECTIVE_MAP[campaign.objective] || "OUTCOME_ENGAGEMENT";
 
   return {
+    draftId: getValidDraftId(campaign), // ✅ FILTER TEMP ID
     name: campaign.name,
     objective: fbObjective,
     status: campaign.status,
     special_ad_categories: ["NONE"],
-    page_id: campaign.facebookPageId,
-    page_name: campaign.facebookPage,
+    // ✅ XÓA page_id và page_name từ campaign (đã di chuyển sang adset)
+    // page_id: campaign.facebookPageId,
+    // page_name: campaign.facebookPage,
     daily_budget: campaign.daily_budget,
     lifetime_budget: campaign.lifetime_budget,
     start_time: campaign.start_time,
@@ -845,7 +900,9 @@ function buildAdsetPayload(adset, campaign) {
   };
 
   return {
-    _id: adset._id,
+    // ✅ CHỈ SET _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
+    ...(adset._id && !isTempId(adset._id) && isValidMongoId(adset._id) && { _id: adset._id }),
+    draftId: getValidDraftId(adset), // ✅ FILTER TEMP ID
     name: adset.name,
     daily_budget: adset.budgetAmount,
     status: "PAUSED",
@@ -853,7 +910,20 @@ function buildAdsetPayload(adset, campaign) {
     targeting: {
       age_min: adset.targeting.ageMin || 18,
       age_max: adset.targeting.ageMax || 65,
-      geo_locations: { countries: ["VN"] },
+      // ✅ Lấy location từ adset.targeting.locations và convert sang country codes
+      geo_locations: {
+        countries: convertCountryNamesToCodes(
+          adset.targeting?.locations || ["Viet Nam"]
+        ),
+      },
+      // ✅ THÊM: Gender và language
+      ...(adset.targeting?.gender && adset.targeting.gender !== "all" && {
+        genders: adset.targeting.gender === "male" ? [1] : adset.targeting.gender === "female" ? [2] : [],
+      }),
+      ...(adset.targeting?.language && adset.targeting.language !== "all" && (() => {
+        const localeId = convertLanguageCodeToLocaleId(adset.targeting.language);
+        return localeId ? { locales: [localeId] } : {};
+      })()),
       targeting_automation: {
         advantage_audience: 0,
       },
@@ -871,7 +941,11 @@ function buildAdsetPayload(adset, campaign) {
     bid_amount: adset.bid_amount,
     ...(adset.promoted_object && { promoted_object: adset.promoted_object }),
     ...(adset.pixel_id && { pixel_id: adset.pixel_id }),
-    ...(adset.destination_type && { destination_type: adset.destination_type }),
+    ...(adset.traffic_destination && { traffic_destination: adset.traffic_destination }),
+    ...(adset.destination_type && !adset.traffic_destination && { destination_type: adset.destination_type }),
+    // ✅ THÊM page_id và page_name từ adset (đã di chuyển từ campaign)
+    ...(adset.facebookPageId && { page_id: adset.facebookPageId }),
+    ...(adset.facebookPage && { page_name: adset.facebookPage }),
   };
 }
 
@@ -905,7 +979,7 @@ function buildCreativePayload(ad, campaign, adset) {
         name: ad.headline,
         description: ad.description,
         call_to_action: {
-          type: "MESSAGE_PAGE",
+          type: convertCTAToFacebookType(ad.cta),
           value: { link: ad.destinationUrl || "https://fchat.vn" },
         },
         ...(ad.mediaUrl && { picture: ad.mediaUrl }),
@@ -919,6 +993,7 @@ function buildCreativePayload(ad, campaign, adset) {
  */
 function buildAdPayload(ad) {
   return {
+    draftId: getValidDraftId(ad), // ✅ FILTER TEMP ID
     adset_id: ad.adset_id,
     name: ad.name,
     status: "PAUSED",

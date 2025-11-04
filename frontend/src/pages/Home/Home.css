@@ -109,7 +109,7 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 36px;
+  padding: 10px 25px;
   background: transparent;
   color: #ffffff;
   border: 1px solid #ffffff;
@@ -139,6 +139,14 @@
 
 .cta-button-home:active {
   transform: translateY(-1px) scale(1.02);
+}
+
+.cta-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .hero-visual {
@@ -184,6 +192,7 @@
   width: 100%;
   overflow: hidden;
   line-height: 0;
+  transform: scaleY(-1);
 }
 
 .wave-divider svg {
@@ -200,7 +209,7 @@
 .wave-divider.bottom {
   bottom: auto;
   top: 0;
-  transform: rotate(180deg);
+  transform: scaleX(-1);
 }
 
 /* Platform Section */

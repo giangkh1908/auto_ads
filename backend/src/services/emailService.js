@@ -97,3 +97,37 @@ export const sendPasswordResetEmail = async (email, name, resetToken) => {
         throw new Error('Không thể gửi email đặt lại mật khẩu');
     }
 };
+
+export const sendInvitationEmail = async (email, token) => {
+  try {
+    const transporter = createTransporter();
+
+    const inviteUrl = `${process.env.FRONTEND_URL}`;
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: "Lời mời tham gia cửa hàng",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">🎉 Bạn được mời tham gia cửa hàng!</h2>
+          <p>Bạn vừa được mời làm nhân viên trong hệ thống của chúng tôi.</p>
+          <p>Vui lòng click vào link bên dưới để đăng nhập hoặc tạo tài khoản và xác nhận lời mời:</p>
+          <div style="text-align: center; margin: 30px 0;">
+              <a href="${inviteUrl}"
+                style="background-color: #28a745; color: white; padding: 12px 30px;
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+                Chấp nhận lời mời
+              </a>
+          </div>
+          <p>Hoặc copy link sau: <br><span style="word-break: break-all; color: #555;">${inviteUrl}</span></p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Error sending invitation email:", error);
+    throw new Error("Không thể gửi email mời nhân viên");
+  }
+};

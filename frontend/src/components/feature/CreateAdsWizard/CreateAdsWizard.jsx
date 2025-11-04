@@ -35,6 +35,8 @@ import { FB_OBJECTIVE_MAP, ADSET_CONFIG_BY_OBJECTIVE } from "../../../constants/
 function CreateAdsWizard({
   onClose,
   onSuccess = null,
+  onError = null, // ✅ Callback khi publish thất bại (để refresh data)
+  onDraftSaved = null, // ✅ Callback cho draft (chỉ fetch từ DB, không sync Facebook)
   mode = "create",
   editingItem = null,
   selectedAccountId = null,
@@ -254,18 +256,37 @@ function CreateAdsWizard({
       return sum + 1 + adsetsCount + adsCount;
     }, 0);
 
-    // ✅ Check xem có item nào có status DRAFT không
+    // ✅ Check xem có item nào có status DRAFT hoặc FAILED (chưa publish) không
+    // FAILED items: 
+    // - Không có external_id → treat như CREATE (DRAFT)
+    // - Có external_id → treat như UPDATE (đã publish nhưng thất bại)
     const hasDraftStatus = finalCampaignsList.some(
-      (camp) =>
-        camp.status === "DRAFT" ||
-        camp.adsets?.some(
-          (adset) =>
-            adset.status === "DRAFT" ||
-            adset.ads?.some((ad) => ad.status === "DRAFT")
-        )
+      (camp) => {
+        const campNeedsCreate = 
+          camp.status === "DRAFT" || 
+          (camp.status === "FAILED" && !camp.external_id);
+        
+        const hasAdsetNeedsCreate = camp.adsets?.some(
+          (adset) => {
+            const adsetNeedsCreate = 
+              adset.status === "DRAFT" || 
+              (adset.status === "FAILED" && !adset.external_id);
+            
+            const hasAdNeedsCreate = adset.ads?.some(
+              (ad) => ad.status === "DRAFT" || (ad.status === "FAILED" && !ad.external_id)
+            );
+            
+            return adsetNeedsCreate || hasAdNeedsCreate;
+          }
+        );
+        
+        return campNeedsCreate || hasAdsetNeedsCreate;
+      }
     );
 
     // ✅ Quyết định action dựa trên status, không chỉ mode
+    // CREATE: mode === "create" HOẶC có items DRAFT/FAILED (không có external_id)
+    // UPDATE: mode === "update" VÀ tất cả items đã publish (có external_id hoặc FAILED có external_id)
     const shouldPublish = mode === "create" || hasDraftStatus;
 
     // ✅ Mở progress popup
@@ -280,21 +301,23 @@ function CreateAdsWizard({
     // ✅ Check status để gọi đúng function
     if (shouldPublish) {
       console.log(
-        "➕ Calling handleFlexiblePublish (CREATE or DRAFT → ACTIVE)"
+        "➕ Calling handleFlexiblePublish (CREATE: DRAFT/FAILED without external_id → ACTIVE)"
       );
       handleFlexiblePublish({
         campaignsList: finalCampaignsList,
         selectedAccountId,
         onSuccess,
+        onError, // ✅ Truyền callback để refresh data khi thất bại
         onClose,
         updateProgress,
       });
     } else {
-      console.log("🔄 Calling handleFlexibleUpdate (UPDATE existing ACTIVE)");
+      console.log("🔄 Calling handleFlexibleUpdate (UPDATE: existing ACTIVE or FAILED with external_id)");
       handleFlexibleUpdate({
         campaignsList: finalCampaignsList,
         selectedAccountId,
         onSuccess,
+        onError, // ✅ Truyền callback để refresh data khi thất bại
         onClose,
         updateProgress,
       });
@@ -359,6 +382,12 @@ function CreateAdsWizard({
 
       toast.success("Đã lưu nháp thành công!");
       setShowSaveDraftPopup(false);
+      
+      // ✅ GỌI onDraftSaved() ĐỂ CHỈ FETCH LẠI TỪ DB (KHÔNG SYNC FACEBOOK)
+      if (onDraftSaved) {
+        onDraftSaved();
+      }
+      
       onClose();
     } catch (error) {
       console.error("Error saving draft:", error);

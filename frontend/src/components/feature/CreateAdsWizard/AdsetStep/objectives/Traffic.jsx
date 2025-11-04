@@ -66,7 +66,7 @@ const BILLING_EVENT_LABELS = {
             return events.map(e => ({ value: e, label: BILLING_EVENT_LABELS[e] || e }));
           },
           default: "IMPRESSIONS",
-          disabled: (adset) => !adset.optimization_goal,
+          // disabled: (adset) => !adset.optimization_goal,
           hint: (adset) => !adset.optimization_goal ? "Vui lòng chọn mục tiêu tối ưu hóa trước" : null,
           validate: (value) => {
             if (!value) return "Thiếu sự kiện tính phí";
@@ -87,8 +87,8 @@ const BILLING_EVENT_LABELS = {
           options: [
             { value: "WEBSITE", label: "Trang web", icon: "Globe" },
             { value: "APP", label: "Ứng dụng", icon: "Smartphone" },
-            { value: "MESSAGING", label: "Ứng dụng nhắn tin", icon: "MessageSquare" },
-            { value: "CALLS", label: "Cuộc gọi", icon: "Phone" },
+            { value: "MESSENGER", label: "Messenger", icon: "MessageSquare" },
+            { value: "FACEBOOK_PAGE", label: "Trang Facebook", icon: "Facebook" },
           ],
           default: "WEBSITE",
         },
@@ -111,7 +111,7 @@ const BILLING_EVENT_LABELS = {
           name: "promoted_object.page_id",
           label: "Page ID",
           placeholder: "Nhập Page ID",
-          visibleIf: (adset) => adset.traffic_destination === "MESSAGING",
+          visibleIf: (adset) => adset.traffic_destination === "MESSENGER",
         },
         {
           type: "input",
@@ -136,6 +136,7 @@ const BILLING_EVENT_LABELS = {
             { value: "lifetime", label: "Ngân sách tổng" },
           ],
           default: "daily",
+          disabled: (adset, mode) => mode === "edit" && adset.external_id,
         },
         {
           type: "money",
@@ -159,7 +160,7 @@ const BILLING_EVENT_LABELS = {
           type: "datetime",
           name: "start_time",
           label: "Ngày bắt đầu",
-          disabled: (mode) => mode === "edit",
+          disabled: (adset, mode) => mode === "edit" && adset?.external_id,
           lockMessage: "🔒 Không thể sửa",
         },
         {

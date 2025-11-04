@@ -116,7 +116,8 @@
       "age_label": "Age",
       "location_label": "Location",
       "language_label": "Language",
-      "goal_label": "Goal"
+      "goal_label": "Goal",
+      "view": "View details"
     },
     "toasts": {
       "toggle_success": "has been",
@@ -127,6 +128,7 @@
       "delete_partial": "Deleted {{successCount}}/{{total}} {{entity}}. {{errorCount}} error(s).",
       "delete_failed": "Delete failed!",
       "archive_success": "Successfully archived {{count}} {{entity}}!",
+      "archive_partial": "Archived {{successCount}}/{{total}} {{entity}}. {{errorCount}} error(s).",
       "archive_failed": "Archive failed, please try again!",
       "refresh_success": "Data refreshed successfully!",
       "refresh_error": "Error refreshing data",
@@ -148,9 +150,13 @@
       "deleting": "Deleting {{entity}}",
       "deleting_progress": "Deleting {{entity}} {{current}}/{{total}}...",
       "deleted": "Deleted {{current}}/{{total}} {{entity}}",
+      "archiving": "Archiving {{entity}}",
+      "archiving_progress": "Archiving {{entity}} {{current}}/{{total}}...",
+      "archived": "Archived {{current}}/{{total}} {{entity}}",
       "completed": "Completed!",
       "completed_with_errors": "Completed with {{errorCount}} error(s)",
-      "delete_failed": "Delete failed"
+      "delete_failed": "Delete failed",
+      "archive_failed": "Archive failed"
     },
     "entity_names": {
       "campaign": "campaign",

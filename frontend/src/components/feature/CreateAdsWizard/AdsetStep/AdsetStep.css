@@ -166,16 +166,6 @@
 
 /* File: frontend/src/components/feature/CreateAdsWizard/AdsetStep/AdsetStep.css */
 
-.field-locked-badge {
-  margin-left: 8px;
-  padding: 2px 8px;
-  font-size: 11px;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 4px;
-  font-weight: 500;
-}
 
 .datetime-input-ads:disabled {
   background-color: #f3f4f6;
@@ -212,7 +202,27 @@
 
 .traffic-option.selected {
   border-color: #2563eb;
+  background-color: #eff6ff; /* ✅ Background color khi selected */
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* ✅ Checkmark icon khi selected */
+.traffic-option.selected::after {
+  content: "✓";
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  color: #2563eb;
+  font-size: 1rem;
+  font-weight: bold;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #dbeafe;
+  border-radius: 50%;
+  line-height: 1;
 }
 
 .traffic-option input[type="radio"] {
@@ -228,6 +238,7 @@
   gap: 0.75rem;
   font-weight: 500;
   color: #374151;
+  flex: 1; /* ✅ Để checkmark ở bên phải */
 }
 
 .traffic-option.selected .traffic-option-content {

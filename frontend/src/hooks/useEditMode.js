@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import axiosInstance from "../utils/axios";
 import { useToast } from "./useToast";
 import { extractObjectId, findIdInObject } from "../utils/wizardUtils";
+import { convertCountryCodesToNames, convertLocaleIdToLanguageCode } from "../utils/locationUtils";
+import { convertFacebookTypeToCTA } from "../utils/ctaUtils";
 
 /**
  * Custom hook để xử lý logic edit mode
@@ -179,7 +181,9 @@ export function useEditMode({
                 primaryText: creative?.object_story_spec?.link_data?.message || "Hãy giới thiệu về nội dung quảng cáo của bạn",
                 headline: creative?.object_story_spec?.link_data?.name || "Chat trong Messenger",
                 description: creative?.object_story_spec?.link_data?.description || "Khám phá dịch vụ của chúng tôi ngay!",
-                cta: creative?.object_story_spec?.link_data?.call_to_action?.type || "Gửi tin nhắn",
+                cta: creative?.object_story_spec?.link_data?.call_to_action?.type 
+                  ? convertFacebookTypeToCTA(creative.object_story_spec.link_data.call_to_action.type)
+                  : "Tìm hiểu thêm",
                 destinationUrl: creative?.object_story_spec?.link_data?.link || "https://fchat.vn",
                 creative: creative ? {
                   name: creative.name,
@@ -196,10 +200,11 @@ export function useEditMode({
             name: adsetDbData.name || "Nhóm quảng cáo mới",
             status: adsetDbData.status,
             // Prefill Facebook Page info (for AdsetStep selector)
-            facebookPage: campaignData?.page_name || null,
-            facebookPageId: campaignData?.page_id || null,
-            facebookPageAvatar: campaignData?.page_id
-              ? `https://graph.facebook.com/${campaignData.page_id}/picture?type=square`
+            // ✅ LẤY TỪ ADSET THAY VÌ CAMPAIGN (ưu tiên adset, fallback campaign để backward compatibility)
+            facebookPage: adsetDbData?.page_name || campaignData?.page_name || null,
+            facebookPageId: adsetDbData?.page_id || promotedObject.page_id || campaignData?.page_id || null,
+            facebookPageAvatar: (adsetDbData?.page_id || promotedObject.page_id || campaignData?.page_id)
+              ? `https://graph.facebook.com/${adsetDbData?.page_id || promotedObject.page_id || campaignData?.page_id}/picture?type=square`
               : null,
             budgetType: adsetDbData.daily_budget ? "daily" : "lifetime",
             budgetAmount: adsetDbData.daily_budget || adsetDbData.lifetime_budget,
@@ -216,10 +221,24 @@ export function useEditMode({
                 : "",
             },
             placement: "AUTOMATIC",
-            targeting: adsetDbData.targeting || {
-              location: "Việt Nam",
-              ageMin: 18,
-              ageMax: 65,
+            targeting: {
+              // ✅ Map geo_locations.countries từ DB (country codes) sang locations (country names) cho FE
+              locations: adsetDbData.targeting?.geo_locations?.countries
+                ? convertCountryCodesToNames(adsetDbData.targeting.geo_locations.countries)
+                : ["Viet Nam"],
+              ageMin: adsetDbData.targeting?.age_min || 18,
+              ageMax: adsetDbData.targeting?.age_max || 65,
+              // ✅ THÊM: Map gender và language từ DB
+              gender: adsetDbData.targeting?.genders?.[0] === 1 
+                    ? "male" 
+                    : adsetDbData.targeting?.genders?.[0] === 2 
+                    ? "female" 
+                    : adsetDbData.targeting?.gender || "all",
+              language: adsetDbData.targeting?.locales?.[0] 
+                    ? (convertLocaleIdToLanguageCode(adsetDbData.targeting.locales[0]) || adsetDbData.targeting.locales[0])
+                    : adsetDbData.targeting?.language || "vi",
+              // Preserve other targeting fields if any
+              ...(adsetDbData.targeting || {}),
             },
             // Optimization / Billing / Conversion settings
             optimization_goal: adsetDbData.optimization_goal,
@@ -227,7 +246,8 @@ export function useEditMode({
             billing_event: adsetDbData.billing_event,
             traffic_destination: adsetDbData.traffic_destination || adsetDbData.destination_type || null,
             promoted_object: {
-              page_id: promotedObject.page_id ?? campaignData?.page_id ?? null,
+              // ✅ ƯU TIÊN: Lấy từ adset.page_id trước, sau đó promoted_object.page_id, cuối cùng campaign.page_id
+              page_id: adsetDbData?.page_id || promotedObject.page_id || campaignData?.page_id || null,
               pixel_id: promotedObject.pixel_id ?? null,
               custom_event_type: promotedObject.custom_event_type ?? null,
               application_id: promotedObject.application_id ?? null,

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { Plus, Edit, Play, Pause, Star } from "lucide-react";
+import { Plus, Edit, Play, Pause, Star, MapPin, Check, ArrowRight} from "lucide-react";
 import { ROUTES } from "../../constants/app.constants";
 import "./Shop.css";
+import { STORAGE_KEYS } from '../../constants/app.constants';
 
 function MyShop() {
   const { t } = useTranslation();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab] = useState("info");
+  const [currentUser, setCurrentUser] = useState(true);
+  const currentShop = shops.find((s) => s.isCurrent);
 
   // Modal states
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -33,56 +36,135 @@ function MyShop() {
   });
 
   useEffect(() => {
-    const loadShops = async () => {
-      try {
-        setLoading(true);
-        // Mock data - thay thế bằng API call thực tế
-        const mockShops = [
-          {
-            id: 1,
-            shopName: "Fashion Store",
-            package: "Premium",
-            employeeCount: 5,
-            pageCount: 3,
-            role: "Owner",
-            expired: "2024-12-31",
-            status: "Active",
-          },
-          {
-            id: 2,
-            shopName: "Tech Shop",
-            package: "Basic",
-            employeeCount: 2,
-            pageCount: 1,
-            role: "Admin",
-            expired: "2024-11-15",
-            status: "Inactive",
-          },
-          {
-            id: 3,
-            shopName: "Beauty Store",
-            package: "Pro",
-            employeeCount: 8,
-            pageCount: 5,
-            role: "Manager",
-            expired: "2025-01-20",
-            status: "Active",
-          },
-        ];
-        setShops(mockShops);
-      } catch (e) {
-        console.error("Load shops error:", e);
-      } finally {
-        setLoading(false);
-      }
+    const fetchUser = async () => {
+      const res = await fetch("http://localhost:5001/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+        }
+      });
+      const data = await res.json();
+      setCurrentUser(data.data.user);
     };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
     loadShops();
   }, []);
+
+  const loadShops = async () => {
+    try {
+      setLoading(true);
+
+      const res = await fetch(`http://localhost:5001/api/shops/owner`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+        },
+      });
+
+      const data = await res.json();
+
+      console.log("🔹 API response:", data);
+
+      if (data.success && Array.isArray(data.data)) {
+        const formatted = data.data.map((shop) => {
+          const permissions = shop.user_role?.permissions || [];
+          const canUpdate = permissions.some(
+            (perm) =>
+              perm.module === "shop" && perm.actions.includes("update_details")
+          );
+          const canViewEmployee = permissions.some(
+            (perm) =>
+              perm.module === "employee" && perm.actions.includes("view")
+          );
+
+          return {
+            id: shop._id,
+            shopName: shop.shop_name || "Unnamed Shop",
+            package: shop.package || "Basic",
+            employeeCount: shop.employee_count || 0,
+            pageCount: shop.page_count || 0,
+            industry: shop.industry || "Other",
+            isCurrent: shop.is_current || false,
+            role: shop.user_role.role_name || "Owner",
+            email: shop.owner_id?.email || "",
+            phone: shop.owner_id?.phone || "",
+            expired: shop.expired_at
+              ? new Date(shop.expired_at).toISOString().slice(0, 10)
+              : "N/A",
+            status: shop.status || "Active",
+            canUpdate,
+            canViewEmployee,
+          };
+        });
+
+        setShops(formatted);
+      } else {
+        console.error("Failed to load shops:", data.message);
+        setShops([]); // fallback an toàn
+      }
+    } catch (e) {
+      console.error("Load shops error:", e);
+      setShops([]); // tránh lỗi map nếu lỗi API
+    } finally {
+      setLoading(false);
+    }
+  };
 
   //Hành động với page
   const handleAction = (shopId, action) => {
     console.log(`Action ${action} for shop ${shopId}`);
   };
+
+  // Hành động với shop (Activate / Deactivate)
+  // const handleAction = async (shopId, action) => {
+  //   try {
+  //     let endpoint = "";
+  //     let successMessage = "";
+
+  //     if (action === "activate") {
+  //       endpoint = `http://localhost:5001/api/shops/${shopId}/activate`;
+  //       successMessage = "Shop activated successfully!";
+  //     } else if (action === "deactivate") {
+  //       endpoint = `http://localhost:5001/api/shops/${shopId}/deactivate`;
+  //       successMessage = "Shop deactivated successfully!";
+  //     } else {
+  //       console.log(`Unknown action: ${action}`);
+  //       return;
+  //     }
+
+  //     const res = await fetch(endpoint, {
+  //       method: "PATCH",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //       },
+  //     });
+
+  //     const data = await res.json();
+  //     if (data.success) {
+  //       alert(successMessage);
+  //       // 🔁 Refresh danh sách shop
+  //       const refresh = await fetch(
+  //         `http://localhost:5001/api/shops/owner/68ed2a2d64097dc1c878e714`,
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //           },
+  //         }
+  //       );
+  //       const refreshedData = await refresh.json();
+  //       setShops(refreshedData.data || refreshedData);
+  //     } else {
+  //       alert(data.message || "Failed to perform action");
+  //     }
+  //   } catch (err) {
+  //     console.error("Action error:", err);
+  //     alert("Server error while performing action");
+  //   }
+  // };
 
   //Thêm page mới
   const handleAddNewPage = () => {
@@ -101,10 +183,17 @@ function MyShop() {
           {t('shop.my_shop')}
         </NavLink>
         <NavLink
-          to={ROUTES.SHOP_EMPLOYEE}
-          className={({ isActive }) => `shop-tab ${isActive ? "active" : ""}`}
+          to={currentShop?.canViewEmployee ? `${ROUTES.SHOP_EMPLOYEE.replace(':shopId', currentShop.id)}` : "#"}
+          state={{ shopId: currentShop?._id }}
+          onClick={(e) => {
+            if (!currentShop?.canViewEmployee) e.preventDefault();
+          }}
+          className={({ isActive }) =>
+            `shop-tab ${isActive ? "active" : ""} ${!currentShop?.canViewEmployee ? "disabled" : ""
+            }`
+          }
         >
-          {t('shop.employee')}
+          {t("shop.employee")}
         </NavLink>
         <NavLink
           to={ROUTES.SHOP_HISTORY}
@@ -128,30 +217,33 @@ function MyShop() {
           {activeTab === "info" && (
             <div className="shop-content">
               {loading ? (
-                <div className="loading-state">
-                  <p>{t('shop.loading_shops')}</p>
+                <div className="empty-state">
+                  <p>You don’t have any shops yet. Click “Add New Shop” to create one!</p>
                 </div>
               ) : (
                 <div className="shops-table">
                   <div className="table-header-shop">
-                    <div className="table-cell">{t('shop.shop_name')}</div>
+                    <div className="table-cell-name">{t('shop.shop_name')}</div>
                     <div className="table-cell">{t('shop.package')}</div>
                     <div className="table-cell">{t('shop.employee_count')}</div>
                     <div className="table-cell">{t('shop.page_count')}</div>
                     <div className="table-cell">{t('shop.role')}</div>
                     <div className="table-cell">{t('shop.expired')}</div>
-                    <div className="table-cell">{t('shop.status')}</div>
+                    {/* <div className="table-cell">{t('shop.status')}</div> */}
                     <div className="table-cell">{t('shop.action')}</div>
                   </div>
 
                   {shops.map((shop) => (
                     <div key={shop.id} className="table-row-shop">
-                      <div className="table-cell" data-label={t('shop.shop_name')}>
+                      <div className="table-cell-name" data-label={t('shop.shop_name')}>
                         <div className="shop-name">
                           <div className="shop-avatar">
-                            {shop.shopName.charAt(0)}
+                            {shop?.shopName?.charAt(0)?.toUpperCase() || "?"}
                           </div>
                           <span>{shop.shopName}</span>
+                          {shop.isCurrent && (
+                            <span className="current-badge"><MapPin size={14} /></span>
+                          )}
                         </div>
                       </div>
                       <div className="table-cell" data-label={t('shop.package')}>
@@ -173,15 +265,15 @@ function MyShop() {
                         <span className="role-badge">{shop.role}</span>
                       </div>
                       <div className="table-cell" data-label={t('shop.expired')}>
-                        <span className="expired-date">{shop.expired}</span>
+                        <span className="expired-date">{shop.expired ? shop.expired : "Vô hạn"}</span>
                       </div>
-                      <div className="table-cell" data-label={t('shop.status')}>
+                      {/* <div className="table-cell" data-label={t('shop.status')}>
                         <span
                           className={`status-badge status-${shop.status.toLowerCase()}`}
                         >
                           {shop.status}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="table-cell" data-label={t('shop.action')}>
                         <div className="action-buttons">
                           <button
@@ -190,34 +282,73 @@ function MyShop() {
                               setUpdateForm({
                                 id: shop.id,
                                 shopName: shop.shopName,
-                                email: `${shop.shopName
-                                  .toLowerCase()
-                                  .replace(/\s+/g, "")}@example.com`,
-                                phone: "",
+                                email: shop.email,
+                                phone: shop.phone,
                                 category: (
-                                  shop.package || "other"
+                                  shop.industry || "other"
                                 ).toLowerCase(),
                               });
                               setIsUpdateOpen(true);
                             }}
-                            title={t('shop.update')}
+                            title="Update"
+                            disabled={!shop.canUpdate}
+                            style={{
+                              opacity: shop.canUpdate ? 1 : 0.5,
+                              cursor: shop.canUpdate ? "pointer" : "not-allowed",
+                            }}
                           >
                             <Edit size={14} />
                           </button>
                           <button
-                            className="shop-action-btn shop-activate-btn"
-                            onClick={() => handleAction(shop.id, "activate")}
-                            title={t('shop.activate')}
+                            className={`shop-action-btn shop-current-btn ${shop.isCurrent ? "active" : ""
+                              }`}
+                            title={shop.isCurrent ? "Current Shop" : "Change Shop"}
+                            disabled={shop.isCurrent}
+                            style={{
+                              cursor: shop.isCurrent ? "default" : "pointer",
+                              opacity: shop.isCurrent ? 0.6 : 1,
+                            }}
+                            onClick={async () => {
+                              if (shop.isCurrent) return; // Nếu đã là current thì không cần làm gì
+                              try {
+                                const res = await fetch(
+                                  `http://localhost:5001/api/shops/switch/${shop.id}`,
+                                  {
+                                    method: "PATCH",
+                                    headers: {
+                                      Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+                                    },
+                                  }
+                                );
+                                const data = await res.json();
+                                if (data.success) {
+                                  alert("Switched to this shop successfully!");
+                                  await loadShops(); // refresh danh sách
+                                } else {
+                                  alert(data.message || "Failed to switch shop");
+                                }
+                              } catch (err) {
+                                console.error("Switch shop error:", err);
+                                alert("Server error while switching shop");
+                              }
+                            }}
                           >
-                            <Play size={14} />
+                            { shop.isCurrent ? <Check size={14} /> : <ArrowRight  size={14} /> }
                           </button>
-                          <button
-                            className="shop-action-btn shop-deactivate-btn"
-                            onClick={() => handleAction(shop.id, "deactivate")}
-                            title={t('shop.deactivate')}
-                          >
-                            <Pause size={14} />
-                          </button>
+                          {/* <button
+                              className="shop-action-btn shop-activate-btn"
+                              onClick={() => handleAction(shop.id, "activate")}
+                              title="Activate"
+                            >
+                              <Play size={14} />
+                            </button>
+                            <button
+                              className="shop-action-btn shop-deactivate-btn"
+                              onClick={() => handleAction(shop.id, "deactivate")}
+                              title="Deactivate"
+                            > */}
+                          {/* <Pause size={14} />
+                            </button> */}
                           <button
                             className="shop-action-btn shop-upgrade-btn"
                             onClick={() => handleAction(shop.id, "upgrade")}
@@ -269,10 +400,10 @@ function MyShop() {
                   id="add-email"
                   type="email"
                   className="modal-input"
-                  value={addForm.email}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, email: e.target.value })
-                  }
+                  value={currentUser?.email || "Chưa có email"}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: "#dddbdbff" }}
                 />
               </div>
               <div className="form-field">
@@ -281,10 +412,10 @@ function MyShop() {
                   id="add-phone"
                   type="tel"
                   className="modal-input"
-                  value={addForm.phone}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, phone: e.target.value })
-                  }
+                  value={currentUser?.phone || "Chưa có số điện thoại"}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: "#dddbdbff" }}
                 />
               </div>
 
@@ -315,9 +446,37 @@ function MyShop() {
               </button>
               <button
                 className="btn-primary-shop"
-                onClick={() => {
-                  console.log("Submit Add:", addForm);
-                  setIsAddOpen(false);
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      shop_name: addForm.shopName,
+                      industry: addForm.category,
+                    };
+
+                    console.log("Submit Add:", payload);
+
+                    const res = await fetch("http://localhost:5001/api/shops/", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+                      },
+                      body: JSON.stringify(payload),
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                      alert("Shop created successfully!");
+                      setIsAddOpen(false);
+                      // 👉 Gọi lại API để refresh danh sách
+                      await loadShops();
+                    } else {
+                      alert(data.message || "Failed to create shop");
+                    }
+                  } catch (err) {
+                    console.error("Error:", err);
+                    alert("Server error");
+                  }
                 }}
               >
                 {t('shop.create')}
@@ -361,9 +520,9 @@ function MyShop() {
                   type="email"
                   className="modal-input"
                   value={updateForm.email}
-                  onChange={(e) =>
-                    setUpdateForm({ ...updateForm, email: e.target.value })
-                  }
+                  style={{ backgroundColor: "#dddbdbff" }}
+                  disabled
+                  readOnly
                 />
               </div>
               <div className="form-field">
@@ -373,9 +532,9 @@ function MyShop() {
                   type="tel"
                   className="modal-input"
                   value={updateForm.phone}
-                  onChange={(e) =>
-                    setUpdateForm({ ...updateForm, phone: e.target.value })
-                  }
+                  style={{ backgroundColor: "#dddbdbff" }}
+                  disabled
+                  readOnly
                 />
               </div>
 
@@ -406,9 +565,36 @@ function MyShop() {
               </button>
               <button
                 className="btn-primary-shop"
-                onClick={() => {
-                  console.log("Submit Update:", updateForm);
-                  setIsUpdateOpen(false);
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      shop_name: updateForm.shopName,
+                      industry: updateForm.category,
+                    };
+
+                    const res = await fetch(`http://localhost:5001/api/shops/${updateForm.id}`, {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+                      },
+                      body: JSON.stringify(payload),
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                      alert("Shop updated successfully!");
+                      setIsUpdateOpen(false);
+
+                      // 🔁 Refresh danh sách shop
+                      await loadShops();
+                    } else {
+                      alert(data.message || "Failed to update shop");
+                    }
+                  } catch (err) {
+                    console.error("Error updating shop:", err);
+                    alert("Server error while updating shop");
+                  }
                 }}
               >
                 {t('shop.update')}

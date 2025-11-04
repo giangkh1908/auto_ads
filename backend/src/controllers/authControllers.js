@@ -4,11 +4,12 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import axios from "axios";
 import { generateTokens, verifyRefreshToken } from "../utils/jwt.js";
-import Shop from "../models/shop.model.js";
+import Shop from "../models/shops/shop.model.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../services/emailService.js";
+import jwt from "jsonwebtoken";
 
 // Hàm xác thực CAPTCHA bằng axios
 async function verifyCaptcha(token) {
@@ -33,7 +34,7 @@ async function verifyCaptcha(token) {
   }
 }
 
-// 🔹 Đăng ký tài khoản
+// Đăng ký tài khoản
 export const register = async (req, res) => {
   try {
     const { full_name, email, password, phone, captchaToken } = req.body;
@@ -58,16 +59,16 @@ export const register = async (req, res) => {
       const captchaResult = await verifyCaptcha(captchaToken);
       
       if (!captchaResult.success) {
-        console.log('❌ CAPTCHA verification failed:', captchaResult.errorCodes);
+        console.log('CAPTCHA verification failed:', captchaResult.errorCodes);
         return res.status(400).json({
           success: false,
           message: "Xác thực CAPTCHA thất bại. Vui lòng thử lại.",
         });
       }
       
-      console.log('✅ CAPTCHA verification successful for hostname:', captchaResult.hostname);
+      console.log('CAPTCHA verification successful for hostname:', captchaResult.hostname);
     } catch (captchaError) {
-      console.error('❌ CAPTCHA verification error:', captchaError.message);
+      console.error('CAPTCHA verification error:', captchaError.message);
       return res.status(400).json({
         success: false,
         message: "Lỗi xác thực CAPTCHA. Vui lòng thử lại.",
@@ -124,12 +125,12 @@ export const register = async (req, res) => {
         "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.",
     });
   } catch (error) {
-    console.error("❌ Lỗi đăng ký:", error);
+    console.error("Lỗi đăng ký:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
-// 🔹 Xác nhận email
+// Xác nhận email
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
@@ -167,12 +168,12 @@ export const verifyEmail = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Verify email error:", error);
+    console.error("Verify email error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
-// 🔹 Đăng nhập
+// Đăng nhập
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -207,7 +208,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Login error:", error);
+    console.error("Login error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
@@ -215,7 +216,7 @@ export const login = async (req, res) => {
 // Login via Facebook
 export const facebookLogin = async (req, res) => {
   try {
-    console.log("🔵 Bắt đầu đăng nhập bằng Facebook");
+    console.log("Bắt đầu đăng nhập bằng Facebook");
 
     const { facebookId, name, email, accessToken } = req.body;
     if (!facebookId || !accessToken) {
@@ -225,7 +226,7 @@ export const facebookLogin = async (req, res) => {
       });
     }
 
-    console.log("🔵 Đang xác thực ...");
+    console.log("Đang xác thực ...");
 
     // Lấy thông tin user
     const fbResp = await fetch(
@@ -248,11 +249,11 @@ export const facebookLogin = async (req, res) => {
       const tokenData = await tokenResp.json();
       if (tokenData.access_token) {
         longLivedToken = tokenData.access_token;
-        console.log("✅ Đã đổi thành long-lived token");
+        console.log("Đã đổi thành long-lived token");
       }
     } catch (tokenError) {
       console.log(
-        "⚠️ Không thể đổi token, sử dụng token gốc:",
+        "Không thể đổi token, sử dụng token gốc:",
         tokenError.message
       );
     }
@@ -289,10 +290,10 @@ export const facebookLogin = async (req, res) => {
       user.avatar = fbData.picture?.data?.url || user.avatar;
       user.facebookAccessToken = longLivedToken;
       await user.save();
-      console.log("✅ Đăng nhập thành công  ");
+      console.log("Đăng nhập thành công  ");
     }
 
-    console.log("🔵 Fetching user's Facebook Pages...");
+    console.log("Fetching user's Facebook Pages...");
     let pages = [];
 
     try {
@@ -309,30 +310,30 @@ export const facebookLogin = async (req, res) => {
           pageAccessToken: page.access_token,
           tasks: page.tasks || [],
         }));
-        console.log(`✅ Found ${pages.length} pages.`);
+        console.log(`Found ${pages.length} pages.`);
       } else {
-        console.log("⚠️ No pages found or missing permission:", pagesData);
+        console.log("No pages found or missing permission:", pagesData);
       }
     } catch (pageError) {
-      console.error("❌ Failed to fetch Facebook Pages:", pageError);
+      console.error("Failed to fetch Facebook Pages:", pageError);
     }
 
-    // 🔹 Tạo token đăng nhập
+    // Tạo token đăng nhập
     const { accessToken: at, refreshToken: rt } = generateTokens(user._id);
 
-    // ✅ Gửi trả về FE cả user, tokens và pages
+    // Gửi trả về FE cả user, tokens và pages
     return res.status(200).json({
       success: true,
       message: "Đăng nhập Facebook thành công.",
       data: { user, tokens: { accessToken: at, refreshToken: rt }, pages },
     });
   } catch (error) {
-    console.error("❌ Facebook login error:", error);
+    console.error("Facebook login error:", error);
     return res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
-// 🔹 Làm mới token
+// Làm mới token
 export const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -357,7 +358,7 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// 🔹 Quên mật khẩu
+// Quên mật khẩu
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -381,12 +382,12 @@ export const forgotPassword = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Email đặt lại mật khẩu đã được gửi!" });
   } catch (error) {
-    console.error("❌ Forgot password error:", error);
+    console.error("Forgot password error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
-// 🔹 Đặt lại mật khẩu
+// Đặt lại mật khẩu
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
@@ -411,12 +412,12 @@ export const resetPassword = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Đặt lại mật khẩu thành công!" });
   } catch (error) {
-    console.error("❌ Reset password error:", error);
+    console.error("Reset password error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
 
-// 🔹 Lấy thông tin user hiện tại
+// Lấy thông tin user hiện tại
 export const getCurrentUser = async (req, res) => {
   try {
     const user = req.user;
@@ -438,7 +439,7 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
-// 🔹 Cập nhật profile
+// Cập nhật profile
 export const updateProfile = async (req, res) => {
   try {
     const { full_name, phone, country, profile } = req.body; // thêm country
@@ -465,7 +466,7 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// 🔹 Đổi mật khẩu
+// Đổi mật khẩu
 export const changePassword = async (req, res) => {
   try {
     const userId = req.user._id; // Lấy user từ middleware xác thực JWT
@@ -517,7 +518,7 @@ export const changePassword = async (req, res) => {
       requireLogout: true,
     });
   } catch (error) {
-    console.error("❌ Change password error:", error);
+    console.error("Change password error:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi hệ thống.",
@@ -525,7 +526,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// 🔹 Gửi lại email xác nhận
+// Gửi lại email xác nhận
 export const resendVerificationEmail = async (req, res) => {
   try {
     const { email } = req.body;
@@ -569,7 +570,7 @@ export const resendVerificationEmail = async (req, res) => {
         "Email xác nhận đã được gửi lại! Vui lòng kiểm tra hộp thư của bạn.",
     });
   } catch (error) {
-    console.error("❌ resendVerificationEmail error:", error);
+    console.error("resendVerificationEmail error:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi hệ thống.",
@@ -577,7 +578,7 @@ export const resendVerificationEmail = async (req, res) => {
   }
 };
 
-// 🔹 Logout
+// Logout
 export const logout = async (_req, res) => {
   res.status(200).json({ success: true, message: "Đăng xuất thành công." });
 };

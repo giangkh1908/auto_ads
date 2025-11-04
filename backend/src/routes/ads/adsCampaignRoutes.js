@@ -3,9 +3,11 @@ import {
   listCampaignsCtrl,
   getCampaignCtrl,
   syncCampaignsCtrl,
+  syncAllCtrl,
   getCampaignsLiveCtrl,
   toggleCampaignStatusCtrl,
   deleteCampaignCascadeCtrl,
+  archiveCampaignCascadeCtrl,
   getCampaignFromDatabase,
   copyCampaignCascadeCtrl,
   getCampaignInsightsCtrl,
@@ -25,12 +27,14 @@ router.get("/count", (req, res) => {
 // Đặt các routes cụ thể TRƯỚC route có tham số /:id
 router.get("/live", getCampaignsLiveCtrl);
 router.get("/database", getCampaignFromDatabase);
+router.get("/sync-all", syncAllCtrl); // ✅ Batch sync endpoint - ưu tiên trước sync riêng lẻ
 router.get("/sync", syncCampaignsCtrl);
 router.get("/insights", getCampaignInsightsCtrl);
 router.get("/", listCampaignsCtrl);
 
 // Routes với tham số động
 router.post("/:id/copy", copyCampaignCascadeCtrl);
+router.post("/:id/archive", archiveCampaignCascadeCtrl);
 router.patch("/:id/status", toggleCampaignStatusCtrl);
 router.get("/:id", getCampaignCtrl);
 router.delete("/:id", deleteCampaignCascadeCtrl);

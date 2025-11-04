@@ -106,13 +106,11 @@ export async function getAdsetFromDatabase(req, res) {
  */
 export async function listAdSetsCtrl(req, res) {
   try {
-    const { account_id, campaign_id, q, status, page = 1, limit = 10 } = req.query;
+    const { account_id, campaign_id, q, status, page = 1, limit = 10, fetch_all = false } = req.query;
 
     const filter = {};
 
-    // ✅ Luôn loại bỏ items đã DELETED ở backend
-    filter.status = { $ne: "DELETED" };
-    
+    // ✅ Lấy tất cả items (không filter theo status) - Frontend sẽ filter
     if (account_id) {
       const normalizedId = account_id.startsWith("act_")
         ? account_id.substring(4)
@@ -121,27 +119,56 @@ export async function listAdSetsCtrl(req, res) {
     }
 
     if (campaign_id) filter.campaign_id = campaign_id;
-    // Nếu có filter status cụ thể, ghi đè filter mặc định
-    if (status) filter.status = status;
+    // Nếu có filter status cụ thể, áp dụng filter đó (bao gồm cả DELETED nếu query)
+    if (status) {
+      filter.status = status;
+    }
+    // Nếu không có status parameter, lấy tất cả (bao gồm cả DELETED)
+    
     if (q) filter.name = new RegExp(q, "i");
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const [items, total] = await Promise.all([
-      AdsSet.find(filter)
-        .populate('created_by', 'full_name email')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      AdsSet.countDocuments(filter),
-    ]);
-
-    return res.status(200).json({
-      items,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      pages: Math.ceil(total / Number(limit)) || 1,
-    });
+    // Hỗ trợ fetch_all hoặc limit lớn để Frontend có thể sort và phân trang
+    const limitNum = Number(limit);
+    const shouldFetchAll = fetch_all === 'true' || fetch_all === true || limitNum === 0 || limitNum > 10000;
+    
+    let items, total;
+    
+    if (shouldFetchAll) {
+      // Fetch tất cả (không phân trang) - để Frontend sort và phân trang
+      [items, total] = await Promise.all([
+        AdsSet.find(filter)
+          .populate('created_by', 'full_name email')
+          .sort({ createdAt: -1 }), // Sort ở Backend trước
+        AdsSet.countDocuments(filter)
+      ]);
+      
+      return res.status(200).json({
+        items,
+        total,
+        page: 1,
+        limit: total,
+        pages: 1,
+      });
+    } else {
+      // Phân trang như cũ (nếu cần)
+      const skip = (Number(page) - 1) * Number(limit);
+      [items, total] = await Promise.all([
+        AdsSet.find(filter)
+          .populate('created_by', 'full_name email')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit)),
+        AdsSet.countDocuments(filter),
+      ]);
+      
+      return res.status(200).json({
+        items,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)) || 1,
+      });
+    }
   } catch (err) {
     console.error("GET AdSets error:", err);
     return res.status(500).json({
@@ -279,6 +306,72 @@ export async function deleteAdsetCascadeCtrl(req, res) {
     console.error("❌ Xoá AdSet cascade lỗi:", err);
     return res.status(500).json({
       message: "Xoá thất bại",
+      error: err.message,
+    });
+  }
+}
+
+/**
+ * POST /api/adsets/:id/archive
+ * Archive adset và các ads liên quan (set status ARCHIVED thay vì DELETED)
+ */
+export async function archiveAdsetCascadeCtrl(req, res) {
+  try {
+    const { id } = req.params;
+    const adset = await AdsSet.findById(id);
+    if (!adset) return res.status(404).json({ message: "Không tìm thấy nhóm quảng cáo." });
+
+    // ✅ Lấy access_token từ user hoặc query
+    let accessToken = req.user?.facebookAccessToken || req.query.access_token || null;
+
+    if (!accessToken && req.user?._id) {
+      const user = await User.findById(req.user._id).select("+facebookAccessToken");
+      accessToken = user?.facebookAccessToken || null;
+    }
+
+    if (!accessToken) {
+      return res.status(400).json({
+        message:
+          "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
+        missingToken: true,
+      });
+    }
+
+    // Lấy toàn bộ ads con trong adset
+    const ads = await Ads.find({ set_id: adset._id });
+
+    // ✅ Xóa thật trên Facebook nếu có token (giống delete)
+    if (accessToken) {
+      try {
+        // Xóa tất cả ads trước
+        for (const ad of ads) {
+          if (ad.external_id) await deleteEntity(ad.external_id, accessToken);
+        }
+
+        // Sau đó xóa adset
+        if (adset.external_id) await deleteEntity(adset.external_id, accessToken);
+
+        console.log(`📦 Đã xóa (archive) adset ${adset.name} (${adset.external_id}) và ${ads.length} ads trên Facebook`);
+      } catch (fbErr) {
+        console.warn("⚠️ Lỗi khi xóa (archive) adset hoặc ads trên Facebook:", fbErr?.response?.data || fbErr.message);
+      }
+    }
+
+    // ✅ Cập nhật status ARCHIVED trong DB
+    const now = new Date();
+    await Promise.all([
+      Ads.updateMany({ set_id: adset._id }, { status: "ARCHIVED", updated_at: now }),
+      AdsSet.findByIdAndUpdate(id, { status: "ARCHIVED", updated_at: now }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã lưu trữ nhóm quảng cáo "${adset.name}" và ${ads.length} quảng cáo liên quan.`,
+    });
+  } catch (err) {
+    console.error("❌ Archive AdSet cascade lỗi:", err);
+    return res.status(500).json({
+      message: "Lưu trữ thất bại",
       error: err.message,
     });
   }

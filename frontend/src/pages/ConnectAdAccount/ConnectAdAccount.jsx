@@ -5,6 +5,7 @@ import './ConnectAdAccount.css'
 import { useToast } from '../../hooks/useToast'
 import axiosInstance from '../../utils/axios'
 import logo from "../../assets/Logo_Fchat.png";
+import { useAuth } from '../../hooks/useAuth'
 
 function ConnectAdAccount() {
   const { t } = useTranslation()
@@ -18,6 +19,7 @@ function ConnectAdAccount() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('status')
   const [selectAll, setSelectAll] = useState(false)
+  const { user } = useAuth()
   
   // Tải dữ liệu tài khoản quảng cáo từ Facebook API
   useEffect(() => {
@@ -65,9 +67,9 @@ function ConnectAdAccount() {
       status: getStatusLabel(acc.account_status),
       isConnected: connectedAccountIds.includes(acc.external_id),
       isSelected: false,
-      avatar: `https://graph.facebook.com/${acc.external_id}/picture?type=square`,
+      avatar: user?.avatar || `https://graph.facebook.com/${acc.external_id}/picture?type=square`,
     }))
-  }, [fbAdAccounts, connectedAccountIds, t])
+  }, [fbAdAccounts, connectedAccountIds, t, user])
 
   //Đếm số tài khoản đã kết nối và còn lại
   const connectedCount = adAccounts.filter(acc => acc.isConnected).length
@@ -250,8 +252,8 @@ function ConnectAdAccount() {
                 <div className="col-page-name">
                   <div className="page-info">
                     <img
-                      src={account.avatar}
-                      alt={account.name}
+                      src= {account.avatar}
+                      alt= "Avatar"
                       className="page-avatar"
                     />
                     <div className="page-details">
