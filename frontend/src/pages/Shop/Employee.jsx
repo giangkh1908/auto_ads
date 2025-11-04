@@ -48,7 +48,7 @@ function Employee() {
         setLoading(true);
 
         // 1. Kiểm tra quyền xem employee (lấy từ danh sách shops)
-        const shopsRes = await fetch(`http://localhost:5001/api/shops/owner`, {
+        const shopsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/owner`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem(
               STORAGE_KEYS.AUTH_TOKEN
@@ -82,7 +82,7 @@ function Employee() {
 
           // 2. Load employees
           const res = await fetch(
-            `http://localhost:5001/api/shop-users/${shopId}`,
+            `${import.meta.env.VITE_API_URL}/api/shop-users/${shopId}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem(
@@ -129,7 +129,7 @@ function Employee() {
       const newRoleId = roleMap[newRoleName];
 
       const res = await fetch(
-        `http://localhost:5001/api/shop-users/${shopId}`,
+        `${import.meta.env.VITE_API_URL}/api/shop-users/${shopId}`,
         {
           method: "PUT",
           headers: {
@@ -164,7 +164,7 @@ function Employee() {
     try {
       if (action === "relinquish") {
         const res = await fetch(
-          `http://localhost:5001/api/shop-users/relinquish`,
+          `${import.meta.env.VITE_API_URL}/api/shop-users/relinquish`,
           {
             method: "PUT",
             headers: {
@@ -195,7 +195,7 @@ function Employee() {
       else if (action === "remove") newStatus = "removed";
 
       const res = await fetch(
-        `http://localhost:5001/api/shop-users/status/${shopId}`,
+        `${import.meta.env.VITE_API_URL}/api/shop-users/status/${shopId}`,
         {
           method: "PUT",
           headers: {
@@ -234,7 +234,7 @@ function Employee() {
     }
 
     try {
-      const res = await fetch("http://localhost:5001/api/shop-users/invite", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shop-users/invite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

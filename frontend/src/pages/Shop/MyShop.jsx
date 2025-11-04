@@ -37,7 +37,7 @@ function MyShop() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const res = await fetch("http://localhost:5001/api/auth/me", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
         }
@@ -56,7 +56,7 @@ function MyShop() {
     try {
       setLoading(true);
 
-      const res = await fetch(`http://localhost:5001/api/shops/owner`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/owner`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -125,10 +125,10 @@ function MyShop() {
   //     let successMessage = "";
 
   //     if (action === "activate") {
-  //       endpoint = `http://localhost:5001/api/shops/${shopId}/activate`;
+  //       endpoint = `${import.meta.env.VITE_API_URL}/api/shops/${shopId}/activate`;
   //       successMessage = "Shop activated successfully!";
   //     } else if (action === "deactivate") {
-  //       endpoint = `http://localhost:5001/api/shops/${shopId}/deactivate`;
+  //       endpoint = `${import.meta.env.VITE_API_URL}/api/shops/${shopId}/deactivate`;
   //       successMessage = "Shop deactivated successfully!";
   //     } else {
   //       console.log(`Unknown action: ${action}`);
@@ -148,7 +148,7 @@ function MyShop() {
   //       alert(successMessage);
   //       // 🔁 Refresh danh sách shop
   //       const refresh = await fetch(
-  //         `http://localhost:5001/api/shops/owner/68ed2a2d64097dc1c878e714`,
+  //         `${import.meta.env.VITE_API_URL}/api/shops/owner/68ed2a2d64097dc1c878e714`,
   //         {
   //           headers: {
   //             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -312,7 +312,7 @@ function MyShop() {
                               if (shop.isCurrent) return; // Nếu đã là current thì không cần làm gì
                               try {
                                 const res = await fetch(
-                                  `http://localhost:5001/api/shops/switch/${shop.id}`,
+                                  `${import.meta.env.VITE_API_URL}/api/shops/switch/${shop.id}`,
                                   {
                                     method: "PATCH",
                                     headers: {
@@ -455,7 +455,7 @@ function MyShop() {
 
                     console.log("Submit Add:", payload);
 
-                    const res = await fetch("http://localhost:5001/api/shops/", {
+                    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/`, {
                       method: "POST",
                       headers: {
                         "Content-Type": "application/json",
@@ -572,7 +572,7 @@ function MyShop() {
                       industry: updateForm.category,
                     };
 
-                    const res = await fetch(`http://localhost:5001/api/shops/${updateForm.id}`, {
+                    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/${updateForm.id}`, {
                       method: "PUT",
                       headers: {
                         "Content-Type": "application/json",
