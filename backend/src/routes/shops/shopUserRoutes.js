@@ -8,6 +8,8 @@ router.get("/", getShopUsers);
 
 router.get("/:shopId", getUsersByShop);
 
+router.post("/invite", authenticate, inviteEmployee);
+
 router.post("/", createShopUser);
 
 router.put("/status/:shopId", updateUserStatus);
