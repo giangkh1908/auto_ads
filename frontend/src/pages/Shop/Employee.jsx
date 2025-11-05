@@ -249,6 +249,7 @@ function Employee() {
               ? "68ff6cab6ef1d167ed39c6f9"
               : "68ff6cab6ef1d167ed39c6f8",
           invitedBy: currentUserId,
+          shopId: shopId, // <--- THÊM DÒNG NÀY
         }),
       });
 
