@@ -19,10 +19,12 @@ export const createShopUser = async (req, res) => {
 
 export const inviteEmployee = async (req, res) => {
   try {
-    const { email, roleId, invitedBy } = req.body;
+    // 1. Lấy thêm `shopId` từ req.body
+    const { email, roleId, invitedBy, shopId } = req.body;
 
-    if (!email || !roleId || !invitedBy) {
-      return res.status(400).json({ success: false, message: "Thiếu dữ liệu đầu vào" });
+    // 2. Thêm `shopId` vào phần kiểm tra
+    if (!email || !roleId || !invitedBy || !shopId) {
+      return res.status(400).json({ success: false, message: "Thiếu dữ liệu đầu vào (email, roleId, invitedBy, shopId)" });
     }
 
     // Kiểm tra user tồn tại chưa
@@ -44,6 +46,15 @@ export const inviteEmployee = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Người dùng chưa hoàn tất đăng ký. Vui lòng chờ họ hoàn tất đăng ký qua email mời.",
+      });
+    }
+
+    // Kiểm tra xem nhân viên đã có trong shop chưa
+    const existingShopUser = await ShopUser.findOne({ shop_id: shopId, user_id: user._id });
+    if (existingShopUser) {
+      return res.status(409).json({ // 409 Conflict
+        success: false,
+        message: "Nhân viên này đã có trong shop.",
       });
     }
 
