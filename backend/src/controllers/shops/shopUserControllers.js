@@ -3,7 +3,6 @@ import UserRole from "../../models/userRole.model.js";
 import User from "../../models/user.model.js";
 import Role from "../../models/role.model.js";
 import jwt from "jsonwebtoken";
-import Shop from "../../models/shops/shop.model.js";
 import { sendInvitationEmail } from "../../services/emailService.js";
 
 // Thêm User vào Shop
@@ -19,12 +18,10 @@ export const createShopUser = async (req, res) => {
 
 export const inviteEmployee = async (req, res) => {
   try {
-    // 1. Lấy thêm `shopId` từ req.body
-    const { email, roleId, invitedBy, shopId } = req.body;
+    const { email, roleId, invitedBy } = req.body;
 
-    // 2. Thêm `shopId` vào phần kiểm tra
-    if (!email || !roleId || !invitedBy || !shopId) {
-      return res.status(400).json({ success: false, message: "Thiếu dữ liệu đầu vào (email, roleId, invitedBy, shopId)" });
+    if (!email || !roleId || !invitedBy) {
+      return res.status(400).json({ success: false, message: "Thiếu dữ liệu đầu vào" });
     }
 
     // Kiểm tra user tồn tại chưa
@@ -46,15 +43,6 @@ export const inviteEmployee = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Người dùng chưa hoàn tất đăng ký. Vui lòng chờ họ hoàn tất đăng ký qua email mời.",
-      });
-    }
-
-    // Kiểm tra xem nhân viên đã có trong shop chưa
-    const existingShopUser = await ShopUser.findOne({ shop_id: shopId, user_id: user._id });
-    if (existingShopUser) {
-      return res.status(409).json({ // 409 Conflict
-        success: false,
-        message: "Nhân viên này đã có trong shop.",
       });
     }
 
@@ -109,41 +97,19 @@ export const getUsersByShop = async (req, res) => {
   try {
     const { shopId } = req.params;
 
-    // 1. Lấy shop owner từ Shop model
-    const shop = await Shop.findById(shopId)
-      .populate({
-        path: "owner_id",
-        select: "full_name username email avatar status"
-      })
-      .lean();
-
-    if (!shop) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy shop"
-      });
-    }
-
-    // 2. Lấy danh sách ShopUser thuộc shop này (không bao gồm owner)
+    // Lấy danh sách ShopUser thuộc shop này
     const shopUsers = await ShopUser.find({ shop_id: shopId })
       .populate({
         path: "user_id",
         select: "full_name username email avatar status",
-        match: { status: { $ne: "pending" } }
+        match: { status: { $ne: "pending" } } // Không lấy user pending
       })
       .lean();
 
-    // 3. Lấy danh sách userId (bao gồm cả owner) để query UserRole
-    const userIds = shopUsers
-      .map(su => su.user_id?._id)
-      .filter(Boolean);
-    
-    // Thêm owner_id vào danh sách nếu có
-    if (shop.owner_id && shop.owner_id._id) {
-      userIds.push(shop.owner_id._id);
-    }
+    // Lấy danh sách userId để query sang UserRole
+    const userIds = shopUsers.map(su => su.user_id?._id).filter(Boolean);
 
-    // 4. Lấy role tương ứng của từng user trong shop này
+    // Lấy role tương ứng của từng user trong shop này
     const userRoles = await UserRole.find({
       user_id: { $in: userIds },
       shop_id: shopId
@@ -151,55 +117,25 @@ export const getUsersByShop = async (req, res) => {
       .populate("role_id", "role_name")
       .lean();
 
-    // Lấy role "Shop Owner" để gán cho owner nếu chưa có UserRole
-    const ownerRole = await Role.findOne({ role_name: "Shop Owner" }).lean();
+    // Map dữ liệu lại thành danh sách hoàn chỉnh
+    const result = shopUsers.map(su => {
+      const matchedRole = userRoles.find(
+        ur => ur.user_id.toString() === su.user_id?._id?.toString()
+      );
 
-    // 5. Tạo object cho shop owner
-    const ownerIdStr = shop.owner_id?._id?.toString();
-    const ownerUserRole = userRoles.find(
-      ur => ur.user_id.toString() === ownerIdStr
-    );
-
-    const ownerData = {
-      user_id: shop.owner_id?._id || null,
-      username: shop.owner_id?.username || "",
-      full_name: shop.owner_id?.full_name || "Chưa cập nhật",
-      email: shop.owner_id?.email || "",
-      avatar: shop.owner_id?.avatar || null,
-      role_name: ownerUserRole?.role_id?.role_name || "Shop Owner", // Mặc định là Shop Owner
-      page: 0, // Owner có thể có page count = 0 hoặc tính từ shop
-      status: "active", // Owner luôn active
-      joined_at: shop.created_at || null,
-      is_manager: true,
-    };
-
-    // 6. Map dữ liệu cho các ShopUser (không phải owner)
-    const shopUserData = shopUsers
-      .filter(su => {
-        // Loại bỏ owner khỏi danh sách ShopUser nếu có
-        return su.user_id?._id?.toString() !== ownerIdStr;
-      })
-      .map(su => {
-        const matchedRole = userRoles.find(
-          ur => ur.user_id.toString() === su.user_id?._id?.toString()
-        );
-
-        return {
-          user_id: su.user_id?._id || null,
-          username: su.user_id?.username || "",
-          full_name: su.user_id?.full_name || "Chưa cập nhật",
-          email: su.user_id?.email || "",
-          avatar: su.user_id?.avatar || null,
-          role_name: matchedRole?.role_id?.role_name || "N/A",
-          page: su.page_count || 0,
-          status: su.status || "inactive",
-          joined_at: su.joined_at || null,
-          is_manager: su.is_manager || false,
-        };
-      });
-
-    // 7. Kết hợp owner và shopUsers, đặt owner lên đầu
-    const result = [ownerData, ...shopUserData];
+      return {
+        user_id: su.user_id?._id || null,
+        username: su.user_id?.username || "",
+        full_name: su.user_id?.full_name || "Chưa cập nhật",
+        email: su.user_id?.email || "",
+        avatar: su.user_id?.avatar || null,
+        role_name: matchedRole?.role_id?.role_name || "N/A",
+        page: su.page_count || 0,
+        status: su.status || "inactive",
+        joined_at: su.joined_at || null,
+        is_manager: su.is_manager || false,
+      };
+    });
 
     res.status(200).json({
       success: true,

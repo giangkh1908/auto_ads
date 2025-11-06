@@ -1,5 +1,5 @@
 import express from "express";
-import { createShopUser, getShopUsers, getUsersByShop, updateUserRole, updateUserStatus, relinquishOwnership, deleteShopUser, inviteEmployee } from "../../controllers/shops/shopUserControllers.js";
+import { createShopUser, getShopUsers, getUsersByShop, updateUserRole, updateUserStatus, relinquishOwnership, deleteShopUser } from "../../controllers/shops/shopUserControllers.js";
 import { authenticate, authorizeInShop } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -7,8 +7,6 @@ const router = express.Router();
 router.get("/", getShopUsers);
 
 router.get("/:shopId", getUsersByShop);
-
-router.post("/invite", authenticate, inviteEmployee);
 
 router.post("/", createShopUser);
 

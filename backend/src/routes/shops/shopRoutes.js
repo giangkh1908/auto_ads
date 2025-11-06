@@ -22,7 +22,6 @@ router.use(authenticate);
 router.get("/", getShops);
 router.get("/facebook/pages", getFacebookPages);
 router.get("/owner", getShopsByOwner);
-router.get("/my-shops", getShopsByOwner); // Thêm route này
 router.get("/:id", getShopById);
 
 router.post("/", createShop);
