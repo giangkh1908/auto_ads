@@ -1,7 +1,6 @@
 import Shop from "../../models/shops/shop.model.js";
 import User from "../../models/user.model.js";
 import fetch from "node-fetch";
-import Log from "../../models/log.model.js";
 import UserRole from "../../models/userRole.model.js";
 import ShopUser from "../../models/shops/shopUser.model.js";
 import Role from "../../models/role.model.js";
