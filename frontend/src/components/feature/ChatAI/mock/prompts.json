@@ -1,0 +1,26 @@
+{
+  "PERF": [
+    "Tổng quan hiệu suất quảng cáo hôm nay như thế nào?",
+    "Chiến dịch nào tiêu ngân sách nhiều nhất tuần này?",
+    "CTR trung bình của tất cả chiến dịch là bao nhiêu?",
+    "CPC và CPM trung bình 7 ngày qua là bao nhiêu?",
+    "Tổng số lượt hiển thị và người tiếp cận của tất cả chiến dịch?"
+  ],
+  "COMPARE": [
+    "So sánh hiệu suất giữa hai chiến dịch [Tên A] và [Tên B].",
+    "Chiến dịch nào có chi phí trên mỗi kết quả thấp nhất?",
+    "Chiến dịch nào có CPM cao bất thường?",
+    "Top 3 nhóm quảng cáo hiệu quả nhất tuần này là gì?"
+  ],
+  "AUDIENCE": [
+    "Nhóm tuổi nào có CTR cao nhất?",
+    "So sánh hiệu suất giữa nam và nữ theo CTR và CPC.",
+    "Độ tuổi nào mang lại kết quả tốt nhất?"
+  ],
+  "TREND": [
+    "Hiệu suất quảng cáo theo ngày 7 ngày qua như thế nào?",
+    "Ngày nào trong tuần CTR cao nhất?",
+    "Tần suất hiển thị tăng hay giảm trong 3 ngày gần đây?",
+    "Chi tiêu quảng cáo tăng mạnh vào ngày nào?"
+  ]
+}

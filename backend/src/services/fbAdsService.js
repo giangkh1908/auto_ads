@@ -530,8 +530,8 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     if (campaignExternalIds.length > 0) {
       const campaignsDocs = await AdsCampaign.find({
         external_id: { $in: campaignExternalIds }
-      });
-      campaignsDocs.forEach(c => campaignsMap.set(c.external_id, c._id));
+      }).select('external_id _id account_id');
+      campaignsDocs.forEach(c => campaignsMap.set(c.external_id, { _id: c._id, account_id: c.account_id }));
     }
 
     // ✅ BULK WRITE: Sử dụng bulkWrite thay vì từng findOneAndUpdate
@@ -539,8 +539,8 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     const validAdsets = [];
 
     for (const s of adsets) {
-      const campaignId = campaignsMap.get(s.campaign_id);
-      if (!campaignId) {
+      const campaignData = campaignsMap.get(s.campaign_id);
+      if (!campaignData) {
         console.warn(
           `⚠️ Bỏ qua adset ${s.id} vì chưa tìm thấy campaign external_id=${s.campaign_id} trong DB.`
         );
@@ -552,7 +552,8 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
         status: s.status,
         external_id: s.id,
         external_account_id: withoutPrefix,
-        campaign_id: campaignId,
+        campaign_id: campaignData._id,
+        account_id: campaignData.account_id,
         effective_status: s.effective_status,
         daily_budget: s.daily_budget,
         lifetime_budget: s.lifetime_budget,
@@ -1072,5 +1073,146 @@ async function processAdsBatch(ads, withoutPrefix) {
   return externalIds.length > 0 
     ? await Ads.find({ external_id: { $in: externalIds } })
     : [];
+}
+
+/**
+ * Fetch account insights với breakdowns từ Facebook Graph API
+ * @param {string} accessToken - Facebook access token
+ * @param {string} adAccountId - Facebook ad account ID (có thể có hoặc không có prefix act_)
+ * @param {Object} options - Các tùy chọn: timeRange, datePreset, breakdowns
+ * @returns {Promise<Array>} Mảng các insights records
+ */
+export async function fetchAccountInsights(accessToken, adAccountId, options = {}) {
+  try {
+    const { withPrefix } = normalizeAccountPair(adAccountId);
+    
+    // ✅ Fields hợp lệ cho Insights API
+    const insightsFields = [
+      'campaign_name',
+      'adset_name',
+      'ad_name',
+      'ad_id', // ✅ Thêm để có thể fetch creative sau
+      'page_id',
+      'objective',
+      'date_start',
+      'date_stop',
+      'spend',
+      'impressions',
+      'reach',
+      'actions', // ✅ Có thể parse để lấy link_clicks từ action_type="link_click"
+      'frequency',
+      'cpc',
+      'cpm',
+      'ctr',
+      'purchase_roas',
+      // ❌ XÓA: ad_creative_body, link_clicks, delivery - không hợp lệ với Insights API
+    ].join(',');
+
+    // Breakdowns - mặc định là age
+    const breakdowns = options.breakdowns || 'age';
+    
+    // Build URL và params
+    const url = `${FB_API}/${withPrefix}/insights`;
+    const params = new URLSearchParams({
+      fields: insightsFields,
+      breakdowns,
+      level: 'ad', // ✅ Set level để có ad_id trong response
+      access_token: accessToken
+    });
+
+    // Xử lý time_range
+    if (options.timeRange) {
+      if (typeof options.timeRange === 'string') {
+        // Nếu là preset (ví dụ: 'last_30d')
+        params.set('time_range', JSON.stringify({ preset: options.timeRange }));
+      } else if (typeof options.timeRange === 'object') {
+        // Nếu là object { since: 'YYYY-MM-DD', until: 'YYYY-MM-DD' }
+        params.set('time_range', JSON.stringify(options.timeRange));
+      }
+    } else {
+      // Mặc định là last_30d
+      params.set('time_range', JSON.stringify({ preset: 'last_30d' }));
+    }
+    
+    const response = await axios.get(`${url}?${params.toString()}`);
+    const insightsData = response.data?.data || [];
+    
+    // ✅ Bước 2: Fetch creative data cho các ads unique để lấy ad_creative_body
+    if (insightsData.length > 0) {
+      const uniqueAdIds = [...new Set(insightsData.map(item => item.ad_id).filter(Boolean))];
+      
+      // Fetch creative data bằng batch request nếu có ad_ids
+      if (uniqueAdIds.length > 0) {
+        const batch = uniqueAdIds.map(adId => ({
+          method: 'GET',
+          relative_url: `${adId}?fields=creative{body,title}`
+        }));
+        
+        try {
+          const creativeResponse = await axios.post(
+            `${FB_API}/`,
+            {
+              batch: JSON.stringify(batch),
+              include_headers: false
+            },
+            {
+              params: { access_token: accessToken }
+            }
+          );
+          
+          // Map creative data vào insights
+          const creativeMap = {};
+          creativeResponse.data.forEach((res, index) => {
+            if (res.code === 200) {
+              try {
+                const adData = JSON.parse(res.body);
+                creativeMap[uniqueAdIds[index]] = adData.creative?.body || '';
+              } catch (parseErr) {
+                console.warn(`Error parsing creative for ad ${uniqueAdIds[index]}:`, parseErr.message);
+                creativeMap[uniqueAdIds[index]] = '';
+              }
+            }
+          });
+          
+          // Merge creative body vào insights data
+          insightsData.forEach(item => {
+            item.ad_creative_body = creativeMap[item.ad_id] || '';
+            // ✅ Thêm link_clicks từ actions nếu có
+            if (item.actions && Array.isArray(item.actions)) {
+              const linkClickAction = item.actions.find(
+                (action) => action.action_type === "link_click"
+              );
+              item.link_clicks = linkClickAction ? parseInt(linkClickAction.value) || 0 : 0;
+            } else {
+              item.link_clicks = 0;
+            }
+            // ✅ Delivery không có trong API, để empty hoặc tính từ impressions
+            item.delivery = item.impressions > 0 ? 'active' : '';
+          });
+        } catch (creativeErr) {
+          console.warn('Error fetching creative data:', creativeErr.message);
+          // Nếu không fetch được creative, vẫn trả về insights nhưng không có creative body
+          insightsData.forEach(item => {
+            item.ad_creative_body = '';
+            item.link_clicks = 0;
+            item.delivery = item.impressions > 0 ? 'active' : '';
+          });
+        }
+      } else {
+        // Không có ad_id, set default values
+        insightsData.forEach(item => {
+          item.ad_creative_body = '';
+          item.link_clicks = 0;
+          item.delivery = '';
+        });
+      }
+    }
+    
+    // Facebook trả về data trong response.data.data
+    return insightsData;
+  } catch (err) {
+    console.error('Error fetching account insights:', err.response?.data || err.message);
+    throw err;
+  }
 }
 

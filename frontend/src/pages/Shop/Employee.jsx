@@ -28,7 +28,7 @@ function Employee() {
 
   useEffect(() => {
     if (shopId) {
-      fetch(`${base_url}/api/shop/employee/${shopId}`);
+      fetch(`/api/shop/employee/${shopId}`);
     }
   }, [shopId]);
 

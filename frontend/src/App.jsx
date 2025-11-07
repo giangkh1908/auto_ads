@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import ErrorBoundary from "./components/common/ErrorBoundary/ErrorBoundary.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound/NotFound.jsx";
 import AccountManagement from "./pages/AccountManagement/AccountManagement.jsx";
 import AdsManagement from "./pages/AdsManagement/AdsManagement.jsx";
 import ArchiveAds from "./pages/ArchiveAds/ArchiveAds.jsx";
+import Analytics from "./pages/Analytics/Analytics.jsx";
 import ConnectPage from "./pages/ConnectPage/ConnectPage.jsx";
 import ConnectAdAccount from "./pages/ConnectAdAccount/ConnectAdAccount.jsx";
 import ServicePackage from "./pages/ServicePackage/ServicePackage.jsx";
@@ -28,12 +29,25 @@ import Employee from "./pages/Shop/Employee.jsx";
 import History from "./pages/Shop/History.jsx";
 import ScrollToTop from "./utils/ScrollToTop.jsx";
 import { ROUTES, HEADER_ROUTES, AUTH_MODES } from "./constants/app.constants";
+import ChatAIPage from "./components/feature/ChatAI/ChatAIPage.jsx";
 
 function AppContent() {
   const [authVisible, setAuthVisible] = useState(false);
   const [authMode, setAuthMode] = useState(AUTH_MODES.LOGIN);
-  // const navigate = useNavigate()
   const location = useLocation();
+
+  useEffect(() => {
+    const handleSessionExpired = (event) => {
+      toast.error(event.detail.message, {
+        duration: 3000,
+      });
+    };
+
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('sessionExpired', handleSessionExpired);
+    };
+  }, []);
 
   const handleLoginClick = () => {
     setAuthMode(AUTH_MODES.LOGIN);
@@ -68,6 +82,15 @@ function AppContent() {
     <>
       {shouldShowHeader && <Header onLoginClick={handleLoginClick} />}
       <Routes>
+        {/* Route cho Chat AI (Full-screen) */}
+        <Route
+          path={ROUTES.CHAT_AI}
+          element={
+            <main className="page-content">
+              <ChatAIPage />
+            </main>
+          }
+        />
         {/* Route cho Home */}
         <Route
           path={ROUTES.HOME}
@@ -134,6 +157,18 @@ function AppContent() {
                 </main>
                 <Sidebar />
               </>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Route cho Analytics */}
+        <Route
+          path={ROUTES.ANALYTICS}
+          element={
+            <ProtectedRoute>
+              <main className="page-content">
+                <Analytics />
+              </main>
             </ProtectedRoute>
           }
         />

@@ -8,6 +8,18 @@ const adPerformanceSchema = new mongoose.Schema(
     account_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsAccount", index: true },
     date: { type: Date, required: true, index: true },
 
+    // Thêm các trường tên
+    campaign_name: { type: String, default: "" },
+    adset_name: { type: String, default: "" },
+    ad_name: { type: String, default: "" },
+    page_name: { type: String, default: "" },
+
+    // Thêm thông tin creative và targeting
+    ad_text: { type: String, default: "" },
+    age_range: { type: String, default: "" },
+    campaign_objective: { type: String, default: "" },
+
+    // Metrics hiện có
     impressions: { type: Number, default: 0 },
     reach: { type: Number, default: 0 },
     clicks: { type: Number, default: 0 },
@@ -15,6 +27,14 @@ const adPerformanceSchema = new mongoose.Schema(
     conversions: { type: Number, default: 0 },
     frequency: { type: Number, default: 0 },
 
+    // Thêm metrics bổ sung
+    results: { type: Number, default: 0 },
+    cost_per_result: { type: Number, default: null },
+    delivery: { type: String, default: "" },
+    link_clicks: { type: Number, default: 0 },
+    results_roas: { type: Number, default: null },
+
+    // Calculated metrics
     cpc: { type: Number },
     cpm: { type: Number },
     ctr: { type: Number },

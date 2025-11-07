@@ -14,6 +14,7 @@ import {
   archiveAdSet,
   archiveAd,
 } from "../../services/adService";
+import { getAdPerformance, refreshAdPerformance } from "../../services/adPerformanceService";
 import { toggleEntityStatus } from "../../services/toggleStatusService";
 import axiosInstance from "../../utils/axios";
 import { useToast } from "../../hooks/useToast";
@@ -66,7 +67,9 @@ function AdsManagement() {
   const [checkAll, setCheckAll] = useState(false);
   const [hasSelectedItems, setHasSelectedItems] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [togglingItems, setTogglingItems] = useState(new Set()); // Track items being toggled
+  const [togglingItems, setTogglingItems] = useState(new Set());
+  // eslint-disable-next-line no-unused-vars
+  const [loadingInsights, setLoadingInsights] = useState(false);
 
   // Confirmation popup state
   const [confirmationPopup, setConfirmationPopup] = useState({
@@ -757,42 +760,15 @@ function AdsManagement() {
           objective: campaign.objective,
           buying_type: campaign.buying_type,
           created_by: campaign.created_by,
+          impressions: 0,
+          reach: 0,
+          results: 0,
+          quality: '-',
         }));
 
-        // Fetch insights for these campaigns
-        const campaignIds = mapped.map((c) => c.external_id).filter(Boolean);
-        let insightsMap = {};
-        if (campaignIds.length) {
-          try {
-            const { data: ins } = await axiosInstance.get(`/api/campaigns/insights?ids=${campaignIds.join(',')}`);
-            if (ins?.items?.length) {
-              insightsMap = ins.items.reduce((acc, it) => {
-                acc[it.id] = it.insights || {};
-                return acc;
-              }, {});
-            }
-          } catch (e) {
-            console.warn('Campaign insights fetch failed', e);
-          }
-        }
-
-        const merged = mapped.map((c) => {
-          const ins = insightsMap[c.external_id] || {};
-          const actions = Array.isArray(ins.actions) ? ins.actions : [];
-          const results = actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0);
-          return {
-            ...c,
-            impressions: ins.impressions || 0,
-            reach: ins.reach || 0,
-            results,
-            quality: ins.quality_ranking || '-',
-          };
-        });
-
-        // Lưu TẤT CẢ data để sort và phân trang ở FE
         setDatasets(prev => ({
           ...prev,
-          campaigns: merged,
+          campaigns: mapped,
         }));
       }
     } catch (error) {
@@ -857,56 +833,19 @@ function AdsManagement() {
           bid_strategy: adset.bid_strategy,
           bid_amount: adset.bid_amount,
           created_by: adset.created_by,
+          impressions: 0,
+          reach: 0,
+          results: 0,
+          quality: '-',
         }));
 
-        // ✅ Fetch insights theo batch nhỏ (50 items/lần) để tránh quá tải và rate limit
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        let insightsMap = {};
-        if (adsetIds.length) {
-          try {
-            const BATCH_SIZE = 50; // Chia nhỏ thành batch 50 items
-            for (let i = 0; i < adsetIds.length; i += BATCH_SIZE) {
-              const batch = adsetIds.slice(i, i + BATCH_SIZE);
-              const { data: ins } = await axiosInstance.get(
-                `/api/adsets/insights?ids=${batch.join(',')}`
-              );
-              if (ins?.items?.length) {
-                ins.items.forEach(it => {
-                  insightsMap[it.id] = it.insights || {};
-                });
-              }
-              // Thêm delay nhỏ giữa các batch để tránh rate limit (100ms)
-              if (i + BATCH_SIZE < adsetIds.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-              }
-            }
-          } catch (e) {
-            console.warn('Adset insights fetch failed', e);
-          }
-        }
-
-        const merged = mapped.map((a) => {
-          const ins = insightsMap[a.external_id] || {};
-          const actions = Array.isArray(ins.actions) ? ins.actions : [];
-          const results = actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0);
-          return {
-            ...a,
-            impressions: ins.impressions || 0,
-            reach: ins.reach || 0,
-            results,
-            quality: ins.quality_ranking || '-',
-            created_by: a.created_by,
-          };
-        });
-
-        // ✅ Merge thông minh: Giữ adsets của campaigns khác, chỉ update campaign này
         setDatasets((prev) => {
           const otherAdsets = prev.adsets.filter(
             a => String(a.campaignId) !== String(campaignId)
           );
           return {
             ...prev,
-            adsets: [...otherAdsets, ...merged]
+            adsets: [...otherAdsets, ...mapped]
           };
         });
 
@@ -954,45 +893,16 @@ function AdsManagement() {
           adsetId,
           isChecked: false,
           enabled: ad.status === "ACTIVE",
-          budget: 0, // Ads don't have budget, it's inherited from adset
+          budget: 0,
           created_by: ad.created_by,
+          impressions: 0,
+          reach: 0,
+          results: 0,
+          quality: '-',
+          updated_at: ad.updated_at || ad.updatedAt,
         }));
 
-        // Fetch insights for these ads
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        let insightsMap = {};
-        if (adIds.length) {
-          try {
-            const { data: ins } = await axiosInstance.get(`/api/ads/insights?ids=${adIds.join(',')}`);
-            if (ins?.items?.length) {
-              insightsMap = ins.items.reduce((acc, it) => {
-                acc[it.id] = it.insights || {};
-                return acc;
-              }, {});
-            }
-          } catch (e) {
-            console.warn('Insights fetch failed', e);
-          }
-        }
-
-        const merged = mapped.map((a) => {
-          const ins = insightsMap[a.external_id] || {};
-          // derive fields for UI columns
-          const actions = Array.isArray(ins.actions) ? ins.actions : [];
-          const results = actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0);
-          return {
-            ...a,
-            impressions: ins.impressions || 0,
-            reach: ins.reach || 0,
-            results,
-            quality: ins.quality_ranking || '-',
-            updated_at: a.updated_at || a.updatedAt,
-            created_by: a.created_by,
-          };
-        });
-
-        // Lưu TẤT CẢ data để sort và phân trang ở FE
-        setDatasets((prev) => ({ ...prev, ads: merged }));
+        setDatasets((prev) => ({ ...prev, ads: mapped }));
       }
     } catch (error) {
       console.error("Error fetching ads:", error);
@@ -1051,52 +961,15 @@ function AdsManagement() {
           bid_strategy: adset.bid_strategy,
           bid_amount: adset.bid_amount,
           created_by: adset.created_by,
+          impressions: 0,
+          reach: 0,
+          results: 0,
+          quality: '-',
         }));
 
-        // ✅ Fetch insights theo batch nhỏ (50 items/lần) để tránh quá tải và rate limit
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        let insightsMap = {};
-        if (adsetIds.length) {
-          try {
-            const BATCH_SIZE = 50; // Chia nhỏ thành batch 50 items
-            for (let i = 0; i < adsetIds.length; i += BATCH_SIZE) {
-              const batch = adsetIds.slice(i, i + BATCH_SIZE);
-              const { data: ins } = await axiosInstance.get(
-                `/api/adsets/insights?ids=${batch.join(',')}`
-              );
-              if (ins?.items?.length) {
-                ins.items.forEach(it => {
-                  insightsMap[it.id] = it.insights || {};
-                });
-              }
-              // Thêm delay nhỏ giữa các batch để tránh rate limit (100ms)
-              if (i + BATCH_SIZE < adsetIds.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-              }
-            }
-          } catch (e) {
-            console.warn('Adset insights fetch failed', e);
-          }
-        }
-
-        const merged = mapped.map((a) => {
-          const ins = insightsMap[a.external_id] || {};
-          const actions = Array.isArray(ins.actions) ? ins.actions : [];
-          const results = actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0);
-          return {
-            ...a,
-            impressions: ins.impressions || 0,
-            reach: ins.reach || 0,
-            results,
-            quality: ins.quality_ranking || '-',
-            created_by: a.created_by,
-          };
-        });
-
-        // Lưu TẤT CẢ data để sort và phân trang ở FE
         setDatasets((prev) => ({
           ...prev,
-          adsets: merged,
+          adsets: mapped,
         }));
 
         // ✅ Update cache sau khi fetch thành công
@@ -1142,44 +1015,16 @@ function AdsManagement() {
           adsetId: ad.adset_id || ad.set_id,
           isChecked: false,
           enabled: ad.status === "ACTIVE",
-          budget: 0, // Ads don't have budget, it's inherited from adset
+          budget: 0,
           created_by: ad.created_by,
+          impressions: 0,
+          reach: 0,
+          results: 0,
+          quality: '-',
+          updated_at: ad.updated_at || ad.updatedAt,
         }));
 
-        // Fetch insights in batch
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        let insightsMap = {};
-        if (adIds.length) {
-          try {
-            const { data: ins } = await axiosInstance.get(`/api/ads/insights?ids=${adIds.join(',')}`);
-            if (ins?.items?.length) {
-              insightsMap = ins.items.reduce((acc, it) => {
-                acc[it.id] = it.insights || {};
-                return acc;
-              }, {});
-            }
-          } catch (e) {
-            console.warn('Insights fetch failed', e);
-          }
-        }
-
-        const merged = mapped.map((a) => {
-          const ins = insightsMap[a.external_id] || {};
-          const actions = Array.isArray(ins.actions) ? ins.actions : [];
-          const results = actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0);
-          return {
-            ...a,
-            impressions: ins.impressions || 0,
-            reach: ins.reach || 0,
-            results,
-            quality: ins.quality_ranking || '-',
-            updated_at: a.updated_at || a.updatedAt,
-            created_by: a.created_by,
-          };
-        });
-
-        // Lưu TẤT CẢ data để sort và phân trang ở FE
-        setDatasets((prev) => ({ ...prev, ads: merged }));
+        setDatasets((prev) => ({ ...prev, ads: mapped }));
       }
     } catch (error) {
       console.error("Error fetching ads:", error);
@@ -1212,7 +1057,8 @@ function AdsManagement() {
     if (selectedAccountId && initialized) {
       syncData(selectedAccountId);
     }
-  }, [selectedAccountId, initialized, syncData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountId, initialized]);
 
   // 🔹 Load data khi chuyển tab hoặc account thay đổi (KHÔNG phụ thuộc vào pagination)
   useEffect(() => {
@@ -1246,13 +1092,8 @@ function AdsManagement() {
     initialized,
     activeTab,
     selectedCampaign?.id,
-    selectedAdset?.id,
-    fetchCampaignsForAccount,
-    fetchAdsetsForCampaign,
-    fetchAllAdsetsForAccount,
-    fetchAdsForAdset,
-    fetchAllAdsForAccount
-  ]); // BỎ pagination.page, pagination.limit
+    selectedAdset?.id
+  ]);
 
   // useEffect riêng để reset page khi limit thay đổi
   useEffect(() => {
@@ -1279,6 +1120,127 @@ function AdsManagement() {
     }
   };
 
+  // 🔹 THAY ĐỔI: Function để load insights từ DATABASE cho tất cả entities
+  const loadInsightsFromDB = useCallback(async (accountId) => {
+    if (!accountId) return;
+    
+    try {
+      setLoadingInsights(true);
+      
+      const selectedAccountData = adAccounts.find(acc => acc.external_id === accountId);
+      const filterParams = {
+        account_id: selectedAccountData?.external_id || accountId,
+        dateFrom: null,
+        dateTo: null
+      };
+
+      const response = await getAdPerformance(filterParams);
+      
+      if (!response?.data || response.data.length === 0) {
+        console.log("No performance data found in database");
+        return;
+      }
+
+      console.log(`📊 Loaded ${response.data.length} performance records from DB`);
+      console.log('🔍 Sample insight:', response.data[0]);
+      console.log('🔍 Campaigns IDs:', datasets.campaigns.slice(0, 3).map(c => ({ id: c.id, _id: c._id })));
+      console.log('🔍 Ads IDs:', datasets.ads.slice(0, 3).map(a => ({ id: a.id, _id: a._id })));
+
+      const insightsMap = {
+        byCampaign: {},
+        byAdset: {},
+        byAd: {}
+      };
+
+      response.data.forEach(insight => {
+        if (insight.campaign_id) {
+          if (!insightsMap.byCampaign[insight.campaign_id]) {
+            insightsMap.byCampaign[insight.campaign_id] = {
+              impressions: 0,
+              reach: 0,
+              results: 0,
+              spend: 0
+            };
+          }
+          insightsMap.byCampaign[insight.campaign_id].impressions += insight.impressions || 0;
+          insightsMap.byCampaign[insight.campaign_id].reach += insight.reach || 0;
+          insightsMap.byCampaign[insight.campaign_id].results += insight.results || 0;
+          insightsMap.byCampaign[insight.campaign_id].spend += insight.spend || 0;
+        }
+
+        if (insight.set_id) {
+          if (!insightsMap.byAdset[insight.set_id]) {
+            insightsMap.byAdset[insight.set_id] = {
+              impressions: 0,
+              reach: 0,
+              results: 0,
+              spend: 0
+            };
+          }
+          insightsMap.byAdset[insight.set_id].impressions += insight.impressions || 0;
+          insightsMap.byAdset[insight.set_id].reach += insight.reach || 0;
+          insightsMap.byAdset[insight.set_id].results += insight.results || 0;
+          insightsMap.byAdset[insight.set_id].spend += insight.spend || 0;
+        }
+
+        if (insight.ads_id) {
+          if (!insightsMap.byAd[insight.ads_id]) {
+            insightsMap.byAd[insight.ads_id] = {
+              impressions: 0,
+              reach: 0,
+              results: 0,
+              spend: 0
+            };
+          }
+          insightsMap.byAd[insight.ads_id].impressions += insight.impressions || 0;
+          insightsMap.byAd[insight.ads_id].reach += insight.reach || 0;
+          insightsMap.byAd[insight.ads_id].results += insight.results || 0;
+          insightsMap.byAd[insight.ads_id].spend += insight.spend || 0;
+        }
+      });
+
+      setDatasets(prev => ({
+        campaigns: prev.campaigns.map(campaign => {
+          const insights = insightsMap.byCampaign[campaign._id || campaign.id];
+          return insights ? {
+            ...campaign,
+            impressions: insights.impressions,
+            reach: insights.reach,
+            results: insights.results,
+            quality: campaign.quality || '-'
+          } : campaign;
+        }),
+        adsets: prev.adsets.map(adset => {
+          const insights = insightsMap.byAdset[adset._id || adset.id];
+          return insights ? {
+            ...adset,
+            impressions: insights.impressions,
+            reach: insights.reach,
+            results: insights.results,
+            quality: adset.quality || '-'
+          } : adset;
+        }),
+        ads: prev.ads.map(ad => {
+          const insights = insightsMap.byAd[ad._id || ad.id];
+          return insights ? {
+            ...ad,
+            impressions: insights.impressions,
+            reach: insights.reach,
+            results: insights.results,
+            quality: ad.quality || '-'
+          } : ad;
+        })
+      }));
+
+      console.log("✅ Insights loaded from database successfully");
+    } catch (error) {
+      console.error("Error loading insights from DB:", error);
+      toast.error("Error loading insights data from database");
+    } finally {
+      setLoadingInsights(false);
+    }
+  }, [adAccounts, toast]);
+
   // 🔹 Handle refresh data (tối ưu - chỉ sync và fetch tab hiện tại)
   const handleRefresh = useCallback(async () => {
     if (!selectedAccountId) {
@@ -1291,10 +1253,15 @@ function AdsManagement() {
     setRefreshing(true);
 
     try {
-      // Force sync data từ Facebook
-      await syncData(selectedAccountId, true);
+      // 🔹 BƯỚC 1: Force sync insights từ Facebook vào database
+      toast.info(t('toasts.syncing_facebook'));
+      const selectedAccountData = adAccounts.find(acc => acc.external_id === selectedAccountId || acc.id === selectedAccountId);
+      await refreshAdPerformance(selectedAccountData?.external_id || selectedAccountId);
       
-      // Sau đó fetch data cho tab hiện tại
+      // 🔹 BƯỚC 2: Force sync campaigns/adsets/ads structure từ Facebook (sync TẤT CẢ)
+      await syncData(selectedAccountId, true, ['campaigns', 'adsets', 'ads']);
+      
+      // 🔹 BƯỚC 3: Fetch data cho tab hiện tại từ database
       if (activeTab === "campaigns") {
         await fetchCampaignsForAccount(selectedAccountId);
       } else if (activeTab === "adsets") {
@@ -1311,16 +1278,26 @@ function AdsManagement() {
         }
       }
 
-      console.log("✅ Data refreshed successfully");
+      // 🔹 BƯỚC 4: Load insights từ database và merge vào datasets
+      await loadInsightsFromDB(selectedAccountId);
+
+      console.log("✅ Data refreshed successfully from Facebook");
       toast.success(t('toasts.refresh_success'));
     } catch (error) {
       console.error("❌ Error refreshing data:", error);
-      toast.error(t('toasts.refresh_error'));
+      
+      if (error.response?.status === 429 || error.response?.data?.rateLimitReached) {
+        toast.error("Đã đạt giới hạn API của Facebook. Vui lòng thử lại sau 5-10 phút.", {
+          duration: 6000,
+        });
+      } else {
+        toast.error(t('toasts.refresh_error'));
+      }
     } finally {
       setRefreshing(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccountId, activeTab, selectedCampaign?.id, selectedAdset?.id, syncData, fetchCampaignsForAccount, fetchAdsetsForCampaign, fetchAllAdsetsForAccount, fetchAdsForAdset, fetchAllAdsForAccount, toast, t]);
+  }, [selectedAccountId, activeTab, selectedCampaign?.id, selectedAdset?.id]);
 
   // ✅ Chỉ fetch từ DB, không sync Facebook (dùng cho draft)
   const handleFetchOnly = useCallback(async () => {
@@ -1350,8 +1327,19 @@ function AdsManagement() {
     } catch (error) {
       console.error("❌ Error fetching data:", error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccountId, activeTab, selectedCampaign?.id, selectedAdset?.id, fetchCampaignsForAccount, fetchAdsetsForCampaign, fetchAllAdsetsForAccount, fetchAdsForAdset, fetchAllAdsForAccount]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountId, activeTab, selectedCampaign?.id, selectedAdset?.id]);
+
+  // 🔹 Load insights từ DB sau khi fetch data structure
+  useEffect(() => {
+    if (selectedAccountId && initialized) {
+      const hasData = datasets.campaigns.length > 0 || datasets.adsets.length > 0 || datasets.ads.length > 0;
+      if (hasData) {
+        loadInsightsFromDB(selectedAccountId);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountId, initialized, datasets.campaigns.length, datasets.adsets.length, datasets.ads.length]);
 
   return (
     <div className="ads-management-layout">
@@ -1733,6 +1721,7 @@ function AdsManagement() {
         progress={progressState.progress}
         onClose={closeProgress}
       />
+
     </div>
   );
 }

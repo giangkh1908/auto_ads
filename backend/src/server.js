@@ -18,7 +18,9 @@ import adsSetRoutes from "./routes/ads/adsSetRoutes.js";
 import adsRoutes from "./routes/ads/adsRoutes.js";
 import creativeRoutes from "./routes/ads/creativeRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-import aiRoutes from "./routes/ai/aiRoutes.js"; 
+import aiRoutes from "./routes/ai/aiRoutes.js";
+import adPerformanceRoutes from "./routes/ads/adPerformanceRoutes.js";
+import { startAdPerformanceCron } from "./jobs/adPerformance.job.js";
 
 //Load các biến môi trường
 dotenv.config();
@@ -61,6 +63,9 @@ app.use("/api/creatives", creativeRoutes);
 app.use("/api/ads-wizard", adsWizardRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/ads/performance", adPerformanceRoutes);
+
+// Connect database & start server
 
 connectDB();
 
@@ -68,5 +73,12 @@ connectDB();
 app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+// Start cronjobs
+startAdPerformanceCron();
 
 export default app;

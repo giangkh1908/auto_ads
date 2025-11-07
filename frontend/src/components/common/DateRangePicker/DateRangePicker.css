@@ -1,0 +1,200 @@
+.analytics-date-range-picker-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.analytics-date-range-input-container {
+  position: relative;
+  display: inline-block;
+}
+
+.analytics-date-range-picker-wrapper .analytics-date-range-input {
+  padding: 10px 35px 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  min-width: 220px;
+  cursor: pointer;
+}
+
+.analytics-date-range-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.analytics-date-range-icon:hover {
+  color: #374151;
+}
+
+.analytics-date-range-picker-wrapper .analytics-date-range-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.analytics-date-range-picker-wrapper .analytics-date-range-input::placeholder {
+  color: #9ca3af;
+}
+
+.analytics-date-range-picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  padding: 12px;
+  min-width: 540px;
+  max-width: 560px;
+}
+
+.analytics-date-range-picker-content {
+  display: flex;
+  gap: 16px;
+}
+
+.analytics-calendar-month {
+  flex: 1;
+  min-width: 240px;
+}
+
+.analytics-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.analytics-calendar-nav-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.analytics-calendar-nav-button:hover {
+  color: #374151;
+}
+
+.analytics-calendar-month-year {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.analytics-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.analytics-calendar-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  padding: 4px 0;
+}
+
+.analytics-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.analytics-calendar-day {
+  aspect-ratio: 1;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 28px;
+}
+
+.analytics-calendar-day.empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.analytics-calendar-day:hover:not(.empty) {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.analytics-calendar-day.in-range {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.analytics-calendar-day.selected {
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+.analytics-calendar-day.start-date {
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+.analytics-calendar-day.end-date {
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+.analytics-calendar-day.in-range.start-date {
+  background: #2563eb;
+  color: white;
+}
+
+.analytics-calendar-day.in-range.end-date {
+  background: #2563eb;
+  color: white;
+}
+
+/* Đảm bảo các ngày trong range có background nhạt */
+.analytics-calendar-day.in-range:not(.start-date):not(.end-date) {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .analytics-date-range-picker {
+    min-width: 100%;
+    left: 0;
+    right: 0;
+  }
+
+  .analytics-date-range-picker-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+

@@ -18,6 +18,7 @@ import {
   fetchCampaignsFromFacebook,
   fetchAdsetsFromFacebook,
   fetchAdsFromFacebook,
+  fetchAccountInsights,
 } from "../../services/fbAdsService.js";
 import axios from "axios";
 import { upsertOneAdAccount } from "../../services/adsAccountService.js";
@@ -372,5 +373,73 @@ export async function connectAdAccountCtrl(req, res) {
   } catch (err) {
     console.error("CONNECT AdAccount error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "Lỗi kết nối tài khoản quảng cáo", error: err.message });
+  }
+}
+
+/**
+ * GET /api/ads-accounts/:id/insights
+ * Lấy insights data từ Facebook với breakdowns
+ */
+export async function getAccountInsightsCtrl(req, res) {
+  try {
+    const { id } = req.params;
+    const { breakdowns = 'age', date_start, date_stop, time_range } = req.query;
+
+    if (!id) {
+      return res.status(400).json({ message: "Thiếu account ID" });
+    }
+
+    // Lấy access token
+    let accessToken = req.query.access_token;
+    if (!accessToken) {
+      const user = await User.findById(req.user?._id).select("+facebookAccessToken");
+      accessToken = user?.facebookAccessToken || null;
+    }
+
+    if (!accessToken) {
+      return res.status(400).json({
+        message: "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
+        missingToken: true,
+      });
+    }
+
+    // Tìm account trong DB để lấy external_id
+    const account = await getAdsAccountById(id);
+    if (!account) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản quảng cáo" });
+    }
+
+    const externalId = account.external_id || account._id;
+
+    // Build options
+    const options = {
+      breakdowns,
+    };
+
+    // Xử lý time range
+    if (date_start && date_stop) {
+      options.timeRange = {
+        since: date_start,
+        until: date_stop,
+      };
+    } else if (time_range) {
+      options.timeRange = time_range;
+    }
+
+    // Fetch insights từ Facebook
+    const insightsData = await fetchAccountInsights(accessToken, externalId, options);
+
+    return res.status(200).json({
+      account_id: id,
+      breakdowns,
+      items: insightsData,
+      total: insightsData.length,
+    });
+  } catch (err) {
+    console.error("GET Account Insights error:", err.response?.data || err.message);
+    return res.status(500).json({
+      message: "Lỗi khi lấy insights từ Facebook",
+      error: err.message,
+    });
   }
 }

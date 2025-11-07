@@ -11,6 +11,7 @@ import {
   getAccountLiveStatsCtrl,
   listFacebookAdAccountsCtrl,
   connectAdAccountCtrl,
+  getAccountInsightsCtrl,
 } from "../../controllers/ads/adsAccount.controller.js";
 import { authenticate } from "../../middlewares/auth.middleware.js";
 
@@ -28,6 +29,7 @@ router.get("/stats/live", getAccountLiveStatsCtrl);
 
 // Routes có dynamic parameter đặt sau cùng
 router.get("/", listAdsAccountsCtrl);
+router.get("/:id/insights", getAccountInsightsCtrl);
 router.get("/:id", getAdsAccountCtrl);
 router.patch("/:id", updateAdsAccountCtrl);
 router.delete("/:id", deleteAdsAccountCtrl);
