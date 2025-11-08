@@ -18,6 +18,7 @@ A modern, full-stack application for managing Facebook advertising campaigns wit
 - **Facebook Integration**: Direct integration with Facebook Marketing API
 - **Error Handling**: Comprehensive error handling and logging
 - **Modular Architecture**: Clean separation of concerns with controllers, services, and routes
+- **Hourly Insight Upserts**: Hourly insights are saved with a composite `{ ad_id, retrieved_at_hour }` key to avoid duplicates while keeping historical precision, and normalized access tokens are used for every request.
 
 ## 🛠️ Tech Stack
 
@@ -145,6 +146,7 @@ The application is fully responsive and works on:
 - Data automatically refreshes after create/update/delete operations
 - Loading states during API calls
 - Error handling with user-friendly messages
+- Hourly ad insights use `retrieved_at_hour` timestamps during ingestion, ensuring upserts happen against the `{ ad_id, retrieved_at_hour }` key with normalized API tokens.
 
 ### User Experience
 - Intuitive navigation with clear visual feedback
