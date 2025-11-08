@@ -1126,6 +1126,13 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
       access_token: accessToken
     });
 
+    const rawTimeIncrement = options.timeIncrement ?? 1;
+    const numericTimeIncrement = Number(rawTimeIncrement);
+    const resolvedTimeIncrement = Number.isFinite(numericTimeIncrement)
+      ? Math.max(1, Math.floor(numericTimeIncrement))
+      : 1;
+    params.set('time_increment', String(resolvedTimeIncrement));
+
     if (needActions && options.actionBreakdowns) {
       params.set('action_breakdowns', options.actionBreakdowns);
     }
@@ -1148,6 +1155,16 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
       params.set('time_range', JSON.stringify({ preset: 'last_30d' }));
     }
     
+    console.log('[fbAdsService] Fetching account insights', {
+      accountId: withPrefix,
+      level: params.get('level'),
+      timeIncrement: params.get('time_increment'),
+      hasActions: needActions,
+      breakdowns: params.get('breakdowns') || null,
+      actionBreakdowns: params.get('action_breakdowns') || null,
+      timeRange: params.get('time_range') || null
+    });
+
     const response = await axios.get(`${url}?${params.toString()}`);
     const insightsData = response.data?.data || [];
     
@@ -1382,6 +1399,27 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
  * @param {string} accountId - MongoDB _id của AdsAccount
  * @returns {Promise<{saved: number, skipped: number}>}
  */
+function parseInsightDate(item) {
+  const baseDate = item?.date_start || item?.date_stop;
+  if (!baseDate) {
+    return null;
+  }
+
+  const parsed = new Date(`${baseDate}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  parsed.setUTCHours(0, 0, 0, 0);
+  return parsed;
+}
+
+function isAggregatedInsight(item) {
+  if (!item) return false;
+  if (!item.date_start || !item.date_stop) return false;
+  return item.date_start !== item.date_stop;
+}
+
 export async function saveInsightsToAdPerformance(insightsData, accountId) {
   if (!insightsData || !Array.isArray(insightsData) || insightsData.length === 0) {
     return { saved: 0, skipped: 0 };
@@ -1414,7 +1452,7 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
 
     for (const item of insightsData) {
       try {
-        if (!item.ad_id || !item.date_start) {
+        if (!item.ad_id) {
           skipped++;
           continue;
         }
@@ -1428,7 +1466,23 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
         const adset = item.adset_id ? adsetsMap.get(item.adset_id) : null;
         const campaign = item.campaign_id ? campaignsMap.get(item.campaign_id) : null;
 
-        const date = new Date(item.date_start);
+        if (isAggregatedInsight(item)) {
+          console.warn(
+            `[fbAdsService] Skipping aggregated insight for ad ${item.ad_id} covering ${item.date_start} -> ${item.date_stop}. Ensure time_increment=1 to avoid aggregated rows.`
+          );
+          skipped++;
+          continue;
+        }
+
+        const date = parseInsightDate(item);
+        if (!date) {
+          console.warn(`[fbAdsService] Unable to parse insight date for ad ${item.ad_id}. Raw dates:`, {
+            date_start: item.date_start,
+            date_stop: item.date_stop
+          });
+          skipped++;
+          continue;
+        }
         
         const performanceData = {
           ads_id: ad._id,
