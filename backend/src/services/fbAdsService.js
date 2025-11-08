@@ -7,6 +7,7 @@ import AdsAccount from "../models/ads/adsAccount.model.js";
 import AdsCampaign from "../models/ads/adsCampaign.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
 import Ads from "../models/ads/ads.model.js";
+import AdPerformance from "../models/ads/adPerformance.model.js";
 
 const FB_API = "https://graph.facebook.com/v23.0";
 
@@ -530,8 +531,8 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     if (campaignExternalIds.length > 0) {
       const campaignsDocs = await AdsCampaign.find({
         external_id: { $in: campaignExternalIds }
-      }).select('external_id _id account_id');
-      campaignsDocs.forEach(c => campaignsMap.set(c.external_id, { _id: c._id, account_id: c.account_id }));
+      });
+      campaignsDocs.forEach(c => campaignsMap.set(c.external_id, c._id));
     }
 
     // ✅ BULK WRITE: Sử dụng bulkWrite thay vì từng findOneAndUpdate
@@ -539,8 +540,8 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     const validAdsets = [];
 
     for (const s of adsets) {
-      const campaignData = campaignsMap.get(s.campaign_id);
-      if (!campaignData) {
+      const campaignId = campaignsMap.get(s.campaign_id);
+      if (!campaignId) {
         console.warn(
           `⚠️ Bỏ qua adset ${s.id} vì chưa tìm thấy campaign external_id=${s.campaign_id} trong DB.`
         );
@@ -552,8 +553,7 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
         status: s.status,
         external_id: s.id,
         external_account_id: withoutPrefix,
-        campaign_id: campaignData._id,
-        account_id: campaignData.account_id,
+        campaign_id: campaignId,
         effective_status: s.effective_status,
         daily_budget: s.daily_budget,
         lifetime_budget: s.lifetime_budget,
@@ -1086,39 +1086,52 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
   try {
     const { withPrefix } = normalizeAccountPair(adAccountId);
     
-    // ✅ Fields hợp lệ cho Insights API
-    const insightsFields = [
+    const baseFields = [
       'campaign_name',
       'adset_name',
       'ad_name',
-      'ad_id', // ✅ Thêm để có thể fetch creative sau
-      'page_id',
+      'ad_id',
+      'adset_id',
+      'campaign_id',
       'objective',
       'date_start',
       'date_stop',
       'spend',
       'impressions',
       'reach',
-      'actions', // ✅ Có thể parse để lấy link_clicks từ action_type="link_click"
       'frequency',
-      'cpc',
       'cpm',
+      'clicks',
+      'cpc',
       'ctr',
+      'inline_link_clicks',
+      'inline_link_click_ctr',
+      'cost_per_inline_link_click',
+      'results',
+      'cost_per_result',
+      'conversions',
+      'cost_per_conversion',
       'purchase_roas',
-      // ❌ XÓA: ad_creative_body, link_clicks, delivery - không hợp lệ với Insights API
-    ].join(',');
+      'website_purchase_roas',
+    ];
 
-    // Breakdowns - mặc định là age
-    const breakdowns = options.breakdowns || 'age';
-    
-    // Build URL và params
+    const needActions = options.needActions === true;
+    const insightsFields = needActions ? [...baseFields, 'actions'].join(',') : baseFields.join(',');
+
     const url = `${FB_API}/${withPrefix}/insights`;
     const params = new URLSearchParams({
       fields: insightsFields,
-      breakdowns,
-      level: 'ad', // ✅ Set level để có ad_id trong response
+      level: options.level || 'ad',
       access_token: accessToken
     });
+
+    if (needActions && options.actionBreakdowns) {
+      params.set('action_breakdowns', options.actionBreakdowns);
+    }
+
+    if (options.breakdowns && needActions) {
+      params.set('breakdowns', options.breakdowns);
+    }
 
     // Xử lý time_range
     if (options.timeRange) {
@@ -1137,7 +1150,6 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
     const response = await axios.get(`${url}?${params.toString()}`);
     const insightsData = response.data?.data || [];
     
-    // ✅ Bước 2: Fetch creative data cho các ads unique để lấy ad_creative_body
     if (insightsData.length > 0) {
       const uniqueAdIds = [...new Set(insightsData.map(item => item.ad_id).filter(Boolean))];
       
@@ -1174,44 +1186,358 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
             }
           });
           
-          // Merge creative body vào insights data
           insightsData.forEach(item => {
             item.ad_creative_body = creativeMap[item.ad_id] || '';
-            // ✅ Thêm link_clicks từ actions nếu có
-            if (item.actions && Array.isArray(item.actions)) {
-              const linkClickAction = item.actions.find(
-                (action) => action.action_type === "link_click"
-              );
-              item.link_clicks = linkClickAction ? parseInt(linkClickAction.value) || 0 : 0;
-            } else {
-              item.link_clicks = 0;
+            
+            item.link_clicks = Number(item.inline_link_clicks || 0);
+            item.link_ctr = item.inline_link_click_ctr !== undefined ? Number(item.inline_link_click_ctr) : null;
+            item.link_cpc = item.cost_per_inline_link_click !== undefined ? Number(item.cost_per_inline_link_click) : null;
+
+            if (item.clicks && item.spend) {
+              item.cpc = item.cpc !== undefined ? Number(item.cpc) : (Number(item.spend) / Number(item.clicks));
             }
-            // ✅ Delivery không có trong API, để empty hoặc tính từ impressions
+
+            if (item.clicks && item.impressions) {
+              item.ctr = item.ctr !== undefined ? Number(item.ctr) : ((Number(item.clicks) / Number(item.impressions)) * 100);
+            }
+
+            if (Array.isArray(item.conversions)) {
+              const totalConversions = item.conversions.reduce((sum, conv) => sum + Number(conv.value || 0), 0);
+              item.conversions = totalConversions;
+            } else {
+              item.conversions = item.conversions ? Number(item.conversions) : 0;
+            }
+
+            if (Array.isArray(item.cost_per_conversion)) {
+              item.cost_per_conversion = item.cost_per_conversion[0]?.value ? Number(item.cost_per_conversion[0].value) : null;
+            } else {
+              item.cost_per_conversion = item.cost_per_conversion ? Number(item.cost_per_conversion) : null;
+            }
+
+            if (Array.isArray(item.results)) {
+              const totalResults = item.results.reduce((sum, res) => {
+                const value = res.value !== undefined ? Number(res.value || 0) : 0;
+                return sum + value;
+              }, 0);
+              item.results = totalResults;
+            } else {
+              item.results = item.results ? Number(item.results) : 0;
+            }
+
+            if (item.conversions > 0 && item.clicks > 0) {
+              item.conversion_rate = (item.conversions / item.clicks) * 100;
+            }
+
+            if (item.results && item.spend) {
+              item.cost_per_result = item.cost_per_result !== undefined 
+                ? Number(item.cost_per_result) 
+                : (Number(item.spend) / Number(item.results));
+            }
+
+            item.audience_reach_percentage = null;
             item.delivery = item.impressions > 0 ? 'active' : '';
           });
         } catch (creativeErr) {
           console.warn('Error fetching creative data:', creativeErr.message);
-          // Nếu không fetch được creative, vẫn trả về insights nhưng không có creative body
           insightsData.forEach(item => {
             item.ad_creative_body = '';
-            item.link_clicks = 0;
+            item.link_clicks = Number(item.inline_link_clicks || 0);
+            item.link_ctr = item.inline_link_click_ctr !== undefined ? Number(item.inline_link_click_ctr) : null;
+            item.link_cpc = item.cost_per_inline_link_click !== undefined ? Number(item.cost_per_inline_link_click) : null;
+
+            if (item.clicks && item.spend) {
+              item.cpc = item.cpc !== undefined ? Number(item.cpc) : (Number(item.spend) / Number(item.clicks));
+            }
+
+            if (item.clicks && item.impressions) {
+              item.ctr = item.ctr !== undefined ? Number(item.ctr) : ((Number(item.clicks) / Number(item.impressions)) * 100);
+            }
+
+            if (Array.isArray(item.conversions)) {
+              const totalConversions = item.conversions.reduce((sum, conv) => sum + Number(conv.value || 0), 0);
+              item.conversions = totalConversions;
+            } else {
+              item.conversions = item.conversions ? Number(item.conversions) : 0;
+            }
+
+            if (Array.isArray(item.cost_per_conversion)) {
+              item.cost_per_conversion = item.cost_per_conversion[0]?.value ? Number(item.cost_per_conversion[0].value) : null;
+            } else {
+              item.cost_per_conversion = item.cost_per_conversion ? Number(item.cost_per_conversion) : null;
+            }
+
+            if (Array.isArray(item.results)) {
+              const totalResults = item.results.reduce((sum, res) => {
+                const value = res.value !== undefined ? Number(res.value || 0) : 0;
+                return sum + value;
+              }, 0);
+              item.results = totalResults;
+            } else {
+              item.results = item.results ? Number(item.results) : 0;
+            }
+
+            if (item.conversions > 0 && item.clicks > 0) {
+              item.conversion_rate = (item.conversions / item.clicks) * 100;
+            }
+
+            if (item.results && item.spend) {
+              item.cost_per_result = item.cost_per_result !== undefined 
+                ? Number(item.cost_per_result) 
+                : (Number(item.spend) / Number(item.results));
+            }
+            item.audience_reach_percentage = null;
             item.delivery = item.impressions > 0 ? 'active' : '';
           });
         }
       } else {
-        // Không có ad_id, set default values
         insightsData.forEach(item => {
           item.ad_creative_body = '';
-          item.link_clicks = 0;
+          item.link_clicks = Number(item.inline_link_clicks || 0);
+          item.link_ctr = item.inline_link_click_ctr !== undefined ? Number(item.inline_link_click_ctr) : null;
+          item.link_cpc = item.cost_per_inline_link_click !== undefined ? Number(item.cost_per_inline_link_click) : null;
+
+          if (item.clicks && item.spend) {
+            item.cpc = item.cpc !== undefined ? Number(item.cpc) : (Number(item.spend) / Number(item.clicks));
+          }
+
+          if (item.clicks && item.impressions) {
+            item.ctr = item.ctr !== undefined ? Number(item.ctr) : ((Number(item.clicks) / Number(item.impressions)) * 100);
+          }
+
+          if (Array.isArray(item.conversions)) {
+            const totalConversions = item.conversions.reduce((sum, conv) => sum + Number(conv.value || 0), 0);
+            item.conversions = totalConversions;
+          } else {
+            item.conversions = item.conversions ? Number(item.conversions) : 0;
+          }
+
+          if (Array.isArray(item.cost_per_conversion)) {
+            item.cost_per_conversion = item.cost_per_conversion[0]?.value ? Number(item.cost_per_conversion[0].value) : null;
+          } else {
+            item.cost_per_conversion = item.cost_per_conversion ? Number(item.cost_per_conversion) : null;
+          }
+
+          if (Array.isArray(item.results)) {
+            const totalResults = item.results.reduce((sum, res) => {
+              const value = res.value !== undefined ? Number(res.value || 0) : 0;
+              return sum + value;
+            }, 0);
+            item.results = totalResults;
+          } else {
+            item.results = item.results ? Number(item.results) : 0;
+          }
+
+          if (item.conversions > 0 && item.clicks > 0) {
+            item.conversion_rate = (item.conversions / item.clicks) * 100;
+          }
+
+          if (item.results && item.spend) {
+            item.cost_per_result = item.cost_per_result !== undefined 
+              ? Number(item.cost_per_result) 
+              : (Number(item.spend) / Number(item.results));
+          }
+          item.audience_reach_percentage = null;
           item.delivery = '';
         });
       }
     }
     
-    // Facebook trả về data trong response.data.data
+    if (needActions) {
+      for (const item of insightsData) {
+        if (Array.isArray(item.actions)) {
+          const pw = item.actions.find(a => 
+            a.action_type === 'purchase' && 
+            (a.action_destination === 'website' || !a.action_destination)
+          );
+          item.website_purchases = pw ? Number(pw.value || 0) : 0;
+          
+          if (!item.results) {
+            const purchaseAction = item.actions.find(a => a.action_type === 'purchase');
+            item.results = purchaseAction ? Number(purchaseAction.value || 0) : 0;
+          }
+        } else {
+          item.website_purchases = 0;
+          if (!item.results) {
+            item.results = 0;
+          }
+        }
+      }
+    } else {
+      insightsData.forEach(item => {
+        item.website_purchases = item.results || 0;
+      });
+    }
+    
     return insightsData;
   } catch (err) {
     console.error('Error fetching account insights:', err.response?.data || err.message);
+    throw err;
+  }
+}
+
+/**
+ * Lưu insights data vào AdPerformance collection
+ * @param {Array} insightsData - Mảng insights data từ Facebook API
+ * @param {string} accountId - MongoDB _id của AdsAccount
+ * @returns {Promise<{saved: number, skipped: number}>}
+ */
+export async function saveInsightsToAdPerformance(insightsData, accountId) {
+  if (!insightsData || !Array.isArray(insightsData) || insightsData.length === 0) {
+    return { saved: 0, skipped: 0 };
+  }
+
+  try {
+    const account = await AdsAccount.findById(accountId);
+    if (!account) {
+      console.warn(`⚠️ Account ${accountId} not found, skipping save`);
+      return { saved: 0, skipped: insightsData.length };
+    }
+
+    const adExternalIds = [...new Set(insightsData.map(item => item.ad_id).filter(Boolean))];
+    const adsetExternalIds = [...new Set(insightsData.map(item => item.adset_id).filter(Boolean))];
+    const campaignExternalIds = [...new Set(insightsData.map(item => item.campaign_id).filter(Boolean))];
+
+    const [adsDocs, adsetsDocs, campaignsDocs] = await Promise.all([
+      Ads.find({ external_id: { $in: adExternalIds } }),
+      AdsSet.find({ external_id: { $in: adsetExternalIds } }),
+      AdsCampaign.find({ external_id: { $in: campaignExternalIds } })
+    ]);
+
+    const adsMap = new Map(adsDocs.map(ad => [ad.external_id, ad]));
+    const adsetsMap = new Map(adsetsDocs.map(adset => [adset.external_id, adset]));
+    const campaignsMap = new Map(campaignsDocs.map(campaign => [campaign.external_id, campaign]));
+
+    const bulkOps = [];
+    let saved = 0;
+    let skipped = 0;
+
+    for (const item of insightsData) {
+      try {
+        if (!item.ad_id || !item.date_start) {
+          skipped++;
+          continue;
+        }
+
+        const ad = adsMap.get(item.ad_id);
+        if (!ad) {
+          skipped++;
+          continue;
+        }
+
+        const adset = item.adset_id ? adsetsMap.get(item.adset_id) : null;
+        const campaign = item.campaign_id ? campaignsMap.get(item.campaign_id) : null;
+
+        const date = new Date(item.date_start);
+        
+        const performanceData = {
+          ads_id: ad._id,
+          set_id: adset?._id || null,
+          campaign_id: campaign?._id || null,
+          account_id: accountId,
+          date: date,
+          
+          impressions: parseFloat(item.impressions) || 0,
+          reach: parseFloat(item.reach) || 0,
+          clicks: item.clicks ? parseFloat(item.clicks) : 0,
+          spend: parseFloat(item.spend) || 0,
+          conversions: item.conversions ? parseFloat(item.conversions) : 0,
+          frequency: parseFloat(item.frequency) || 0,
+          
+          cpc: item.cpc ? parseFloat(item.cpc) : null,
+          cpm: item.cpm ? parseFloat(item.cpm) : null,
+          ctr: item.ctr ? parseFloat(item.ctr) : null,
+          conversion_rate: item.conversion_rate ? parseFloat(item.conversion_rate) : null,
+          cost_per_conversion: item.cost_per_conversion ? parseFloat(item.cost_per_conversion) : null,
+          
+          campaign_name: item.campaign_name || null,
+          adset_name: item.adset_name || null,
+          ad_name: item.ad_name || null,
+          page_name: item.page_name || adset?.page_name || campaign?.page_name || null,
+          
+          daily_budget: null,
+          daily_spend_rate: null,
+          total_amount_spent: parseFloat(item.spend) || 0,
+          
+          link_clicks: item.link_clicks !== undefined
+            ? Number(item.link_clicks)
+            : Number(item.inline_link_clicks || 0),
+          link_cpc: item.link_cpc !== undefined
+            ? Number(item.link_cpc)
+            : (item.cost_per_inline_link_click !== undefined ? Number(item.cost_per_inline_link_click) : null),
+          link_ctr: item.link_ctr !== undefined
+            ? Number(item.link_ctr)
+            : (item.inline_link_click_ctr !== undefined ? Number(item.inline_link_click_ctr) : null),
+          
+          website_purchases: item.website_purchases ? Number(item.website_purchases) : 0,
+          website_purchase_roas: (() => {
+            if (Array.isArray(item.website_purchase_roas)) {
+              return Number(item.website_purchase_roas[0]?.value ?? null);
+            }
+            if (typeof item.website_purchase_roas === 'number') {
+              return Number(item.website_purchase_roas);
+            }
+            if (Array.isArray(item.purchase_roas)) {
+              return Number(item.purchase_roas[0]?.value ?? null);
+            }
+            if (typeof item.purchase_roas === 'number') {
+              return Number(item.purchase_roas);
+            }
+            return null;
+          })(),
+          
+          results: (() => {
+            if (Array.isArray(item.results)) {
+              const totalResults = item.results.reduce((sum, res) => {
+                const value = res.value !== undefined ? Number(res.value || 0) : 0;
+                return sum + value;
+              }, 0);
+              return totalResults;
+            }
+            const parsed = item.results ? parseFloat(item.results) : 0;
+            return isNaN(parsed) ? 0 : parsed;
+          })(),
+          cost_per_result: item.cost_per_result ? parseFloat(item.cost_per_result) : null,
+          
+          audience_reach_percentage: item.audience_reach_percentage ?? null,
+        };
+
+        if (adset?.daily_budget) {
+          performanceData.daily_budget = Number(adset.daily_budget) / 100;
+          if (performanceData.daily_budget > 0 && performanceData.spend > 0) {
+            performanceData.daily_spend_rate = (performanceData.spend / performanceData.daily_budget) * 100;
+          }
+        } else if (campaign?.daily_budget) {
+          performanceData.daily_budget = Number(campaign.daily_budget) / 100;
+          if (performanceData.daily_budget > 0 && performanceData.spend > 0) {
+            performanceData.daily_spend_rate = (performanceData.spend / performanceData.daily_budget) * 100;
+          }
+        }
+
+        bulkOps.push({
+          updateOne: {
+            filter: {
+              ads_id: ad._id,
+              date: date
+            },
+            update: { $set: performanceData },
+            upsert: true
+          }
+        });
+
+        saved++;
+      } catch (itemErr) {
+        console.error(`Error processing insight item:`, itemErr.message);
+        skipped++;
+      }
+    }
+
+    if (bulkOps.length > 0) {
+      await AdPerformance.bulkWrite(bulkOps);
+    }
+
+    return { saved, skipped };
+  } catch (err) {
+    console.error('Error saving insights to AdPerformance:', err.message);
     throw err;
   }
 }
