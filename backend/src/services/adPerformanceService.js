@@ -19,11 +19,15 @@ function formatDate(date) {
 
 function buildDefaultTimeRange() {
   const today = new Date();
-  const since = new Date(today);
-  since.setDate(since.getDate() - 7);
+  const until = new Date(today);
+  until.setDate(until.getDate() - 1);
+
+  const since = new Date(until);
+  since.setDate(since.getDate() - 6);
+
   return {
     since: formatDate(since),
-    until: formatDate(today),
+    until: formatDate(until),
   };
 }
 
