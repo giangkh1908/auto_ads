@@ -31,6 +31,12 @@ const adHourlyInsightSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Cached external identifiers from Facebook (string form)
+    account_external_id: { type: String, trim: true, index: true },
+    campaign_external_id: { type: String, trim: true, index: true },
+    adset_external_id: { type: String, trim: true, index: true },
+    ad_external_id: { type: String, trim: true, index: true },
+
     delivery_status: { type: String, trim: true },
 
     impressions: { type: Number, default: 0 },
@@ -83,7 +89,7 @@ const adHourlyInsightSchema = new mongoose.Schema(
   { timestamps: { createdAt: "created_at", updatedAt: false } }
 );
 
-adHourlyInsightSchema.index({ ad_id: 1, insight_at: 1 }, { unique: true });
+adHourlyInsightSchema.index({ ad_id: 1, retrieved_at_hour: 1 }, { unique: true });
 adHourlyInsightSchema.index({ account_id: 1, insight_at: 1 });
 adHourlyInsightSchema.index(
   { account_id: 1, ad_id: 1, retrieved_at_hour: -1 },
