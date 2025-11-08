@@ -4,7 +4,6 @@ import { connectDB } from "./config/db.js";
 import cors from "cors";
 import path from "path";
 
-import { startAdPerformanceCron } from "./jobs/adPerformance.job.js";
 import { startAdHourlyInsightsCron } from "./jobs/adHourlyInsights.job.js";
 
 //Import Routes
@@ -72,7 +71,6 @@ app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
 
-startAdPerformanceCron();
 startAdHourlyInsightsCron();
 
 // 🚀 Start server
