@@ -13,7 +13,7 @@ function getCurrentRetrievedAt() {
 
 export const startAdHourlyInsightsCron = () => {
   // Chạy mỗi 30 phút
-  cron.schedule("*/30 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     const retrievedAt = getCurrentRetrievedAt(); 
     const retrievedAtIso = retrievedAt.toISOString();
 

@@ -5,7 +5,7 @@ import AdsAccount from "../models/ads/adsAccount.model.js";
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const startAdPerformanceCron = () => {
-  cron.schedule("*/30 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     const startTime = new Date().toISOString();
     console.log(`[${startTime}] 🚀 Starting ad performance sync job for all accounts...`);
     

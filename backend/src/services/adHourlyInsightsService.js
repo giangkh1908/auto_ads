@@ -39,82 +39,123 @@ function buildInsightFromPerformance({
   account,
 }) {
   const hasPerformance = Boolean(performance);
-  const performanceDateIso = performance?.date ? new Date(performance.date).toISOString() : null;
-  const metrics = {
-    impressions: performance?.impressions ?? 0,
-    reach: performance?.reach ?? 0,
-    clicks: performance?.clicks ?? 0,
-    spend: performance?.spend ?? 0,
-    conversions: performance?.conversions ?? 0,
-    frequency: performance?.frequency ?? 0,
-    cpc: performance?.cpc ?? null,
-    cpm: performance?.cpm ?? null,
-    ctr: performance?.ctr ?? null,
-    conversion_rate: performance?.conversion_rate ?? null,
-    cost_per_conversion: performance?.cost_per_conversion ?? null,
-    results: performance?.results ?? 0,
-    cost_per_result: performance?.cost_per_result ?? null,
-    link_clicks: performance?.link_clicks ?? 0,
-    link_cpc: performance?.link_cpc ?? null,
-    link_ctr: performance?.link_ctr ?? null,
-    website_purchases: performance?.website_purchases ?? 0,
-    website_purchase_roas: performance?.website_purchase_roas ?? null,
-    audience_reach_percentage: performance?.audience_reach_percentage ?? null,
+  
+  // 📊 DAILY METRICS: Từ latestPerformance (ngày mới nhất) - ✅ ROOT LEVEL
+  const latestPerf = performance?.latestPerformance || null;
+  const performanceDateIso = performance?.latestDate ? new Date(performance.latestDate).toISOString() : null;
+  
+  const dailyMetrics = {
+    impressions: latestPerf?.impressions ?? 0,
+    reach: latestPerf?.reach ?? 0,
+    clicks: latestPerf?.clicks ?? 0,
+    spend: latestPerf?.spend ?? 0,
+    conversions: latestPerf?.conversions ?? 0,
+    frequency: latestPerf?.frequency ?? 0,
+    cpc: latestPerf?.cpc ?? null,
+    cpm: latestPerf?.cpm ?? null,
+    ctr: latestPerf?.ctr ?? null,
+    conversion_rate: latestPerf?.conversion_rate ?? null,
+    cost_per_conversion: latestPerf?.cost_per_conversion ?? null,
+    results: latestPerf?.results ?? 0,
+    cost_per_result: latestPerf?.cost_per_result ?? null,
+    link_clicks: latestPerf?.link_clicks ?? 0,
+    link_cpc: latestPerf?.link_cpc ?? null,
+    link_ctr: latestPerf?.link_ctr ?? null,
+    website_purchases: latestPerf?.website_purchases ?? 0,
+    website_purchase_roas: latestPerf?.website_purchase_roas ?? null,
+    audience_reach_percentage: latestPerf?.audience_reach_percentage ?? null,
+  };
+
+  // 📊 CUMULATIVE METRICS: Tổng từ đầu đến giờ
+  const cumulativeMetrics = {
+    total_spend: performance?.totalSpend ?? 0,
+    total_impressions: performance?.totalImpressions ?? 0,
+    total_reach: performance?.totalReach ?? 0,
+    total_clicks: performance?.totalClicks ?? 0,
+    total_results: performance?.totalResults ?? 0,
+    total_conversions: performance?.totalConversions ?? 0,
+    total_purchases: performance?.totalPurchases ?? 0,
+    
+    // Tính các metrics trung bình từ cumulative
+    avg_cpc: performance?.totalClicks > 0 
+      ? toNumber(performance.totalSpend / performance.totalClicks, 2) 
+      : null,
+    avg_cpm: performance?.totalImpressions > 0 
+      ? toNumber((performance.totalSpend / performance.totalImpressions) * 1000, 2) 
+      : null,
+    avg_ctr: performance?.totalImpressions > 0 
+      ? toNumber((performance.totalClicks / performance.totalImpressions) * 100, 2) 
+      : null,
+    avg_cost_per_result: performance?.totalResults > 0 
+      ? toNumber(performance.totalSpend / performance.totalResults, 2) 
+      : null,
+    avg_conversion_rate: performance?.totalClicks > 0 
+      ? toNumber((performance.totalConversions / performance.totalClicks) * 100, 2) 
+      : null,
+    
+    // Thống kê
+    days_with_data: performance?.recordCount ?? 0,
+    first_performance_date: performance?.firstDate ? new Date(performance.firstDate).toISOString() : null,
   };
 
   const fallbackBudget = resolveBudget(adset, campaign);
-  const dailyBudget = performance?.daily_budget ?? fallbackBudget;
-  const totalSpend = metrics.spend ?? 0;
-  const dailySpendRate = performance?.daily_spend_rate
+  const dailyBudget = latestPerf?.daily_budget ?? fallbackBudget;
+  const totalSpend = dailyMetrics.spend ?? 0;
+  const dailySpendRate = latestPerf?.daily_spend_rate
     ?? (dailyBudget && totalSpend ? toNumber((totalSpend / dailyBudget) * 100, 2) : null);
 
-  const ruleEvaluations = performance?.meta?.rule_evaluations
-    ?? performance?.rule_evaluations
-    ?? {};
-
   return {
-    account_id: account._id, // ✅ SỬA: Dùng account._id thay vì ad.account_id
+    account_id: account._id,
     campaign_id: campaign?._id || null,
     adset_id: adset?._id || null,
     ad_id: ad._id,
     delivery_status: ad.effective_status || ad.status || ad.configured_status || "UNKNOWN",
-    impressions: metrics.impressions,
-    reach: metrics.reach,
-    clicks: metrics.clicks,
-    spend: metrics.spend,
-    conversions: metrics.conversions,
-    frequency: metrics.frequency,
-    cpc: metrics.cpc,
-    cpm: metrics.cpm,
-    ctr: metrics.ctr,
-    conversion_rate: metrics.conversion_rate,
-    cost_per_conversion: metrics.cost_per_conversion,
-    results: metrics.results,
-    cost_per_result: metrics.cost_per_result,
-    campaign_name: performance?.campaign_name || campaign?.name || null,
-    adset_name: performance?.adset_name || adset?.name || null,
-    ad_name: performance?.ad_name || ad.name || null,
-    page_name: performance?.page_name || adset?.page_name || campaign?.page_name || null,
+    
+    // 📊 DAILY METRICS (Ngày mới nhất)
+    impressions: dailyMetrics.impressions,
+    reach: dailyMetrics.reach,
+    clicks: dailyMetrics.clicks,
+    spend: dailyMetrics.spend,
+    conversions: dailyMetrics.conversions,
+    frequency: dailyMetrics.frequency,
+    cpc: dailyMetrics.cpc,
+    cpm: dailyMetrics.cpm,
+    ctr: dailyMetrics.ctr,
+    conversion_rate: dailyMetrics.conversion_rate,
+    cost_per_conversion: dailyMetrics.cost_per_conversion,
+    results: dailyMetrics.results,
+    cost_per_result: dailyMetrics.cost_per_result,
+    link_clicks: dailyMetrics.link_clicks,
+    link_cpc: dailyMetrics.link_cpc,
+    link_ctr: dailyMetrics.link_ctr,
+    website_purchases: dailyMetrics.website_purchases,
+    website_purchase_roas: dailyMetrics.website_purchase_roas,
+    audience_reach_percentage: dailyMetrics.audience_reach_percentage,
+    
+    // Thông tin chung
+    campaign_name: latestPerf?.campaign_name || campaign?.name || null,
+    adset_name: latestPerf?.adset_name || adset?.name || null,
+    ad_name: latestPerf?.ad_name || ad.name || null,
+    page_name: latestPerf?.page_name || adset?.page_name || campaign?.page_name || null,
     daily_budget: dailyBudget,
     daily_spend_rate: dailySpendRate,
-    total_amount_spent: performance?.total_amount_spent ?? metrics.spend,
-    link_clicks: metrics.link_clicks,
-    link_cpc: metrics.link_cpc,
-    link_ctr: metrics.link_ctr,
-    website_purchases: metrics.website_purchases,
-    website_purchase_roas: metrics.website_purchase_roas,
-    audience_reach_percentage: metrics.audience_reach_percentage,
-    rule_evaluations: ruleEvaluations,
+    total_amount_spent: latestPerf?.total_amount_spent ?? dailyMetrics.spend,
+    
+    // Timestamp
     insight_at: retrievedAtHour,
     retrieved_at: retrievedAtHour,
-    retrieved_at_hour: retrievedAtHour, // ✅ THÊM FIELD NÀY để filter chính xác
+    retrieved_at_hour: retrievedAtHour,
+    
     meta: {
       source: "ad_performance_snapshot",
       retrieved_at_hour: retrievedAtHour.toISOString(),
-      performance_date: performanceDateIso,
+      performance_date: performanceDateIso, // Ngày của daily metrics
       account_external_id: account.external_id || null,
-      performance_document_id: hasPerformance && performance?._id ? performance._id.toString() : null,
+      performance_document_id: hasPerformance && latestPerf?._id ? latestPerf._id.toString() : null,
       performance_available: hasPerformance,
+      
+      // ✅ CUMULATIVE METRICS (Tổng từ đầu)
+      cumulative: cumulativeMetrics,
     },
   };
 }
@@ -179,8 +220,8 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     : [];
   const campaignsMap = new Map(campaigns.map(campaign => [campaign._id.toString(), campaign]));
 
-  // ✅ LẤY PERFORMANCE MỚI NHẤT CỦA MỖI AD (tại thời điểm retrieved_at_hour)
-  // Dùng aggregation để lấy 1 record/ad (mới nhất)
+  // ✅ LẤY CẢ DAILY (ngày mới nhất) VÀ CUMULATIVE (tổng từ đầu) CỦA MỖI AD
+  // Dùng aggregation để tính 2 loại metrics
   const performances = await AdPerformance.aggregate([
     {
       $match: {
@@ -192,31 +233,41 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
       $sort: {
         ads_id: 1,
         date: -1,      // Ngày mới nhất trước
-        updated_at: -1, // Record mới nhất nếu cùng ngày
-        created_at: -1
+        updated_at: -1
       }
     },
     {
-      // Group theo ads_id, chỉ lấy document đầu tiên (mới nhất)
       $group: {
         _id: "$ads_id",
-        latestPerformance: { $first: "$$ROOT" }
+        // 📊 DAILY: Chỉ số ngày mới nhất
+        latestPerformance: { $first: "$$ROOT" },
+        latestDate: { $first: "$date" },
+        
+        // 📊 CUMULATIVE: Tổng tất cả các ngày (✅ SỬA: Lấy từ ROOT LEVEL)
+        totalSpend: { $sum: "$spend" },
+        totalImpressions: { $sum: "$impressions" },
+        totalReach: { $sum: "$reach" },
+        totalClicks: { $sum: "$clicks" },
+        totalResults: { $sum: "$results" },
+        totalConversions: { $sum: "$conversions" },
+        totalPurchases: { $sum: "$website_purchases" },
+        
+        // Metrics khác (lấy từ latest)
+        firstDate: { $last: "$date" }, // Ngày đầu tiên có data
+        recordCount: { $sum: 1 } // Số ngày có data
       }
-    },
-    {
-      $replaceRoot: { newRoot: "$latestPerformance" }
     }
   ]);
 
-  console.log(`[${retrievedAtHourIso}] 📊 Found ${performances.length} latest performance records (date <= ${retrievedAtHourIso})`);
+  console.log(`[${retrievedAtHourIso}] 📊 Found ${performances.length} ads with performance data (date <= ${retrievedAtHourIso})`);
 
   // ✅ Map performance theo ads_id
   const performanceByAdId = new Map();
   for (const perf of performances) {
-    performanceByAdId.set(perf.ads_id.toString(), perf);
+    performanceByAdId.set(perf._id.toString(), perf);
   }
 
-  console.log(`[${retrievedAtHourIso}] 🎯 Mapped ${performanceByAdId.size} ads with latest performance data`);
+  console.log(`[${retrievedAtHourIso}] 🎯 Mapped ${performanceByAdId.size} ads with daily + cumulative performance data`);
 
   const hourlyInsights = [];
   let missingPerformanceCount = 0;
@@ -228,7 +279,7 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     const campaignId = adset?.campaign_id ? adset.campaign_id.toString() : null;
     const campaign = campaignId ? campaignsMap.get(campaignId) || null : null;
     
-    // ✅ Lấy performance MỚI NHẤT của ad này
+    // ✅ Lấy performance data (có cả daily và cumulative)
     const performance = performanceByAdId.get(ad._id.toString()) || null;
 
     const insight = buildInsightFromPerformance({
@@ -245,8 +296,8 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     if (!performance) {
       missingPerformanceCount += 1;
     } else {
-      // Thống kê theo ngày performance
-      const perfDate = performance.date ? new Date(performance.date).toISOString().split('T')[0] : 'unknown';
+      // Thống kê theo ngày performance (latest date)
+      const perfDate = performance.latestDate ? new Date(performance.latestDate).toISOString().split('T')[0] : 'unknown';
       performanceDateCounts[perfDate] = (performanceDateCounts[perfDate] || 0) + 1;
     }
   }
