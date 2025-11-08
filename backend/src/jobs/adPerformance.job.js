@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { syncAdPerformanceData } from "../services/adPerformanceService.js";
+import { syncAdPerformanceData } from "../services/adPerformanceServic.js";
 import AdsAccount from "../models/ads/adsAccount.model.js";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

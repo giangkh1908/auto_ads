@@ -4,7 +4,7 @@ import { syncAdHourlyInsightsForAccount } from "../services/adHourlyInsightsServ
 
 const VIETNAM_OFFSET_MINUTES = 7 * 60;
 const VIETNAM_OFFSET_MS = VIETNAM_OFFSET_MINUTES * 60 * 1000;
-const HOUR_IN_MS = 60 * 60 * 1000;
+const HOUR_IN_MS = 1 * 60 * 1000;
 
 function getCurrentRetrievedAtHour() {
   const now = new Date();
