@@ -107,6 +107,7 @@ function buildInsightFromPerformance({
     rule_evaluations: ruleEvaluations,
     insight_at: retrievedAtHour,
     retrieved_at: retrievedAtHour,
+    retrieved_at_hour: retrievedAtHour, // ✅ THÊM FIELD NÀY để filter chính xác
     meta: {
       source: "ad_performance_snapshot",
       retrieved_at_hour: retrievedAtHour.toISOString(),
@@ -138,9 +139,16 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
   const normalizedRetrievedAtHour = ensureDate(retrievedAtHour);
   const retrievedAtHourIso = normalizedRetrievedAtHour.toISOString();
 
-  const ads = await Ads.find({ account_id: account._id })
-    .select("_id set_id account_id name status effective_status configured_status")
+  // Lấy account ID number (bỏ prefix "act_" nếu có)
+  const accountIdNumber = account.external_id ? account.external_id.replace(/^act_/, '') : null;
+
+  const ads = await Ads.find({ 
+    external_account_id: accountIdNumber 
+  })
+    .select("_id set_id account_id external_account_id name status effective_status configured_status")
     .lean();
+
+  console.log(`🔍 Found ${ads.length} ads for account ${account.external_id} (external_account_id=${accountIdNumber})`);
 
   if (!ads.length) {
     console.log(`[${retrievedAtHourIso}] ℹ️ No ads found for account ${account.external_id || account._id} when generating hourly insights`);
@@ -152,6 +160,7 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     };
   }
 
+  const adIds = ads.map(ad => ad._id); // ✅ THÊM DÒNG NÀY
   const adsetIds = ads.map(ad => ad.set_id).filter(Boolean);
   const adsets = adsetIds.length > 0
     ? await AdsSet.find({ _id: { $in: adsetIds } })
@@ -170,22 +179,24 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     : [];
   const campaignsMap = new Map(campaigns.map(campaign => [campaign._id.toString(), campaign]));
 
-  const { startUtc, endUtc } = getVietnamDayRange(normalizedRetrievedAtHour);
-
+  // 🔥 LẤY PERFORMANCE DATA MỚI NHẤT CHO TỪNG AD (không giới hạn theo ngày)
   const performances = await AdPerformance.find({
-    account_id: account._id,
-    date: { $gte: startUtc, $lt: endUtc },
+    ads_id: { $in: adIds },
   })
+    .sort({ date: -1, created_at: -1 }) // Sắp xếp theo ngày mới nhất
     .select(
       "_id ads_id date impressions reach clicks spend conversions frequency cpc cpm ctr conversion_rate cost_per_conversion results cost_per_result link_clicks link_cpc link_ctr website_purchases website_purchase_roas audience_reach_percentage daily_budget daily_spend_rate total_amount_spent campaign_name adset_name ad_name page_name rule_evaluations meta"
     )
     .lean();
 
-  const performanceByAdId = new Map(
-    performances
-      .filter(perf => perf.ads_id)
-      .map(perf => [perf.ads_id.toString(), perf])
-  );
+  // Group performance theo ads_id, chỉ lấy record mới nhất của mỗi ad
+  const performanceByAdId = new Map();
+  for (const perf of performances) {
+    const adIdStr = perf.ads_id.toString();
+    if (!performanceByAdId.has(adIdStr)) {
+      performanceByAdId.set(adIdStr, perf); // Lấy record đầu tiên (mới nhất do đã sort)
+    }
+  }
 
   const hourlyInsights = [];
   let missingPerformanceCount = 0;
@@ -223,32 +234,35 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     };
   }
 
-  const bulkOps = hourlyInsights.map((insight) => ({
-    updateOne: {
-      filter: {
-        ad_id: insight.ad_id,
-        insight_at: insight.insight_at,
-      },
-      update: {
-        $set: {
-          ...insight,
-          retrieved_at: normalizedRetrievedAtHour,
-        },
-      },
-      upsert: true,
-    },
-  }));
-
-  if (bulkOps.length > 0) {
-    await AdHourlyInsight.bulkWrite(bulkOps, { ordered: false });
+  // 🔥 ĐỂ TEST: TẠO SNAPSHOT MỚI MỖI LẦN CHẠY (mỗi phút 1 snapshot)
+  let upsertedCount = 0;
+  if (hourlyInsights.length > 0) {
+    try {
+      // Dùng insertMany để tạo snapshot mới mỗi lần (không upsert)
+      const result = await AdHourlyInsight.insertMany(hourlyInsights, { 
+        ordered: false 
+      });
+      upsertedCount = result.length;
+      console.log(`[${retrievedAtHourIso}] ✅ Inserted ${upsertedCount} new hourly snapshots`);
+    } catch (error) {
+      if (error.name === 'MongoBulkWriteError' && error.code === 11000) {
+        // Đếm số records thành công
+        const successCount = hourlyInsights.length - (error.writeErrors?.length || 0);
+        upsertedCount = successCount;
+        console.log(`[${retrievedAtHourIso}] ⚠️ Inserted ${successCount} snapshots, ${error.writeErrors?.length || 0} duplicates skipped`);
+      } else {
+        console.error(`[${retrievedAtHourIso}] ❌ Error inserting snapshots:`, error.message);
+        throw error;
+      }
+    }
   }
 
-  console.log(`[${retrievedAtHourIso}] ✅ Synced hourly insights for account ${account.external_id || account._id}: processed ${ads.length} ads, upserted ${hourlyInsights.length}, missing performance ${missingPerformanceCount} (retrieved_at_hour=${retrievedAtHourIso})`);
+  console.log(`[${retrievedAtHourIso}] ✅ Synced hourly insights for account ${account.external_id || account._id}: processed ${ads.length} ads, upserted ${upsertedCount}, missing performance ${missingPerformanceCount} (retrieved_at_hour=${retrievedAtHourIso})`);
 
   return {
     retrievedAtHour: retrievedAtHourIso,
     processedAds: ads.length,
-    upserts: hourlyInsights.length,
+    upserts: upsertedCount,
     skipped: missingPerformanceCount,
   };
 }

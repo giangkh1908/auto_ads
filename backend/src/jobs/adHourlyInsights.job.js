@@ -17,7 +17,8 @@ function getCurrentRetrievedAtHour() {
 }
 
 export const startAdHourlyInsightsCron = () => {
-  cron.schedule("10 * * * *", async () => {
+  // Chạy mỗi 30 phút
+  cron.schedule("*/30 * * * *", async () => {
     const retrievedAtHour = getCurrentRetrievedAtHour();
     const retrievedAtHourIso = retrievedAtHour.toISOString();
 
@@ -63,5 +64,5 @@ export const startAdHourlyInsightsCron = () => {
     }
   });
 
-  console.log("✅ Ad hourly insights cronjob scheduled - runs hourly at minute 10");
+  console.log("✅ Ad hourly insights cronjob scheduled - runs every 30 minutes");
 };
