@@ -20,7 +20,7 @@ function formatDate(date) {
 function buildDefaultTimeRange() {
   const today = new Date();
   const since = new Date(today);
-  since.setDate(since.getDate() - 2);
+  since.setDate(since.getDate() - 7);
   return {
     since: formatDate(since),
     until: formatDate(today),

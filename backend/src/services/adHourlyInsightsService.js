@@ -73,7 +73,7 @@ function buildInsightFromPerformance({
     ?? {};
 
   return {
-    account_id: ad.account_id,
+    account_id: account._id, // ✅ SỬA: Dùng account._id thay vì ad.account_id
     campaign_id: campaign?._id || null,
     adset_id: adset?._id || null,
     ad_id: ad._id,
@@ -224,6 +224,20 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     }
   }
 
+  // 🔍 THÊM LOG DEBUG CHI TIẾT
+  console.log(`[${retrievedAtHourIso}] 🔍 DEBUG hourlyInsights:`, {
+    totalAds: ads.length,
+    insightsCreated: hourlyInsights.length,
+    firstInsight: hourlyInsights[0] ? {
+      ad_id: hourlyInsights[0].ad_id,
+      account_id: hourlyInsights[0].account_id,
+      retrieved_at_hour: hourlyInsights[0].retrieved_at_hour,
+      hasPerformance: Boolean(performanceByAdId.get(ads[0]._id.toString()))
+    } : null,
+    accountId: account._id,
+    accountExternalId: account.external_id
+  });
+
   if (!hourlyInsights.length) {
     console.log(`[${retrievedAtHourIso}] ℹ️ No hourly insights generated for account ${account.external_id || account._id}`);
     return {
@@ -234,27 +248,40 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     };
   }
 
-  // 🔥 ĐỂ TEST: TẠO SNAPSHOT MỚI MỖI LẦN CHẠY (mỗi phút 1 snapshot)
+  // � LOG TRƯỚC KHI INSERT
+  console.log(`[${retrievedAtHourIso}] 📝 About to insert ${hourlyInsights.length} insights, sample data:`, 
+    JSON.stringify(hourlyInsights[0], null, 2)
+  );
+
+  // Lưu hourly insights vào database
   let upsertedCount = 0;
   if (hourlyInsights.length > 0) {
     try {
-      // Dùng insertMany để tạo snapshot mới mỗi lần (không upsert)
       const result = await AdHourlyInsight.insertMany(hourlyInsights, { 
         ordered: false 
       });
       upsertedCount = result.length;
       console.log(`[${retrievedAtHourIso}] ✅ Inserted ${upsertedCount} new hourly snapshots`);
     } catch (error) {
+      console.error(`[${retrievedAtHourIso}] ❌ INSERT ERROR:`, {
+        name: error.name,
+        code: error.code,
+        message: error.message,
+        writeErrorsCount: error.writeErrors?.length,
+        firstWriteError: error.writeErrors?.[0],
+        validationErrors: error.errors
+      });
+      
       if (error.name === 'MongoBulkWriteError' && error.code === 11000) {
-        // Đếm số records thành công
         const successCount = hourlyInsights.length - (error.writeErrors?.length || 0);
         upsertedCount = successCount;
         console.log(`[${retrievedAtHourIso}] ⚠️ Inserted ${successCount} snapshots, ${error.writeErrors?.length || 0} duplicates skipped`);
       } else {
-        console.error(`[${retrievedAtHourIso}] ❌ Error inserting snapshots:`, error.message);
         throw error;
       }
     }
+  } else {
+    console.log(`[${retrievedAtHourIso}] ⚠️ No hourly insights to insert (empty array)`);
   }
 
   console.log(`[${retrievedAtHourIso}] ✅ Synced hourly insights for account ${account.external_id || account._id}: processed ${ads.length} ads, upserted ${upsertedCount}, missing performance ${missingPerformanceCount} (retrieved_at_hour=${retrievedAtHourIso})`);

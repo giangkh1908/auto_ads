@@ -89,12 +89,10 @@ const adHourlyInsightSchema = new mongoose.Schema(
   { timestamps: { createdAt: "created_at", updatedAt: false } }
 );
 
-adHourlyInsightSchema.index({ ad_id: 1, retrieved_at_hour: 1 }, { unique: true });
+// ✅ GIỮ index bình thường để query nhanh
+adHourlyInsightSchema.index({ ad_id: 1, retrieved_at_hour: 1 });
 adHourlyInsightSchema.index({ account_id: 1, insight_at: 1 });
-adHourlyInsightSchema.index(
-  { account_id: 1, ad_id: 1, retrieved_at_hour: -1 },
-  { unique: true }
-);
+adHourlyInsightSchema.index({ account_id: 1, ad_id: 1, retrieved_at_hour: -1 });
 
 adHourlyInsightSchema.pre("save", function preSave(next) {
   if (!this.retrieved_at_hour) {
