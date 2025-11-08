@@ -1168,6 +1168,22 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
     const response = await axios.get(`${url}?${params.toString()}`);
     const insightsData = response.data?.data || [];
     
+    // ✅ LOG: Kiểm tra response từ Facebook API
+    console.log(`[fbAdsService] 📊 API Response: ${insightsData.length} records`, {
+      firstRecord: insightsData[0] ? {
+        ad_id: insightsData[0].ad_id,
+        date_start: insightsData[0].date_start,
+        date_stop: insightsData[0].date_stop,
+        spend: insightsData[0].spend,
+        impressions: insightsData[0].impressions
+      } : null,
+      sampleDates: insightsData.slice(0, 3).map(item => ({
+        ad_id: item.ad_id,
+        date_start: item.date_start,
+        date_stop: item.date_stop
+      }))
+    });
+    
     if (insightsData.length > 0) {
       const uniqueAdIds = [...new Set(insightsData.map(item => item.ad_id).filter(Boolean))];
       
@@ -1422,8 +1438,11 @@ function isAggregatedInsight(item) {
 
 export async function saveInsightsToAdPerformance(insightsData, accountId) {
   if (!insightsData || !Array.isArray(insightsData) || insightsData.length === 0) {
+    console.log('[fbAdsService] ⚠️ No insights data to save');
     return { saved: 0, skipped: 0 };
   }
+
+  console.log(`[fbAdsService] 💾 Preparing to save ${insightsData.length} performance records to database...`);
 
   try {
     const account = await AdsAccount.findById(accountId);
@@ -1468,7 +1487,7 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
 
         if (isAggregatedInsight(item)) {
           console.warn(
-            `[fbAdsService] Skipping aggregated insight for ad ${item.ad_id} covering ${item.date_start} -> ${item.date_stop}. Ensure time_increment=1 to avoid aggregated rows.`
+            `[fbAdsService] ⚠️ Skipping aggregated insight for ad ${item.ad_id} covering ${item.date_start} -> ${item.date_stop}. Ensure time_increment=1 to avoid aggregated rows.`
           );
           skipped++;
           continue;
@@ -1476,12 +1495,25 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
 
         const date = parseInsightDate(item);
         if (!date) {
-          console.warn(`[fbAdsService] Unable to parse insight date for ad ${item.ad_id}. Raw dates:`, {
+          console.warn(`[fbAdsService] ⚠️ Unable to parse insight date for ad ${item.ad_id}. Raw dates:`, {
             date_start: item.date_start,
             date_stop: item.date_stop
           });
           skipped++;
           continue;
+        }
+        
+        // ✅ LOG: Debug first few items để verify date parsing
+        if (saved < 3) {
+          console.log(`[fbAdsService] 🔍 Processing insight #${saved + 1}:`, {
+            ad_id: item.ad_id,
+            ad_name: item.ad_name,
+            date_start: item.date_start,
+            date_stop: item.date_stop,
+            parsed_date: date.toISOString().split('T')[0],
+            spend: item.spend,
+            impressions: item.impressions
+          });
         }
         
         const performanceData = {
@@ -1568,13 +1600,19 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
           }
         }
 
+        // ✅ DÙNG UPSERT thay vì insert
         bulkOps.push({
           updateOne: {
             filter: {
               ads_id: ad._id,
               date: date
             },
-            update: { $set: performanceData },
+            update: { 
+              $set: performanceData,
+              $setOnInsert: {
+                created_at: new Date()
+              }
+            },
             upsert: true
           }
         });
@@ -1587,12 +1625,23 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
     }
 
     if (bulkOps.length > 0) {
-      await AdPerformance.bulkWrite(bulkOps);
+      console.log(`[fbAdsService] 💾 Saving ${bulkOps.length} performance records to database...`);
+      const result = await AdPerformance.bulkWrite(bulkOps);
+      
+      // ✅ LOG CHI TIẾT KẾT QUẢ
+      console.log(`[fbAdsService] ✅ BulkWrite completed:`, {
+        upserted: result.upsertedCount,    // Số records MỚI được insert
+        modified: result.modifiedCount,     // Số records CŨ được update
+        matched: result.matchedCount,       // Số records tìm thấy
+        total: result.upsertedCount + result.modifiedCount
+      });
     }
+
+    console.log(`[fbAdsService] 📊 Save summary: saved=${saved}, skipped=${skipped}`);
 
     return { saved, skipped };
   } catch (err) {
-    console.error('Error saving insights to AdPerformance:', err.message);
+    console.error('[fbAdsService] ❌ Error saving insights to AdPerformance:', err.message);
     throw err;
   }
 }

@@ -160,7 +160,7 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     };
   }
 
-  const adIds = ads.map(ad => ad._id); // ✅ THÊM DÒNG NÀY
+  const adIds = ads.map(ad => ad._id);
   const adsetIds = ads.map(ad => ad.set_id).filter(Boolean);
   const adsets = adsetIds.length > 0
     ? await AdsSet.find({ _id: { $in: adsetIds } })
@@ -179,33 +179,56 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     : [];
   const campaignsMap = new Map(campaigns.map(campaign => [campaign._id.toString(), campaign]));
 
-  // 🔥 LẤY PERFORMANCE DATA MỚI NHẤT CHO TỪNG AD (không giới hạn theo ngày)
-  const performances = await AdPerformance.find({
-    ads_id: { $in: adIds },
-  })
-    .sort({ date: -1, created_at: -1 }) // Sắp xếp theo ngày mới nhất
-    .select(
-      "_id ads_id date impressions reach clicks spend conversions frequency cpc cpm ctr conversion_rate cost_per_conversion results cost_per_result link_clicks link_cpc link_ctr website_purchases website_purchase_roas audience_reach_percentage daily_budget daily_spend_rate total_amount_spent campaign_name adset_name ad_name page_name rule_evaluations meta"
-    )
-    .lean();
+  // ✅ LẤY PERFORMANCE MỚI NHẤT CỦA MỖI AD (tại thời điểm retrieved_at_hour)
+  // Dùng aggregation để lấy 1 record/ad (mới nhất)
+  const performances = await AdPerformance.aggregate([
+    {
+      $match: {
+        ads_id: { $in: adIds },
+        date: { $lte: normalizedRetrievedAtHour } // Chỉ lấy data <= thời điểm snapshot
+      }
+    },
+    {
+      $sort: {
+        ads_id: 1,
+        date: -1,      // Ngày mới nhất trước
+        updated_at: -1, // Record mới nhất nếu cùng ngày
+        created_at: -1
+      }
+    },
+    {
+      // Group theo ads_id, chỉ lấy document đầu tiên (mới nhất)
+      $group: {
+        _id: "$ads_id",
+        latestPerformance: { $first: "$$ROOT" }
+      }
+    },
+    {
+      $replaceRoot: { newRoot: "$latestPerformance" }
+    }
+  ]);
 
-  // Group performance theo ads_id, chỉ lấy record mới nhất của mỗi ad
+  console.log(`[${retrievedAtHourIso}] 📊 Found ${performances.length} latest performance records (date <= ${retrievedAtHourIso})`);
+
+  // ✅ Map performance theo ads_id
   const performanceByAdId = new Map();
   for (const perf of performances) {
-    const adIdStr = perf.ads_id.toString();
-    if (!performanceByAdId.has(adIdStr)) {
-      performanceByAdId.set(adIdStr, perf); // Lấy record đầu tiên (mới nhất do đã sort)
-    }
+    performanceByAdId.set(perf.ads_id.toString(), perf);
   }
+
+  console.log(`[${retrievedAtHourIso}] 🎯 Mapped ${performanceByAdId.size} ads with latest performance data`);
 
   const hourlyInsights = [];
   let missingPerformanceCount = 0;
+  let performanceDateCounts = {}; // Thống kê số ads theo từng ngày performance
 
   for (const ad of ads) {
     const adsetId = ad.set_id ? ad.set_id.toString() : null;
     const adset = adsetId ? adsetsMap.get(adsetId) || null : null;
     const campaignId = adset?.campaign_id ? adset.campaign_id.toString() : null;
     const campaign = campaignId ? campaignsMap.get(campaignId) || null : null;
+    
+    // ✅ Lấy performance MỚI NHẤT của ad này
     const performance = performanceByAdId.get(ad._id.toString()) || null;
 
     const insight = buildInsightFromPerformance({
@@ -221,19 +244,20 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
 
     if (!performance) {
       missingPerformanceCount += 1;
+    } else {
+      // Thống kê theo ngày performance
+      const perfDate = performance.date ? new Date(performance.date).toISOString().split('T')[0] : 'unknown';
+      performanceDateCounts[perfDate] = (performanceDateCounts[perfDate] || 0) + 1;
     }
   }
 
-  // 🔍 THÊM LOG DEBUG CHI TIẾT
-  console.log(`[${retrievedAtHourIso}] 🔍 DEBUG hourlyInsights:`, {
+  // 🔍 LOG THỐNG KÊ CHI TIẾT
+  console.log(`[${retrievedAtHourIso}] � Hourly snapshot statistics:`, {
+    retrievedAtHour: retrievedAtHourIso,
     totalAds: ads.length,
-    insightsCreated: hourlyInsights.length,
-    firstInsight: hourlyInsights[0] ? {
-      ad_id: hourlyInsights[0].ad_id,
-      account_id: hourlyInsights[0].account_id,
-      retrieved_at_hour: hourlyInsights[0].retrieved_at_hour,
-      hasPerformance: Boolean(performanceByAdId.get(ads[0]._id.toString()))
-    } : null,
+    adsWithPerformance: ads.length - missingPerformanceCount,
+    adsMissingPerformance: missingPerformanceCount,
+    performanceBreakdownByDate: performanceDateCounts,
     accountId: account._id,
     accountExternalId: account.external_id
   });
@@ -253,38 +277,35 @@ export async function syncAdHourlyInsightsForAccount(account, options = {}) {
     JSON.stringify(hourlyInsights[0], null, 2)
   );
 
-  // Lưu hourly insights vào database
+  // ✅ LUÔN INSERT MỚI - Không check duplicate
   let upsertedCount = 0;
   if (hourlyInsights.length > 0) {
     try {
       const result = await AdHourlyInsight.insertMany(hourlyInsights, { 
-        ordered: false 
+        ordered: false // Tiếp tục insert nếu có lỗi
       });
       upsertedCount = result.length;
       console.log(`[${retrievedAtHourIso}] ✅ Inserted ${upsertedCount} new hourly snapshots`);
     } catch (error) {
-      console.error(`[${retrievedAtHourIso}] ❌ INSERT ERROR:`, {
-        name: error.name,
-        code: error.code,
-        message: error.message,
-        writeErrorsCount: error.writeErrors?.length,
-        firstWriteError: error.writeErrors?.[0],
-        validationErrors: error.errors
-      });
-      
       if (error.name === 'MongoBulkWriteError' && error.code === 11000) {
+        // Có duplicate key errors
         const successCount = hourlyInsights.length - (error.writeErrors?.length || 0);
         upsertedCount = successCount;
-        console.log(`[${retrievedAtHourIso}] ⚠️ Inserted ${successCount} snapshots, ${error.writeErrors?.length || 0} duplicates skipped`);
+        console.warn(`[${retrievedAtHourIso}] ⚠️ Inserted ${successCount} snapshots, ${error.writeErrors?.length || 0} duplicates skipped`);
+        console.log(`[${retrievedAtHourIso}] 💡 Note: Duplicates may occur if cronjob runs multiple times at same hour`);
       } else {
+        console.error(`[${retrievedAtHourIso}] ❌ INSERT ERROR:`, {
+          name: error.name,
+          code: error.code,
+          message: error.message,
+          writeErrorsCount: error.writeErrors?.length,
+        });
         throw error;
       }
     }
-  } else {
-    console.log(`[${retrievedAtHourIso}] ⚠️ No hourly insights to insert (empty array)`);
   }
 
-  console.log(`[${retrievedAtHourIso}] ✅ Synced hourly insights for account ${account.external_id || account._id}: processed ${ads.length} ads, upserted ${upsertedCount}, missing performance ${missingPerformanceCount} (retrieved_at_hour=${retrievedAtHourIso})`);
+  console.log(`[${retrievedAtHourIso}] ✅ Synced hourly insights for account ${account.external_id || account._id}: processed ${ads.length} ads, inserted ${upsertedCount} new snapshots, missing performance ${missingPerformanceCount}`);
 
   return {
     retrievedAtHour: retrievedAtHourIso,
