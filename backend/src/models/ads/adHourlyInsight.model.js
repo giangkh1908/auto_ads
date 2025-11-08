@@ -1,5 +1,11 @@
 import mongoose from "mongoose";
 
+const startOfHour = (value = new Date()) => {
+  const date = new Date(value);
+  date.setMinutes(0, 0, 0);
+  return date;
+};
+
 const adHourlyInsightSchema = new mongoose.Schema(
   {
     account_id: {
@@ -66,6 +72,12 @@ const adHourlyInsightSchema = new mongoose.Schema(
 
     insight_at: { type: Date, required: true },
     retrieved_at: { type: Date, default: Date.now, index: true },
+    retrieved_at_hour: {
+      type: Date,
+      required: true,
+      default: () => startOfHour(Date.now()),
+      index: true,
+    },
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: { createdAt: "created_at", updatedAt: false } }
@@ -73,7 +85,60 @@ const adHourlyInsightSchema = new mongoose.Schema(
 
 adHourlyInsightSchema.index({ ad_id: 1, insight_at: 1 }, { unique: true });
 adHourlyInsightSchema.index({ account_id: 1, insight_at: 1 });
-adHourlyInsightSchema.index({ account_id: 1, ad_id: 1, retrieved_at: -1 });
+adHourlyInsightSchema.index(
+  { account_id: 1, ad_id: 1, retrieved_at_hour: -1 },
+  { unique: true }
+);
+
+adHourlyInsightSchema.pre("save", function preSave(next) {
+  if (!this.retrieved_at_hour) {
+    const baseDate = this.retrieved_at ?? new Date();
+    this.retrieved_at_hour = startOfHour(baseDate);
+  }
+  next();
+});
+
+const ensureRetrievedAtHour = (update) => {
+  if (!update) return update;
+
+  const set = update.$set ?? {};
+  const hasRetrievedAtHour =
+    Object.prototype.hasOwnProperty.call(set, "retrieved_at_hour") ||
+    Object.prototype.hasOwnProperty.call(update, "retrieved_at_hour");
+
+  if (hasRetrievedAtHour) {
+    return update;
+  }
+
+  const retrievedAtValue =
+    set.retrieved_at ?? update.retrieved_at ?? update.$setOnInsert?.retrieved_at;
+
+  const retrievedAtDate = retrievedAtValue
+    ? new Date(retrievedAtValue)
+    : new Date();
+
+  const computed = startOfHour(retrievedAtDate);
+
+  if (update.$set) {
+    update.$set.retrieved_at_hour = computed;
+  } else {
+    update.$set = { retrieved_at_hour: computed };
+  }
+
+  if (update.$setOnInsert && !update.$setOnInsert.retrieved_at_hour) {
+    update.$setOnInsert.retrieved_at_hour = computed;
+  }
+
+  return update;
+};
+
+adHourlyInsightSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function preUpdate(next) {
+  const update = ensureRetrievedAtHour(this.getUpdate());
+  if (update) {
+    this.setUpdate(update);
+  }
+  next();
+});
 
 const AdHourlyInsight = mongoose.model("AdHourlyInsight", adHourlyInsightSchema);
 
