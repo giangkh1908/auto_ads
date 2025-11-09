@@ -88,6 +88,77 @@ export async function createAdSet(adAccountId, accessToken, body) {
 export async function createCreative(adAccountId, accessToken, body) {
   const { withPrefix } = normalizeAccountPair(adAccountId);
   
+  // 🔍 DETECT VIDEO: Check if media is video
+  let creativePayload = { ...body };
+  const linkData = body?.object_story_spec?.link_data;
+  const pictureUrl = linkData?.picture;
+  
+  const isVideo = pictureUrl && (
+    pictureUrl.includes('/video/') ||
+    pictureUrl.endsWith('.mp4') ||
+    pictureUrl.endsWith('.mov') ||
+    pictureUrl.endsWith('.avi') ||
+    pictureUrl.endsWith('.webm')
+  );
+  
+  if (isVideo) {
+    console.log(`🎥 Detected VIDEO creative: ${pictureUrl}`);
+    
+    try {
+      // Step 1: Upload video to Facebook Ad Account
+      console.log('📤 Uploading video to Facebook...');
+      const videoUploadResponse = await axios.post(
+        `${FB_API}/${withPrefix}/advideos`,
+        {
+          file_url: pictureUrl,
+          name: body.name || 'Ad Video',
+        },
+        { params: buildFbAuthParams(accessToken) }
+      );
+      
+      const videoId = videoUploadResponse.data.id;
+      console.log(`✅ Video uploaded successfully. Video ID: ${videoId}`);
+      
+      // Step 2: Get video details to retrieve thumbnail
+      console.log('🖼️ Fetching video thumbnail...');
+      const videoDetailsResponse = await axios.get(
+        `${FB_API}/${videoId}`,
+        { 
+          params: {
+            ...buildFbAuthParams(accessToken),
+            fields: 'id,picture,thumbnails'
+          }
+        }
+      );
+      
+      const thumbnailUrl = videoDetailsResponse.data.picture || videoDetailsResponse.data.thumbnails?.data?.[0]?.uri;
+      console.log(`✅ Thumbnail URL: ${thumbnailUrl}`);
+      
+      // Step 3: Create creative with video_data using video_id and thumbnail
+      creativePayload = {
+        name: body.name,
+        object_story_spec: {
+          page_id: body.object_story_spec.page_id,
+          video_data: {
+            video_id: videoId,
+            image_url: thumbnailUrl, // ✅ Required: thumbnail for video
+            message: linkData.message,
+            title: linkData.name,
+            link_description: linkData.description,
+            call_to_action: linkData.call_to_action,
+          }
+        }
+      };
+      
+      console.log('🎬 Converted to video_data format with video_id and thumbnail');
+    } catch (uploadError) {
+      console.error('❌ Failed to upload video to Facebook:', uploadError);
+      throw new Error(`Video upload failed: ${uploadError.response?.data?.error?.message || uploadError.message}`);
+    }
+  } else {
+    console.log(`🖼️ Detected IMAGE creative`);
+  }
+  
   // ✅ Whitelist: Chỉ gửi các field Facebook chấp nhận
   const allowedFields = [
     'name',
@@ -103,10 +174,10 @@ export async function createCreative(adAccountId, accessToken, body) {
     'interactive_components_spec',
   ];
   
-  const filteredBody = Object.keys(body)
-    .filter(key => allowedFields.includes(key) && body[key] !== undefined)
+  const filteredBody = Object.keys(creativePayload)
+    .filter(key => allowedFields.includes(key) && creativePayload[key] !== undefined)
     .reduce((obj, key) => {
-      obj[key] = body[key];
+      obj[key] = creativePayload[key];
       return obj;
     }, {});
   

@@ -179,23 +179,77 @@ function AdStepInner({ ad, setAd, adset }, ref) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // ✅ Validate file type based on destination type
+    const fileType = file.type || "";
+    const isVideoFile = fileType.startsWith("video/");
+
+    // Check if media type matches requirement
+    if (guidance.mediaType === 'video' && !isVideoFile) {
+      toast.error("Mục tiêu này yêu cầu file video (.mp4, .mov, .avi, .webm)");
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    // ✅ Validate file size (max 100MB for video, 10MB for image)
+    const maxSizeVideo = 100 * 1024 * 1024; // 100MB
+    const maxSizeImage = 10 * 1024 * 1024;  // 10MB
+    const maxSize = isVideoFile ? maxSizeVideo : maxSizeImage;
+
+    if (file.size > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024);
+      toast.error(`File quá lớn. Kích thước tối đa: ${maxSizeMB}MB`);
+      e.target.value = '';
+      return;
+    }
+
+    // ✅ For video files, validate duration (optional - requires reading video metadata)
+    if (isVideoFile) {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = async function() {
+        window.URL.revokeObjectURL(video.src);
+        const duration = video.duration;
+        
+        // Facebook recommends 15-240 seconds for video ads
+        if (duration > 240) {
+          toast.warning("Video dài hơn 4 phút. Facebook khuyến nghị video 15-240 giây để tối ưu hiệu suất.");
+        }
+        
+        console.log(`📹 Video duration: ${duration.toFixed(1)}s`);
+      };
+      
+      video.src = URL.createObjectURL(file);
+    }
+
     const formData = new FormData();
     formData.append("file", file);
+    
     try {
       setUploading(true);
+      
+      // Show different messages for video vs image
+      if (isVideoFile) {
+        toast.info("Đang upload video... Vui lòng đợi", { duration: 5000 });
+      }
+      
       const res = await axiosInstance.post("/api/upload/media", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`Upload progress: ${percentCompleted}%`);
+        }
       });
 
       if (res.data?.success && res.data?.url) {
-        // Lấy file đầu tiên trong formData
-        const file = formData.get("file") || formData.get("media");
-        const fileType = file?.type || "";
+        // Lấy file từ formData
+        const uploadedFile = formData.get("file") || formData.get("media");
+        const uploadedFileType = uploadedFile?.type || "";
 
         // Xác định loại media
-        const mediaType = fileType.startsWith("video/")
+        const mediaType = uploadedFileType.startsWith("video/")
           ? "video"
-          : fileType.startsWith("image/")
+          : uploadedFileType.startsWith("image/")
             ? "image"
             : "unknown";
 
@@ -205,7 +259,11 @@ function AdStepInner({ ad, setAd, adset }, ref) {
           mediaUrl: res.data.url,
         }));
 
-        toast.success("Tải file thành công");
+        toast.success(
+          mediaType === "video" 
+            ? "✅ Upload video thành công!" 
+            : "✅ Upload ảnh thành công!"
+        );
       } else {
         toast.error(res.data?.message || "Upload thất bại");
       }
@@ -214,6 +272,7 @@ function AdStepInner({ ad, setAd, adset }, ref) {
       toast.error("Không thể upload file. Vui lòng thử lại.");
     } finally {
       setUploading(false);
+      e.target.value = ''; // Reset input để có thể chọn lại file khác
     }
   };
 
@@ -678,6 +737,17 @@ function AdStepInner({ ad, setAd, adset }, ref) {
               <small className="media-description-hint">
                 {guidance.mediaDescription}
               </small>
+              
+              {/* ✅ Hiển thị thông tin file đã chọn */}
+              {ad.mediaUrl && (
+                <div className="selected-file-info">
+                  <span className="file-type-badge">
+                    {ad.media === 'video' ? '🎥 Video' : '🖼️ Ảnh'}
+                  </span>
+                  <span className="file-status">Đã upload thành công</span>
+                </div>
+              )}
+              
               <div className="media-buttons-container">
                 <button
                   className="media-button upload-button"
@@ -689,7 +759,7 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                   {uploading
                     ? "Đang tải lên..."
                     : ad.mediaUrl
-                      ? "Đã chọn file"
+                      ? `Thay đổi ${guidance.mediaLabel.toLowerCase()}`
                       : `Thêm ${guidance.mediaLabel.toLowerCase()}`}
                 </button>
                 {guidance.mediaType !== 'video' && (

@@ -2,6 +2,7 @@ import AdsCampaign from "../models/ads/adsCampaign.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
 import Ads from "../models/ads/ads.model.js";
 import Creative from "../models/ads/creative.model.js";
+import AdsAccount from "../models/ads/adsAccount.model.js";
 import {
   createCampaign,
   createAdSet,
@@ -1259,7 +1260,17 @@ export async function publishAdsetService({
     });
   } else {
     // ✅ CHỈ TẠO MỚI KHI KHÔNG CÓ DRAFTID (trường hợp tạo mới hoàn toàn)
+    // 🔍 TÌM account_id (MongoDB _id) từ ad_account_id (external_id)
+    const adsAccount = await AdsAccount.findOne({
+      external_id: { $in: [ad_account_id, `act_${ad_account_id}`, ad_account_id.replace('act_', '')] }
+    });
+    
+    if (!adsAccount) {
+      throw new Error(`Không tìm thấy AdsAccount với external_id: ${ad_account_id}`);
+    }
+    
     draftSet = await AdsSet.create({
+      account_id: adsAccount._id, // ✅ THÊM account_id (MongoDB _id)
       campaign_id: campaignDbId, // MongoDB _id của campaign
       name: adset?.name,
       status: "DRAFT",

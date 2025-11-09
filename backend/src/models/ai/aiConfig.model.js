@@ -21,7 +21,6 @@ const aiConfigSchema = new mongoose.Schema(
     is_system_template: {
       type: Boolean,
       default: false,
-      index: true,
     },
     character: {
       type: String,
