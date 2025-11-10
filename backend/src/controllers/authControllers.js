@@ -5,6 +5,9 @@ import fetch from "node-fetch";
 import axios from "axios";
 import { generateTokens, verifyRefreshToken } from "../utils/jwt.js";
 import Shop from "../models/shops/shop.model.js";
+import ShopUser from "../models/shops/shopUser.model.js";
+import UserRole from "../models/userRole.model.js";
+import { RoleEnum } from "../constants/enum.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -16,20 +19,20 @@ async function verifyCaptcha(token) {
   try {
     const secret = process.env.RECAPTCHA_SECRET_KEY;
     if (!secret) {
-      throw new Error('RECAPTCHA_SECRET_KEY not configured');
+      throw new Error("RECAPTCHA_SECRET_KEY not configured");
     }
-    
+
     const response = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
     );
-    
+
     return {
       success: response.data.success,
-      errorCodes: response.data['error-codes'] || [],
-      hostname: response.data.hostname
+      errorCodes: response.data["error-codes"] || [],
+      hostname: response.data.hostname,
     };
   } catch (error) {
-    console.error('CAPTCHA verification request failed:', error.message);
+    console.error("CAPTCHA verification request failed:", error.message);
     throw error;
   }
 }
@@ -57,18 +60,21 @@ export const register = async (req, res) => {
     // Xác thực CAPTCHA với Google
     try {
       const captchaResult = await verifyCaptcha(captchaToken);
-      
+
       if (!captchaResult.success) {
-        console.log('CAPTCHA verification failed:', captchaResult.errorCodes);
+        console.log("CAPTCHA verification failed:", captchaResult.errorCodes);
         return res.status(400).json({
           success: false,
           message: "Xác thực CAPTCHA thất bại. Vui lòng thử lại.",
         });
       }
-      
-      console.log('CAPTCHA verification successful for hostname:', captchaResult.hostname);
+
+      console.log(
+        "CAPTCHA verification successful for hostname:",
+        captchaResult.hostname
+      );
     } catch (captchaError) {
-      console.error('CAPTCHA verification error:', captchaError.message);
+      console.error("CAPTCHA verification error:", captchaError.message);
       return res.status(400).json({
         success: false,
         message: "Lỗi xác thực CAPTCHA. Vui lòng thử lại.",
@@ -94,7 +100,7 @@ export const register = async (req, res) => {
     });
 
     // Tạo shop mặc định cho user mới
-    await Shop.create({
+    const shop = await Shop.create({
       shop_name: full_name,
       owner_id: user._id,
       status: "active",
@@ -106,6 +112,51 @@ export const register = async (req, res) => {
       created_by: user._id,
       updated_by: user._id,
     });
+    console.log("✅ Shop created:", shop._id);
+
+    // Tạo ShopUser với status "active" để được tính vào employee count
+    let shopUser;
+    try {
+      shopUser = await ShopUser.create({
+        user_id: user._id,
+        shop_id: shop._id,
+        is_manager: true,
+        status: "active", // Đảm bảo status là "active" để được tính vào employee count
+      });
+      console.log("✅ ShopUser created:", shopUser._id);
+    } catch (shopUserError) {
+      console.error("❌ Error creating ShopUser:", shopUserError);
+      console.error("❌ ShopUser error details:", {
+        message: shopUserError.message,
+        code: shopUserError.code,
+        keyPattern: shopUserError.keyPattern,
+        keyValue: shopUserError.keyValue,
+      });
+      throw shopUserError;
+    }
+
+    // Tạo UserRole với role Shop Owner
+    try {
+      await UserRole.create({
+        user_id: user._id,
+        role_id: RoleEnum.SHOP_OWNER,
+        shop_id: shop._id,
+        shop_user_id: shopUser._id,
+        is_current: true,
+        source: "system", // Đánh dấu là được tạo tự động từ hệ thống
+      });
+      console.log("✅ UserRole created successfully");
+    } catch (userRoleError) {
+      console.error("❌ Error creating UserRole:", userRoleError);
+      console.error("❌ UserRole error details:", {
+        message: userRoleError.message,
+        code: userRoleError.code,
+        name: userRoleError.name,
+        keyPattern: userRoleError.keyPattern,
+        keyValue: userRoleError.keyValue,
+      });
+      throw userRoleError;
+    }
 
     // Tạo token xác minh email
     const token = crypto.randomBytes(32).toString("hex");
@@ -274,7 +325,7 @@ export const facebookLogin = async (req, res) => {
       });
 
       // Tạo shop mặc định cho user Facebook lần đầu
-      await Shop.create({
+      const shop = await Shop.create({
         shop_name: fbData.name,
         owner_id: user._id,
         status: "active",
@@ -286,6 +337,26 @@ export const facebookLogin = async (req, res) => {
         created_by: user._id,
         updated_by: user._id,
       });
+
+      // Tạo ShopUser với status "active" để được tính vào employee count
+      const shopUser = await ShopUser.create({
+        user_id: user._id,
+        shop_id: shop._id,
+        is_manager: true,
+        status: "active", // Đảm bảo status là "active" để được tính vào employee count
+      });
+      console.log("✅ ShopUser created for Facebook user:", shopUser._id);
+
+      // Tạo UserRole với role Shop Owner
+      await UserRole.create({
+        user_id: user._id,
+        role_id: RoleEnum.SHOP_OWNER,
+        shop_id: shop._id,
+        shop_user_id: shopUser._id,
+        is_current: true,
+        source: "system", // Đánh dấu là được tạo tự động từ hệ thống
+      });
+      console.log("✅ UserRole created for Facebook user");
     } else {
       user.avatar = fbData.picture?.data?.url || user.avatar;
       user.facebookAccessToken = longLivedToken;
@@ -421,15 +492,46 @@ export const resetPassword = async (req, res) => {
 export const getCurrentUser = async (req, res) => {
   try {
     const user = req.user;
-    const shop = await Shop.findOne({
-      owner_id: user._id,
-      deleted_at: null,
+    let shop = null;
+    let shopId = null;
+
+    // Ưu tiên 1: Lấy shop_id từ UserRole với is_current = true (shop đang active)
+    const currentUserRole = await UserRole.findOne({
+      user_id: user._id,
+      is_current: true,
+      shop_id: { $ne: null },
+      revoked_at: null,
     }).lean();
+
+    if (currentUserRole?.shop_id) {
+      // Nếu có UserRole với is_current = true, lấy shop từ shop_id đó
+      shopId = currentUserRole.shop_id;
+      shop = await Shop.findOne({
+        _id: shopId,
+        deleted_at: null,
+      }).lean();
+    } else {
+      // Fallback: Tìm shop mà user là owner (theo đề xuất)
+      shop = await Shop.findOne({
+        owner_id: user._id,
+        deleted_at: null,
+      }).lean();
+
+      if (shop) {
+        shopId = shop._id;
+      }
+    }
+
+    // Thêm shop_id vào user object để frontend dùng
+    const userWithShop = {
+      ...user.toObject(),
+      shop_id: shopId,
+    };
 
     return res.status(200).json({
       success: true,
       data: {
-        user,
+        user: userWithShop,
         shop,
       },
     });
@@ -491,12 +593,10 @@ export const changePassword = async (req, res) => {
     // Kiểm tra mật khẩu cũ
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Mật khẩu hiện tại không chính xác.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu hiện tại không chính xác.",
+      });
     }
 
     // Kiểm tra mật khẩu mới khác mật khẩu cũ

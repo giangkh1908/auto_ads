@@ -8,6 +8,7 @@ import {
     deleteShop, 
     activateShop, 
     deactivateShop,
+    getShopLogs,
     switchCurrentShop,
     getFacebookPages, 
     connectFacebookPage, 
@@ -22,7 +23,9 @@ router.use(authenticate);
 router.get("/", getShops);
 router.get("/facebook/pages", getFacebookPages);
 router.get("/owner", getShopsByOwner);
+router.get("/logs", getShopLogs);
 router.get("/:id", getShopById);
+
 
 router.post("/", createShop);
 

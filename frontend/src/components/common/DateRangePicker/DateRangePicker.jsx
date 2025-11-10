@@ -11,16 +11,24 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const pickerRef = useRef(null);
 
-  // Parse value từ string "dd/mm/yyyy - dd/mm/yyyy"
+  // Parse value từ string "dd/mm/yyyy - dd/mm/yyyy" hoặc object { from: Date, to: Date }
   useEffect(() => {
     if (value) {
-      const parts = value.split(" - ");
-      if (parts.length === 2) {
-        const start = parseDate(parts[0]);
-        const end = parseDate(parts[1]);
-        if (start && end) {
-          setStartDate(start);
-          setEndDate(end);
+      // Nếu value là object { from, to }
+      if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
+        if (value.from) setStartDate(value.from);
+        if (value.to) setEndDate(value.to);
+      }
+      // Nếu value là string
+      else if (typeof value === 'string') {
+        const parts = value.split(" - ");
+        if (parts.length === 2) {
+          const start = parseDate(parts[0]);
+          const end = parseDate(parts[1]);
+          if (start && end) {
+            setStartDate(start);
+            setEndDate(end);
+          }
         }
       }
     }
@@ -77,10 +85,17 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
       }
       setHoverDate(null);
       
-      // Gọi onChange với giá trị formatted
+      // Gọi onChange với object { from, to } hoặc string tùy thuộc vào format mong muốn
       const finalStart = date < startDate ? date : startDate;
       const finalEnd = date < startDate ? startDate : date;
-      onChange(`${formatDate(finalStart)} - ${formatDate(finalEnd)}`);
+      
+      // Nếu onChange expect object
+      if (typeof value === 'object') {
+        onChange({ from: finalStart, to: finalEnd });
+      } else {
+        // Nếu onChange expect string
+        onChange(`${formatDate(finalStart)} - ${formatDate(finalEnd)}`);
+      }
     }
   };
 

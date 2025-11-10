@@ -143,6 +143,19 @@ export const API_ENDPOINTS = {
       }`,
     STATUS: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/ads/status`,
   },
+
+  AUTOMATION_RULES: {
+    LIST: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules`,
+    DETAIL: (id) =>
+      `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}`,
+    CREATE: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules`,
+    UPDATE: (id) =>
+      `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}`,
+    DELETE: (id) =>
+      `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}`,
+    TOGGLE: (id) =>
+      `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}/toggle`,
+  },
 };
 
 export default API_CONFIG;

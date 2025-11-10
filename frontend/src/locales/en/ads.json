@@ -117,7 +117,8 @@
       "location_label": "Location",
       "language_label": "Language",
       "goal_label": "Goal",
-      "view": "View details"
+      "view": "View details",
+      "create_rule": "Automatic rule"
     },
     "toasts": {
       "toggle_success": "has been",

@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./ConnectPage.css";
 import { useToast } from "../../hooks/useToast";
-import profileService from "../../services/profileService";
 import shopService from "../../services/shopService";
+import { getShopCache } from "../../utils/shopCache";
+import axiosInstance from "../../utils/axios.js";
 import logo from "../../assets/Logo_Fchat.png";
 
 function ConnectPage() {
@@ -12,7 +13,6 @@ function ConnectPage() {
   const toast = useToast();
   const { t } = useTranslation();
   const [shopId, setShopId] = useState(null);
-  const [connectedPageIds, setConnectedPageIds] = useState([]);
   const [fbPages, setFbPages] = useState([]);
   const [selectedPages, setSelectedPages] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,16 +23,30 @@ function ConnectPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const me = await profileService.getCurrentProfile();
-        const shop = me?.data?.shop || me?.shop;
-        setShopId(shop?._id || null);
-        const connected = Array.isArray(shop?.facebook_pages)
-          ? shop.facebook_pages
-              .filter((p) => p.connected_status === "connected")
-              .map((p) => p.page_id)
-          : [];
-        setConnectedPageIds(connected);
+        // 1. Thử lấy shopId từ cache trước (nhanh nhất)
+        const cachedShop = getShopCache();
+        if (cachedShop?.id) {
+          setShopId(cachedShop.id);
+        } else {
+          // 2. Nếu không có cache, lấy từ API
+          try {
+            const res = await axiosInstance.get("/api/shops/owner");
+            const data = res.data;
+            if (data.success && Array.isArray(data.data)) {
+              const currentShop = data.data.find((s) => s.is_current);
+              if (currentShop?._id) {
+                setShopId(currentShop._id);
+              } else if (data.data.length > 0) {
+                // Nếu không có current shop, lấy shop đầu tiên
+                setShopId(data.data[0]._id);
+              }
+            }
+          } catch (apiError) {
+            console.error("Error fetching shops:", apiError);
+          }
+        }
 
+        // Lấy danh sách pages từ API (đã có thông tin connected_shop và can_connect)
         const pagesRes = await shopService.fetchFacebookPages();
         const realPages = pagesRes?.data?.pages || [];
         setFbPages(realPages);
@@ -42,7 +56,7 @@ function ConnectPage() {
       }
     };
     load();
-  }, [t]);
+  }, [t, toast]);
 
   // Chuẩn hóa dữ liệu page từ API
   const pages = useMemo(() => {
@@ -59,19 +73,30 @@ function ConnectPage() {
       if (normalized.has("ANALYZE")) return "ANALYST";
       return "PAGE";
     };
-    return (fbPages || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      avatar:
-        p.picture || `https://graph.facebook.com/${p.id}/picture?type=square`,
-      link: `https://www.facebook.com/${p.id}`,
-      role: deriveRole(p.tasks),
-      status: connectedPageIds.includes(p.id) ? t('connect_page.status_connected') : t('connect_page.status_not_connected'),
-      connectedBy: null,
-      isSelected: false,
-      pageAccessToken: p.pageAccessToken,
-    }));
-  }, [fbPages, connectedPageIds]);
+    return (fbPages || []).map((p) => {
+      const isConnectedToCurrentShop = p.connected_shop?.is_current_shop || false;
+      const isConnectedToOtherShop = p.connected_shop && !p.connected_shop.is_current_shop;
+      
+      return {
+        id: p.id,
+        name: p.name,
+        avatar:
+          p.picture || `https://graph.facebook.com/${p.id}/picture?type=square`,
+        link: `https://www.facebook.com/${p.id}`,
+        role: deriveRole(p.tasks),
+        status: isConnectedToCurrentShop 
+          ? t('connect_page.status_connected') 
+          : isConnectedToOtherShop
+          ? `Đã kết nối với shop "${p.connected_shop.shop_name}"`
+          : t('connect_page.status_not_connected'),
+        connectedBy: p.connected_shop?.shop_name || null,
+        isConnectedToOtherShop,
+        canConnect: p.can_connect !== false, // Mặc định true nếu không có thông tin
+        isSelected: false,
+        pageAccessToken: p.pageAccessToken,
+      };
+    });
+  }, [fbPages, t]);
 
   //Đếm số page đã kết nối và còn lại
   const connectedCount = pages.filter(
@@ -79,21 +104,28 @@ function ConnectPage() {
   ).length;
   const remainingCount = pages.length - connectedCount;
 
-  // Loại bỏ các page đã kết nối khỏi selectedPages
+  // Loại bỏ các page đã kết nối với shop khác hoặc không thể kết nối khỏi selectedPages
   useEffect(() => {
     setSelectedPages((prev) =>
       prev.filter((pageId) => {
         const page = pages.find((p) => p.id === pageId);
-        return page && page.status !== t('connect_page.status_connected');
+        return page && !page.isConnectedToOtherShop && page.canConnect;
       })
     );
-  }, [pages, t]);
+  }, [pages]);
 
   //Xử lý chọn page
   const handlePageSelect = (pageId) => {
     const page = pages.find((p) => p.id === pageId);
-    // Không cho phép chọn page đã kết nối hoặc không có quyền ADMIN
-    if (page && (page.status === t('connect_page.status_connected') || page.role !== "ADMIN")) {
+    // Không cho phép chọn page:
+    // - Đã kết nối với shop khác (không phải current shop)
+    // - Không có quyền ADMIN
+    // - Không thể kết nối (canConnect = false)
+    if (page && (
+      page.isConnectedToOtherShop || 
+      page.role !== "ADMIN" || 
+      !page.canConnect
+    )) {
       return;
     }
     //Thêm page vào selectedPages
@@ -107,7 +139,7 @@ function ConnectPage() {
   //Xử lý chọn tất cả
   const handleSelectAll = () => {
     const selectablePages = filteredPages.filter(
-      (page) => page.status !== t('connect_page.status_connected') && page.role === "ADMIN"
+      (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
 
     if (selectAll) {
@@ -136,9 +168,12 @@ function ConnectPage() {
           pageAccessToken: page.pageAccessToken,
         });
       }
-      setConnectedPageIds((prev) =>
-        Array.from(new Set([...prev, ...selected.map((p) => p.id)]))
-      );
+      
+      // Reload pages để cập nhật trạng thái
+      const pagesRes = await shopService.fetchFacebookPages();
+      const realPages = pagesRes?.data?.pages || [];
+      setFbPages(realPages);
+      
       toast.success(t('connect_page.toast_connect_success', { count: selected.length }));
       navigate("/dashboard");
     } catch (e) {
@@ -176,17 +211,18 @@ function ConnectPage() {
     const matchesSearch = page.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
+    const isConnectedToCurrent = page.status === t('connect_page.status_connected');
     const matchesStatus =
       statusFilter === "status" ||
-      (statusFilter === "connected" && page.status === t('connect_page.status_connected')) ||
-      (statusFilter === "not-connected" && page.status === t('connect_page.status_not_connected'));
+      (statusFilter === "connected" && isConnectedToCurrent) ||
+      (statusFilter === "not-connected" && !isConnectedToCurrent && !page.isConnectedToOtherShop);
     return matchesSearch && matchesStatus;
   });
 
   // Cập nhật trạng thái selectAll khi selectedPages thay đổi
   useEffect(() => {
     const selectablePages = filteredPages.filter(
-      (page) => page.status !== t('connect_page.status_connected') && page.role === "ADMIN"
+      (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
     setSelectAll(
       selectablePages.length > 0 &&
@@ -220,7 +256,7 @@ function ConnectPage() {
           ) : (
             <>
               {/* Search and Filter Bar */}
-              <div className="search-filter-bar-connect-page">
+              <div className="search-filter-bar">
                 <div className="search-section">
                   <input
                     type="text"
@@ -241,7 +277,7 @@ function ConnectPage() {
                     <option value="connected">{t('connect_page.filter_connected')}</option>
                     <option value="not-connected">{t('connect_page.filter_not_connected')}</option>
                   </select>
-                  <span className="page-count-connect">
+                  <span className="page-count">
                     {t('connect_page.pages_count', { count: filteredPages.length })}
                   </span>
                 </div>
@@ -260,9 +296,9 @@ function ConnectPage() {
                       onChange={handleSelectAll}
                       className="select-all-checkbox"
                       disabled={
-                        // Disable khi không còn checkbox nào có thể chọn (không connected và phải là ADMIN)
+                        // Disable khi không còn checkbox nào có thể chọn
                         filteredPages.filter(
-                          (page) => page.status !== t('connect_page.status_connected') && page.role === "ADMIN"
+                          (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
                         ).length === 0
                       }
                     />
@@ -312,8 +348,7 @@ function ConnectPage() {
                         checked={selectedPages.includes(page.id)}
                         onChange={() => handlePageSelect(page.id)}
                         className="page-checkbox"
-                        disabled={page.status === t('connect_page.status_connected') || page.role !== "ADMIN"}
-                        title={page.status === t('connect_page.status_connected') ? t('connect_page.disable_title') : page.role !== "ADMIN" ? t('connect_page.disable_title') : ""}
+                        disabled={page.isConnectedToOtherShop || page.role !== "ADMIN" || !page.canConnect}
                       />
                     </div>
                   </div>

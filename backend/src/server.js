@@ -6,7 +6,7 @@ import path from "path";
 
 import { startAdPerformanceCron } from "./jobs/adPerformance.job.js"; 
 import { startAdHourlyInsightsCron } from "./jobs/adHourlyInsights.job.js";
-
+import { startAutoRuleScheduler } from './services/autoRuleScheduler.js'; 
 //Import Routes
 import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
@@ -23,6 +23,7 @@ import creativeRoutes from "./routes/ads/creativeRoutes.js";
 import adPerformanceRoutes from "./routes/ads/adPerformanceRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import aiRoutes from "./routes/ai/aiRoutes.js";
+import automationRuleRoutes from "./routes/automationRuleRoutes.js";
 import chatRoutes from "./routes/ai/chatRoutes.js"; 
 
 //Load các biến môi trường
@@ -66,15 +67,14 @@ app.use("/api/creatives", creativeRoutes);
 app.use("/api/ads-wizard", adsWizardRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/automation-rules", automationRuleRoutes);
 app.use("/api/ai/chat", chatRoutes);
-
-// Connect database & start server
 connectDB();
-
 // Add a root route to check deployment status
 app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
+startAutoRuleScheduler();
 startAdPerformanceCron(); 
 startAdHourlyInsightsCron();
 

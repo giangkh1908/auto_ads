@@ -78,6 +78,7 @@ axiosInstance.interceptors.response.use(
             }
           }
 
+          // logout khi không refresh được
           const wasLoggedIn =
             localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) ||
             localStorage.getItem(STORAGE_KEYS.USER_DATA)
@@ -87,13 +88,7 @@ axiosInstance.interceptors.response.use(
           localStorage.removeItem(STORAGE_KEYS.USER_DATA)
 
           if (wasLoggedIn && window.location.pathname !== '/') {
-            const event = new CustomEvent('sessionExpired', { 
-              detail: { message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' } 
-            })
-            window.dispatchEvent(event)
-            setTimeout(() => {
-              window.location.replace('/')
-            }, 2000)
+            window.location.replace('/')
           }
           return Promise.reject(error)
         }

@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import facebook_icon from "../../assets/facebook.png";
 import { ROUTES, STORAGE_KEYS } from "../../constants/app.constants";
 import { Edit3, Pause, PlugZap, RefreshCcw, Repeat, Bell, Users, MessageCircle, Bot, Play, Calendar, Key, Store, Search as SearchIcon, Plus, Link2} from "lucide-react";
-import profileService from "../../services/profileService";
 import shopService from "../../services/shopService";
+import { getShopCache, onShopChange } from "../../utils/shopCache";
+import axiosInstance from "../../utils/axios.js";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -19,34 +20,86 @@ function Dashboard() {
   const [connectedPages, setConnectedPages] = useState([]);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const me = await profileService.getCurrentProfile();
-        const shop = me?.data?.shop || me?.shop;
-        const pages = Array.isArray(shop?.facebook_pages)
-          ? shop.facebook_pages
-          : [];
-        const normalized = pages
-          .filter((p) => p.connected_status === "connected")
-          .map((p) => ({
-            id: p.page_id,
-            name: p.page_info?.name || "Facebook Page",
-            pageId: p.page_id,
-            link: `https://www.facebook.com/${p.id}`,
-            avatar:
-              p.page_info?.picture_url ||
-              `https://graph.facebook.com/${p.page_id}/picture?type=square`,
-            status: "active",
-            followerCount: 0,
-          }));
-        setConnectedPages(normalized);
-      } catch (e) {
-        console.error("Load dashboard shop info error:", e);
+  // Hàm load pages từ current shop
+  const loadConnectedPages = useCallback(async () => {
+    try {
+      // Lấy current shop từ cache hoặc API
+      let currentShop = null;
+      const cachedShop = getShopCache();
+      
+      if (cachedShop?.id) {
+        // Nếu có cache, vẫn cần lấy full shop data từ API để có facebook_pages
+        try {
+          const res = await axiosInstance.get("/api/shops/owner");
+          const data = res.data;
+          if (data.success && Array.isArray(data.data)) {
+            currentShop = data.data.find((s) => s.is_current || s._id === cachedShop.id);
+          }
+        } catch (apiError) {
+          console.error("Error fetching shops:", apiError);
+        }
+      } else {
+        // Nếu không có cache, lấy từ API
+        try {
+          const res = await axiosInstance.get("/api/shops/owner");
+          const data = res.data;
+          if (data.success && Array.isArray(data.data)) {
+            currentShop = data.data.find((s) => s.is_current);
+          }
+        } catch (apiError) {
+          console.error("Error fetching shops:", apiError);
+        }
       }
-    };
-    load();
+
+      if (!currentShop || !currentShop.facebook_pages) {
+        console.warn("Không tìm thấy current shop hoặc không có pages");
+        setConnectedPages([]);
+        return;
+      }
+
+      // Lấy pages từ current shop
+      const pages = Array.isArray(currentShop.facebook_pages)
+        ? currentShop.facebook_pages
+        : [];
+      const normalized = pages
+        .filter((p) => p.connected_status === "connected")
+        .map((p) => ({
+          id: p.page_id,
+          name: p.page_info?.name || "Facebook Page",
+          pageId: p.page_id,
+          link: p.page_info?.link || `https://www.facebook.com/${p.page_id}`,
+          avatar:
+            p.page_info?.picture_url ||
+            `https://graph.facebook.com/${p.page_id}/picture?type=square`,
+          status: "active",
+          followerCount: 0,
+        }));
+      setConnectedPages(normalized);
+    } catch (e) {
+      console.error("Load dashboard shop info error:", e);
+      setConnectedPages([]);
+    }
   }, []);
+
+  // Load pages khi component mount
+  useEffect(() => {
+    loadConnectedPages();
+  }, [loadConnectedPages]);
+
+  // Lắng nghe sự kiện thay đổi shop để reload pages
+  useEffect(() => {
+    const removeListener = onShopChange((newShop) => {
+      if (newShop) {
+        // Reload pages khi shop thay đổi
+        loadConnectedPages();
+      } else {
+        // Nếu shop bị xóa, clear pages
+        setConnectedPages([]);
+      }
+    });
+
+    return removeListener;
+  }, [loadConnectedPages]);
 
   const handleRefresh = () => {
     console.log("Refreshing...");
@@ -89,16 +142,39 @@ function Dashboard() {
     }
     if (itemId === "disconnect") {
       try {
-        const me = await profileService.getCurrentProfile();
-        const shop = me?.data?.shop || me?.shop;
-        if (!shop?._id) return;
+        // Lấy current shop ID từ cache hoặc API
+        let currentShopId = null;
+        const cachedShop = getShopCache();
+        if (cachedShop?.id) {
+          currentShopId = cachedShop.id;
+        } else {
+          try {
+            const res = await axiosInstance.get("/api/shops/owner");
+            const data = res.data;
+            if (data.success && Array.isArray(data.data)) {
+              const currentShop = data.data.find((s) => s.is_current);
+              if (currentShop?._id) {
+                currentShopId = currentShop._id;
+              }
+            }
+          } catch (apiError) {
+            console.error("Error fetching shops:", apiError);
+          }
+        }
+
+        if (!currentShopId) {
+          toast.error("Không tìm thấy shop hiện tại");
+          return;
+        }
+
         const res = await shopService.disconnectFacebookPage({
-          shopId: shop._id,
+          shopId: currentShopId,
           pageId,
         });
         // ✅ Kiểm tra phản hồi
         if (res?.success) {
-          setConnectedPages((prev) => prev.filter((p) => p.id !== pageId));
+          // Reload pages để đảm bảo UI được cập nhật
+          await loadConnectedPages();
           toast.success(res.message || "Đã ngắt kết nối page.");
         } else {
           toast.warning(res.message || "Không thể ngắt kết nối page.");

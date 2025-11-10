@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
 
+const facebookPageSchema = new mongoose.Schema(
+  {
+    page_id: { type: String, required: true },
+    page_name: { type: String },
+    page_category: { type: String },
+    page_access_token: { type: String },
+    picture_url: { type: String },
+    connected_status: { type: String, enum: ["connected", "disconnected"], default: "connected" },
+    connected_at: { type: Date, default: Date.now },
+    assigned_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    assigned_at: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const shopUserSchema = new mongoose.Schema(
   {
     shop_id: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
@@ -13,6 +28,7 @@ const shopUserSchema = new mongoose.Schema(
     joined_at: { type: Date, default: Date.now },
     invited_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     removed_at: { type: Date, default: null },
+    facebook_pages: { type: [facebookPageSchema], default: [] },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

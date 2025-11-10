@@ -97,6 +97,21 @@ export const AuthProvider = ({ children }) => {
     checkAuth()
   }, [toast, logout])
 
+  // Helper function để refresh user với shop_id từ getCurrentUser
+  const refreshUserWithShopId = useCallback(async () => {
+    try {
+      const currentUserResponse = await authService.getCurrentUser()
+      if (currentUserResponse.success && currentUserResponse.data?.user) {
+        const userWithShop = currentUserResponse.data.user
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userWithShop))
+        setUser(userWithShop)
+        return userWithShop
+      }
+    } catch (error) {
+      console.log('Error refreshing user with shop_id:', error)
+    }
+    return null
+  }, [])
 
   // Đăng nhập
   const login = async (credentials, redirectTo = null) => {
@@ -135,7 +150,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem(STORAGE_KEYS.FB_PAGES)
         setFbPages([])
 
-        setUser(user)
+        // Gọi getCurrentUser để lấy user với shop_id đầy đủ
+        const userWithShop = await refreshUserWithShopId()
+        setUser(userWithShop || user)
+
         setIsAuthenticated(true)
 
         toast.success(response.message || 'Đăng nhập thành công!')
@@ -186,7 +204,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   // Hoàn tất đăng nhập từ kênh bên ngoài (ví dụ: Facebook)
-  const completeExternalLogin = (data, redirectTo = null) => {
+  const completeExternalLogin = async (data, redirectTo = null) => {
     const { user: loggedInUser, tokens, pages = [], adAccounts = [] } = data || {}
     if (!loggedInUser || !tokens?.accessToken || !tokens?.refreshToken) {
       toast.error('Thông tin đăng nhập không hợp lệ')
@@ -200,13 +218,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.FB_PAGES, JSON.stringify(pages))
     localStorage.setItem(STORAGE_KEYS.FB_AD_ACCOUNTS, JSON.stringify(adAccounts))
 
-    // Cập nhật state để UI (avatar, xin chào, nav, ...) hiển thị ngay
+    // Cập nhật state ngay để UI hiển thị (để popup có thể đóng ngay)
     setUser(loggedInUser)
     setIsAuthenticated(true)
     setFbPages(pages)
     setFbAdAccounts(adAccounts)
 
     toast.success('Đăng nhập thành công!')
+
+    // Gọi getCurrentUser để lấy user với shop_id đầy đủ (chạy trong background)
+    // Không await để popup có thể đóng ngay
+    refreshUserWithShopId().then((userWithShop) => {
+      if (userWithShop) {
+        // Cập nhật lại user với shop_id khi có kết quả
+        setUser(userWithShop)
+      }
+    }).catch((error) => {
+      console.log('Error refreshing user with shop_id (non-blocking):', error)
+    })
 
     // Điều hướng giống login thường
     setTimeout(() => {
@@ -325,7 +354,9 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken)
           localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user))
 
-          setUser(user)
+          // Gọi getCurrentUser để lấy user với shop_id đầy đủ
+          const userWithShop = await refreshUserWithShopId()
+          setUser(userWithShop || user)
           setIsAuthenticated(true)
 
         }

@@ -131,3 +131,107 @@ export const sendInvitationEmail = async (email, token) => {
     throw new Error("Không thể gửi email mời nhân viên");
   }
 };
+
+/**
+ * Gửi email thông báo khi AutoRule được trigger
+ */
+export const sendAutoRuleNotificationEmail = async (email, name, ruleData) => {
+  try {
+    const transporter = createTransporter();
+
+    const { ruleName, conditions, action, entities } = ruleData;
+
+    // Map action name
+    const actionNames = {
+      TURN_ON: "Bật",
+      TURN_OFF: "Tắt",
+      SEND_NOTIFICATION: "Gửi thông báo",
+    };
+    const actionName = actionNames[action] || action;
+
+    // Format conditions
+    const conditionText = conditions
+      ?.map((c) => {
+        const metricNames = {
+          spend: "Chi tiêu",
+          daily_budget: "Ngân sách hàng ngày",
+          daily_spend_rate: "Tỷ lệ chi tiêu hàng ngày",
+          website_purchase_roas: "ROAS mua hàng trên website",
+          link_ctr: "CTR liên kết",
+          impressions: "Lượt hiển thị",
+          link_cpc: "CPC liên kết",
+          cost_per_result: "Chi phí trên mỗi kết quả",
+          results: "Kết quả",
+          frequency: "Tần suất",
+          website_purchases: "Lượt mua trên website",
+          total_amount_spent: "Tổng số tiền đã chi",
+          link_clicks: "Lượt click liên kết",
+          cpm: "CPM",
+          audience_reach_percentage: "Phần trăm tiếp cận đối tượng",
+        };
+        const operatorNames = {
+          GREATER_THAN: "lớn hơn",
+          LESS_THAN: "nhỏ hơn",
+          EQUAL_TO: "bằng",
+        };
+        const metric = metricNames[c.metric] || c.metric;
+        const operator = operatorNames[c.operator] || c.operator;
+        return `${metric} ${operator} ${c.value}`;
+      })
+      .join(", ");
+
+    // Format entities
+    const entityText = [];
+    if (entities.campaigns && entities.campaigns.length > 0) {
+      entityText.push(`Chiến dịch: ${entities.campaigns.join(", ")}`);
+    }
+    if (entities.adsets && entities.adsets.length > 0) {
+      entityText.push(`Nhóm quảng cáo: ${entities.adsets.join(", ")}`);
+    }
+    if (entities.ads && entities.ads.length > 0) {
+      entityText.push(`Quảng cáo: ${entities.ads.join(", ")}`);
+    }
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: `Thông báo: Quy tắc tự động "${ruleName}" đã được kích hoạt`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">🔔 Thông báo quy tắc tự động</h2>
+          <p>Chào ${name},</p>
+          <p>Quy tắc tự động <strong>"${ruleName}"</strong> đã được kích hoạt.</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #333; margin-top: 0;">Điều kiện đã thỏa mãn:</h3>
+            <p>${conditionText || "Không có điều kiện"}</p>
+          </div>
+          
+          <div style="background-color: #e7f3ff; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #333; margin-top: 0;">Hành động đã thực thi:</h3>
+            <p><strong>${actionName}</strong></p>
+          </div>
+          
+          ${entityText.length > 0 ? `
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #333; margin-top: 0;">Đối tượng bị ảnh hưởng:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${entityText.map((text) => `<li>${text}</li>`).join("")}
+            </ul>
+          </div>
+          ` : ""}
+          
+          <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Email này được gửi tự động bởi hệ thống quản lý quảng cáo.
+          </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`AutoRule notification email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending AutoRule notification email:", error);
+    throw new Error("Không thể gửi email thông báo quy tắc tự động");
+  }
+};

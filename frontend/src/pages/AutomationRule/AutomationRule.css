@@ -1,0 +1,332 @@
+/* Full wide page layout - no sidebar, no footer */
+.automation-rule-page {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 0;
+  padding-top: 58px; /* Header height to prevent content from being hidden */
+  width: 100%;
+}
+
+.automation-rule-container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #ffffff;
+  min-height: calc(100vh - 58px); /* Full height minus header */
+}
+
+/* Header with Back Button */
+.automation-rule-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 30px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.btn-back:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.automation-rule-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+/* Action Button */
+.automation-rule-actions {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-add-rule {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #417ef8;
+  color: #ffffff;
+  border: 1px solid #417ef8;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-add-rule:hover:not(:disabled) {
+  background: #3b80e0;
+  border-color: #3b80e0;
+}
+
+.btn-add-rule:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Table Wrapper */
+.automation-rule-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.automation-rule-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  display: grid;
+  grid-template-columns: 0.48fr 1.5fr 0.5fr 1.07fr 1.3fr 2.2fr 1.7fr 1.2fr 1.5fr 1fr;
+  min-width: 1200px;
+  gap: 0;
+}
+
+.automation-rule-table thead {
+  display: contents;
+}
+
+.automation-rule-table tbody {
+  display: contents;
+}
+
+.automation-rule-table tr {
+  display: contents;
+}
+
+.automation-rule-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  background-color: #f9fafb;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.automation-rule-table td {
+  padding: 10px 10px;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.automation-rule-table-wrapper {
+  display: block;
+}
+
+/* Hover effect for table rows */
+.automation-rule-table tbody tr:hover td {
+  background-color: #f9fafb;
+}
+
+.automation-rule-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Fix for empty state with colspan - span all columns */
+.automation-rule-table tbody tr:has(.empty-state) td {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Toggle Switch */
+.rule-toggle {
+  width: 44px;
+  height: 24px;
+  background: #d1d5db;
+  border-radius: 999px;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.rule-toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 999px;
+  transition: left 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rule-toggle.on {
+  background: #10b981;
+}
+
+.rule-toggle.on::after {
+  left: 22px;
+}
+
+.rule-toggle.off {
+  background: #d1d5db;
+}
+
+.rule-toggle.off::after {
+  left: 2px;
+}
+
+/* Status */
+.rule-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-enabled {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-triggered {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Rule Actions */
+.rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-edit,
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.btn-edit {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.btn-edit:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.btn-delete {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-delete:hover {
+  background-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: #6b7280;
+  font-size: 14px;
+  grid-column: 1 / -1; /* Span all columns */
+  background-color: #ffffff;
+}
+
+/* Rule ID Cell - Allow text to wrap */
+.rule-id-cell {
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: normal;
+  overflow-wrap: break-word;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+/* Action Condition Cell - Multi-line display */
+.action-condition-cell {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+.action-condition-cell strong {
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Rule Result Cell - Multi-line display với thông tin chi tiết */
+.rule-result-cell {
+  white-space: pre-line;
+  line-height: 1.8;
+  font-size: 13px;
+  padding: 12px 16px;
+  color: #374151;
+  vertical-align: top;
+  overflow: visible;
+  word-wrap: break-word;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .automation-rule-container {
+    padding: 16px;
+  }
+
+  .automation-rule-title {
+    font-size: 24px;
+  }
+
+  .automation-rule-table-wrapper {
+    overflow-x: scroll;
+  }
+}
+

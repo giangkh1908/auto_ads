@@ -213,16 +213,7 @@ export async function syncCampaignsCtrl(req, res) {
         });
       }
       
-      if (syncError.response?.data?.error?.code === 17 || syncError.response?.data?.error?.error_subcode === 2446079) {
-        console.warn("⚠️ Facebook rate limit reached for account:", account_id);
-        return res.status(429).json({
-          message: "Đã đạt giới hạn API của Facebook. Vui lòng thử lại sau 5-10 phút.",
-          rateLimitReached: true,
-          retryAfter: 300
-        });
-      }
-      
-      throw syncError;
+      throw syncError; // Ném lỗi để xử lý ở catch bên ngoài
     }
   } catch (err) {
     console.error("SYNC Campaigns error:", err);
@@ -274,6 +265,7 @@ export async function syncAllCtrl(req, res) {
         }
       });
     } catch (syncError) {
+      // Xử lý lỗi từ Facebook API cụ thể
       if (syncError.response?.data?.error?.code === 190) {
         return res.status(401).json({
           message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
@@ -285,15 +277,6 @@ export async function syncAllCtrl(req, res) {
         return res.status(403).json({
           message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
           permissionDenied: true
-        });
-      }
-      
-      if (syncError.response?.data?.error?.code === 17 || syncError.response?.data?.error?.error_subcode === 2446079) {
-        console.warn("⚠️ Facebook rate limit reached for account:", account_id);
-        return res.status(429).json({
-          message: "Đã đạt giới hạn API của Facebook. Vui lòng thử lại sau 5-10 phút.",
-          rateLimitReached: true,
-          retryAfter: 300
         });
       }
       

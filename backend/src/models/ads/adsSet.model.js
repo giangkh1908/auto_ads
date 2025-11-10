@@ -5,13 +5,7 @@ const adsSetSchema = new mongoose.Schema(
     campaign_id: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "AdsCampaign",
-      required: true,
-      index: true
-    },
-    account_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "AdsAccount",
-      required: true,
+      required: true,  // Mỗi AdSet phải thuộc về một Campaign
       index: true
     },
     external_account_id: { 

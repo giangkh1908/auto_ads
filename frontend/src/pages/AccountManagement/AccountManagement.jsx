@@ -316,13 +316,13 @@ function AccountManagement() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: "center", color: "#6b7280" }}>
+                    <td colSpan="8" style={{ textAlign: "center", color: "#6b7280" }}>
                       {t('account_management.loading')}
                     </td>
                   </tr>
                 ) : accounts.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: "center", color: "#6b7280" }}>
+                    <td colSpan="8" style={{ textAlign: "center", color: "#6b7280" }}>
                       {t('account_management.no_accounts')}
                     </td>
                   </tr>

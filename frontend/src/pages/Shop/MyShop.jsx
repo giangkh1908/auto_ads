@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { Plus, Edit, Play, Pause, Star, MapPin, Check, ArrowRight} from "lucide-react";
+import { Plus, Edit, Play, Pause, Star, MapPin, ArrowRight } from "lucide-react";
 import { ROUTES } from "../../constants/app.constants";
 import "./Shop.css";
 import { STORAGE_KEYS } from '../../constants/app.constants';
+import axiosInstance from "../../utils/axios.js";
+import { toast } from "sonner";
+import { clearShopCache, saveShopCache } from "../../utils/shopCache";
 
 function MyShop() {
   const { t } = useTranslation();
@@ -37,13 +40,14 @@ function MyShop() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
-        }
-      });
-      const data = await res.json();
-      setCurrentUser(data.data.user);
+      try {
+        const res = await axiosInstance.get("/api/auth/me");
+        const data = res.data;
+        setCurrentUser(data.data.user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast.error("Lỗi khi tải thông tin người dùng");
+      }
     };
     fetchUser();
   }, []);
@@ -56,15 +60,8 @@ function MyShop() {
     try {
       setLoading(true);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/owner`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
-        },
-      });
-
-      const data = await res.json();
+      const res = await axiosInstance.get("/api/shops/owner");
+      const data = res.data;
 
       console.log("🔹 API response:", data);
 
@@ -103,10 +100,12 @@ function MyShop() {
         setShops(formatted);
       } else {
         console.error("Failed to load shops:", data.message);
+        toast.error(data.message || "Không thể tải danh sách shop");
         setShops([]); // fallback an toàn
       }
     } catch (e) {
       console.error("Load shops error:", e);
+      toast.error("Lỗi khi tải danh sách shop");
       setShops([]); // tránh lỗi map nếu lỗi API
     } finally {
       setLoading(false);
@@ -117,54 +116,6 @@ function MyShop() {
   const handleAction = (shopId, action) => {
     console.log(`Action ${action} for shop ${shopId}`);
   };
-
-  // Hành động với shop (Activate / Deactivate)
-  // const handleAction = async (shopId, action) => {
-  //   try {
-  //     let endpoint = "";
-  //     let successMessage = "";
-
-  //     if (action === "activate") {
-  //       endpoint = `${import.meta.env.VITE_API_URL}/api/shops/${shopId}/activate`;
-  //       successMessage = "Shop activated successfully!";
-  //     } else if (action === "deactivate") {
-  //       endpoint = `${import.meta.env.VITE_API_URL}/api/shops/${shopId}/deactivate`;
-  //       successMessage = "Shop deactivated successfully!";
-  //     } else {
-  //       console.log(`Unknown action: ${action}`);
-  //       return;
-  //     }
-
-  //     const res = await fetch(endpoint, {
-  //       method: "PATCH",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //       },
-  //     });
-
-  //     const data = await res.json();
-  //     if (data.success) {
-  //       alert(successMessage);
-  //       // 🔁 Refresh danh sách shop
-  //       const refresh = await fetch(
-  //         `${import.meta.env.VITE_API_URL}/api/shops/owner/68ed2a2d64097dc1c878e714`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //           },
-  //         }
-  //       );
-  //       const refreshedData = await refresh.json();
-  //       setShops(refreshedData.data || refreshedData);
-  //     } else {
-  //       alert(data.message || "Failed to perform action");
-  //     }
-  //   } catch (err) {
-  //     console.error("Action error:", err);
-  //     alert("Server error while performing action");
-  //   }
-  // };
 
   //Thêm page mới
   const handleAddNewPage = () => {
@@ -182,21 +133,22 @@ function MyShop() {
         >
           {t('shop.my_shop')}
         </NavLink>
+        {/* Chỉ hiển thị tab Employee nếu role không phải Marketer và có quyền view employee */}
+        {currentShop?.role !== "Marketer" && currentShop?.canViewEmployee && (
+          <NavLink
+            to={currentShop?.id 
+              ? ROUTES.SHOP_EMPLOYEE.replace(":shopId", currentShop.id) 
+              : "#"}
+            state={{ shopId: currentShop?._id }}
+            className={({ isActive }) => `shop-tab ${isActive ? "active" : ""}`}
+          >
+            {t("shop.employee")}
+          </NavLink>
+        )}
         <NavLink
-          to={currentShop?.canViewEmployee ? `${ROUTES.SHOP_EMPLOYEE.replace(':shopId', currentShop.id)}` : "#"}
-          state={{ shopId: currentShop?._id }}
-          onClick={(e) => {
-            if (!currentShop?.canViewEmployee) e.preventDefault();
-          }}
-          className={({ isActive }) =>
-            `shop-tab ${isActive ? "active" : ""} ${!currentShop?.canViewEmployee ? "disabled" : ""
-            }`
-          }
-        >
-          {t("shop.employee")}
-        </NavLink>
-        <NavLink
-          to={ROUTES.SHOP_HISTORY}
+          to={currentShop?.id 
+            ? ROUTES.SHOP_HISTORY.replace(":shopId", currentShop.id) 
+            : ROUTES.SHOP}
           className={({ isActive }) => `shop-tab ${isActive ? "active" : ""}`}
         >
           {t('shop.history')}
@@ -265,7 +217,7 @@ function MyShop() {
                         <span className="role-badge">{shop.role}</span>
                       </div>
                       <div className="table-cell" data-label={t('shop.expired')}>
-                        <span className="expired-date">{shop.expired ? shop.expired : "Vô hạn"}</span>
+                        <span className="expired-date">{shop.expired}</span>
                       </div>
                       {/* <div className="table-cell" data-label={t('shop.status')}>
                         <span
@@ -302,38 +254,47 @@ function MyShop() {
                           <button
                             className={`shop-action-btn shop-current-btn ${shop.isCurrent ? "active" : ""
                               }`}
-                            title={shop.isCurrent ? "Current Shop" : "Change Shop"}
+                            title={shop.isCurrent ? "Current Shop" : "Set as Current"}
                             disabled={shop.isCurrent}
                             style={{
                               cursor: shop.isCurrent ? "default" : "pointer",
-                              opacity: shop.isCurrent ? 0.6 : 1,
                             }}
                             onClick={async () => {
                               if (shop.isCurrent) return; // Nếu đã là current thì không cần làm gì
                               try {
-                                const res = await fetch(
-                                  `${import.meta.env.VITE_API_URL}/api/shops/switch/${shop.id}`,
-                                  {
-                                    method: "PATCH",
-                                    headers: {
-                                      Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
-                                    },
-                                  }
-                                );
-                                const data = await res.json();
+                                const res = await axiosInstance.patch(`/api/shops/switch/${shop.id}`);
+                                const data = res.data;
                                 if (data.success) {
-                                  alert("Switched to this shop successfully!");
+                                  // Xóa cache cũ
+                                  clearShopCache();
+                                  
+                                  // Cập nhật localStorage với shop mới
+                                  localStorage.setItem("selectedShopId", shop.id);
+                                  
+                                  // Tạo object shop để lưu vào cache (format giống Header)
+                                  const shopForCache = {
+                                    id: shop.id,
+                                    shop_name: shop.shopName,
+                                    package: shop.package,
+                                    role: shop.role,
+                                    is_current: true,
+                                  };
+                                  
+                                  // Lưu shop mới vào cache và dispatch event để Header cập nhật
+                                  saveShopCache(shopForCache);
+                                  
+                                  toast.success("Chuyển đổi shop thành công!");
                                   await loadShops(); // refresh danh sách
                                 } else {
-                                  alert(data.message || "Failed to switch shop");
+                                  toast.error(data.message || "Không thể chuyển đổi shop");
                                 }
                               } catch (err) {
                                 console.error("Switch shop error:", err);
-                                alert("Server error while switching shop");
+                                toast.error("Lỗi server khi chuyển đổi shop");
                               }
                             }}
                           >
-                            { shop.isCurrent ? <Check size={14} /> : <ArrowRight  size={14} /> }
+                            {shop.isCurrent ? <MapPin size={14} /> : <ArrowRight size={14} />} { }
                           </button>
                           {/* <button
                               className="shop-action-btn shop-activate-btn"
@@ -401,9 +362,9 @@ function MyShop() {
                   type="email"
                   className="modal-input"
                   value={currentUser?.email || "Chưa có email"}
-                  readOnly
                   disabled
-                  style={{ backgroundColor: "#dddbdbff" }}
+                  style={{ backgroundColor: "#e4e7ec" }}
+                  title = "Tự động sử dụng email của bạn"
                 />
               </div>
               <div className="form-field">
@@ -413,9 +374,9 @@ function MyShop() {
                   type="tel"
                   className="modal-input"
                   value={currentUser?.phone || "Chưa có số điện thoại"}
-                  readOnly
                   disabled
-                  style={{ backgroundColor: "#dddbdbff" }}
+                  style={{ backgroundColor: "#e4e7ec" }}
+                  title = "Tự động sử dụng số điện thoại của bạn"
                 />
               </div>
 
@@ -455,27 +416,19 @@ function MyShop() {
 
                     console.log("Submit Add:", payload);
 
-                    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/`, {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
-                      },
-                      body: JSON.stringify(payload),
-                    });
-
-                    const data = await res.json();
+                    const res = await axiosInstance.post("/api/shops/", payload);
+                    const data = res.data;
                     if (data.success) {
-                      alert("Shop created successfully!");
+                      toast.success("Tạo shop thành công!");
                       setIsAddOpen(false);
                       // 👉 Gọi lại API để refresh danh sách
                       await loadShops();
                     } else {
-                      alert(data.message || "Failed to create shop");
+                      toast.error(data.message || "Không thể tạo shop");
                     }
                   } catch (err) {
                     console.error("Error:", err);
-                    alert("Server error");
+                    toast.error(err.response?.data?.message || "Lỗi server khi tạo shop");
                   }
                 }}
               >
@@ -572,28 +525,20 @@ function MyShop() {
                       industry: updateForm.category,
                     };
 
-                    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shops/${updateForm.id}`, {
-                      method: "PUT",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
-                      },
-                      body: JSON.stringify(payload),
-                    });
-
-                    const data = await res.json();
+                    const res = await axiosInstance.put(`/api/shops/${updateForm.id}`, payload);
+                    const data = res.data;
                     if (data.success) {
-                      alert("Shop updated successfully!");
+                      toast.success("Cập nhật shop thành công!");
                       setIsUpdateOpen(false);
 
                       // 🔁 Refresh danh sách shop
                       await loadShops();
                     } else {
-                      alert(data.message || "Failed to update shop");
+                      toast.error(data.message || "Không thể cập nhật shop");
                     }
                   } catch (err) {
                     console.error("Error updating shop:", err);
-                    alert("Server error while updating shop");
+                    toast.error(err.response?.data?.message || "Lỗi server khi cập nhật shop");
                   }
                 }}
               >

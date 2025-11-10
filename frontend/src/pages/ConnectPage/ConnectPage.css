@@ -65,7 +65,7 @@
 /* Search and Filter Bar */
 .search-filter-bar-connect-page {
   display: flex;
-  justify-content: space-between;
+  justify-content: left;
   align-items: center;
   margin-bottom: 20px;
   gap: 16px;
@@ -94,7 +94,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  justify-content: space-between;
+  justify-content: left;
   width: 100%;
 } 
 
@@ -109,13 +109,9 @@
 
 .page-count-connect {
   font-size: 14px;
-  color: #ffffff;
+  color: #6b7280;
   font-weight: 500;
-  text-align: right;
-  background-color: #2563EB;
-  padding: 10px 20px;
-  border-radius: 6px;
-  border: 1px solid #2563EB;
+  margin-right: 30px;
 }
 
 .connect-section {

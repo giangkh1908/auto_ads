@@ -158,11 +158,16 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
                 console.log("✅ Facebook Login Success!");
           
                 // 🔹 Cập nhật AuthContext để đồng bộ UI
-                const result = completeExternalLogin({ user, tokens, pages});
-                if (result?.success && onSuccess) onSuccess();
+                // Await completeExternalLogin vì nó là async function
+                const result = await completeExternalLogin({ user, tokens, pages});
+                if (result?.success && onSuccess) {
+                  // Đóng popup sau khi login thành công
+                  onSuccess();
+                }
               } else {
                 console.error("❌ Backend login failed:", loginResponse.data);
                 toast.error(loginResponse.data.message || t('auth.login_failed'));
+                setFbLoading(false);
               }
             } catch (error) {
               console.error("❌ Backend login error:", error);
@@ -175,7 +180,6 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
                 console.error("❌ Error response:", error.response?.data);
                 toast.error(error.response?.data?.message || t('common.error'));
               }
-            } finally {
               setFbLoading(false);
             }
         };

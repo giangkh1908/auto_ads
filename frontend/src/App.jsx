@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
 import ErrorBoundary from "./components/common/ErrorBoundary/ErrorBoundary.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
@@ -15,6 +15,7 @@ import AccountManagement from "./pages/AccountManagement/AccountManagement.jsx";
 import AdsManagement from "./pages/AdsManagement/AdsManagement.jsx";
 import ArchiveAds from "./pages/ArchiveAds/ArchiveAds.jsx";
 import Analytics from "./pages/Analytics/Analytics.jsx";
+import AutomationRule from "./pages/AutomationRule/AutomationRule.jsx";
 import ConnectPage from "./pages/ConnectPage/ConnectPage.jsx";
 import ConnectAdAccount from "./pages/ConnectAdAccount/ConnectAdAccount.jsx";
 import ServicePackage from "./pages/ServicePackage/ServicePackage.jsx";
@@ -34,20 +35,8 @@ import ChatAIPage from "./components/feature/ChatAI/ChatAIPage.jsx";
 function AppContent() {
   const [authVisible, setAuthVisible] = useState(false);
   const [authMode, setAuthMode] = useState(AUTH_MODES.LOGIN);
+  // const navigate = useNavigate()
   const location = useLocation();
-
-  useEffect(() => {
-    const handleSessionExpired = (event) => {
-      toast.error(event.detail.message, {
-        duration: 3000,
-      });
-    };
-
-    window.addEventListener('sessionExpired', handleSessionExpired);
-    return () => {
-      window.removeEventListener('sessionExpired', handleSessionExpired);
-    };
-  }, []);
 
   const handleLoginClick = () => {
     setAuthMode(AUTH_MODES.LOGIN);
@@ -168,6 +157,18 @@ function AppContent() {
             <ProtectedRoute>
               <main className="page-content">
                 <Analytics />
+              </main>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Route cho Automation Rule */}
+        <Route
+          path={ROUTES.AUTOMATION_RULE}
+          element={
+            <ProtectedRoute>
+              <main className="page-content">
+                <AutomationRule />
               </main>
             </ProtectedRoute>
           }
