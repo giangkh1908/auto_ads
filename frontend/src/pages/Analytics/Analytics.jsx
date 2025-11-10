@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ChevronDown, RefreshCw } from "lucide-react";
 import DateRangePicker from "../../components/common/DateRangePicker/DateRangePicker";
+import ChatAIWidget from "../../components/feature/ChatAI/ChatAIWidget";
 import axiosInstance from "../../utils/axios";
 import "./Analytics.css";
 
@@ -55,6 +56,9 @@ function Analytics() {
   const [tableData, setTableData] = useState([]);
   const [loadingInsights, setLoadingInsights] = useState(false);
 
+  // Get selected account info for Chat AI Widget
+  const selectedAccountInfo = adAccounts.find(acc => acc.id === selectedAccount);
+
   // Helper function để format date thành dd/MM/yyyy
   const formatDateRange = (date) => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -89,7 +93,17 @@ function Analytics() {
             external_id: account.external_id,
           }));
           setAdAccounts(accounts);
-          // Không tự động chọn account, để người dùng tự chọn
+          
+          // Load selected account from localStorage if exists
+          const savedAccountId = localStorage.getItem('selected_account_id');
+          if (savedAccountId && accounts.length > 0) {
+            const savedAccount = accounts.find(
+              acc => acc.external_id === savedAccountId || acc.id === savedAccountId
+            );
+            if (savedAccount) {
+              setSelectedAccount(savedAccount.id);
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching ad accounts:", error);
@@ -458,6 +472,9 @@ function Analytics() {
                       onClick={() => {
                         setSelectedAccount(account.id);
                         setShowAccountDropdown(false);
+                        // Save to localStorage for Chat AI Widget
+                        localStorage.setItem('selected_account_id', account.external_id || account.id);
+                        localStorage.setItem('selected_account_name', account.name);
                       }}
                     >
                       {account.name}
@@ -681,6 +698,12 @@ function Analytics() {
           </div>
         </div>
       </div>
+
+      {/* Chat AI Widget - Fixed at bottom right */}
+      <ChatAIWidget 
+        accountId={selectedAccount}
+        accountName={selectedAccountInfo?.name}
+      />
     </div>
   );
 }

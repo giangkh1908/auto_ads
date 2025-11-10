@@ -22,7 +22,8 @@ import adsRoutes from "./routes/ads/adsRoutes.js";
 import creativeRoutes from "./routes/ads/creativeRoutes.js";
 import adPerformanceRoutes from "./routes/ads/adPerformanceRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-import aiRoutes from "./routes/ai/aiRoutes.js"; 
+import aiRoutes from "./routes/ai/aiRoutes.js";
+import chatRoutes from "./routes/ai/chatRoutes.js"; 
 
 //Load các biến môi trường
 dotenv.config();
@@ -65,6 +66,7 @@ app.use("/api/creatives", creativeRoutes);
 app.use("/api/ads-wizard", adsWizardRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/ai/chat", chatRoutes);
 
 // Connect database & start server
 connectDB();
