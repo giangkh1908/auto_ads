@@ -74,6 +74,16 @@ connectDB();
 app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
+// Health check endpoint cho monitoring services (UptimeRobot, Cron-Job, etc.)
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    message: "Server is running"
+  });
+});
+
 startAutoRuleScheduler();
 startAdPerformanceCron(); 
 startAdHourlyInsightsCron();
