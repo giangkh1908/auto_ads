@@ -5,7 +5,23 @@ import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
 import { syncAdPerformanceData } from "../../services/adPerformanceService.js";
 
-// Helper: Tìm AdsAccount bằng external_id (hỗ trợ cả act_xxx và xxx)
+function normalizeToVietnamMidnight(dateInput) {
+  let dateStr;
+  if (typeof dateInput === 'string') {
+    dateStr = dateInput.split('T')[0];
+  } else if (dateInput instanceof Date) {
+    const vnDateStr = dateInput.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  } else {
+    const now = new Date();
+    const vnDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  }
+  
+  const vnMidnight = new Date(`${dateStr}T00:00:00+07:00`);
+  return vnMidnight;
+}
+
 async function findAccountByExternalId(externalId) {
   const hasPrefix = String(externalId).startsWith("act_");
   const withPrefix = hasPrefix ? externalId : `act_${externalId}`;
@@ -74,14 +90,16 @@ export async function getAdPerformance(req, res) {
       }
     }
     
-    // 🔹 Date range filter
+    // 🔹 Date range filter (normalize về VN timezone)
     if (dateFrom || dateTo) {
       filter.date = {};
       if (dateFrom) {
-        filter.date.$gte = new Date(dateFrom);
+        filter.date.$gte = normalizeToVietnamMidnight(dateFrom);
       }
       if (dateTo) {
-        filter.date.$lte = new Date(dateTo);
+        const toDate = normalizeToVietnamMidnight(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filter.date.$lte = toDate;
       }
     }
 
@@ -298,10 +316,12 @@ export async function getAdPerformanceStats(req, res) {
     if (dateFrom || dateTo) {
       matchQuery.date = {};
       if (dateFrom) {
-        matchQuery.date.$gte = new Date(dateFrom);
+        matchQuery.date.$gte = normalizeToVietnamMidnight(dateFrom);
       }
       if (dateTo) {
-        matchQuery.date.$lte = new Date(dateTo);
+        const toDate = normalizeToVietnamMidnight(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        matchQuery.date.$lte = toDate;
       }
     }
 

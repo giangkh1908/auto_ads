@@ -19,6 +19,18 @@ const MODULE_WELCOME = {
   TREND: 'Theo dõi xu hướng và biến động hiệu suất theo thời gian',
 }
 
+function withModuleContext(text, moduleType) {
+  if (!moduleType) return text
+  const prefixByModule = {
+    PERF: 'Module PERF (hiệu suất tổng quan):',
+    COMPARE: 'Module COMPARE (so sánh chiến dịch):',
+    AUDIENCE: 'Module AUDIENCE (phân tích đối tượng):',
+    TREND: 'Module TREND (xu hướng theo thời gian):',
+  }
+  const prefix = prefixByModule[moduleType] || ''
+  return prefix ? `${prefix} ${text}` : text
+}
+
 function ChatAIWidget({ accountId, accountName }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -47,7 +59,7 @@ function ChatAIWidget({ accountId, accountName }) {
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || !accountId) return
-    const messageToSend = inputValue
+    const messageToSend = withModuleContext(inputValue, selectedModule?.module_type)
     setInputValue('')
     await sendMessage(messageToSend)
   }

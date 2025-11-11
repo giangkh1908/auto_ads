@@ -17,17 +17,40 @@ function normalizeAccountPair(accountId) {
   return { withPrefix, withoutPrefix };
 }
 
+function normalizeToVietnamMidnight(dateInput) {
+  let dateStr;
+  if (typeof dateInput === 'string') {
+    dateStr = dateInput.split('T')[0];
+  } else if (dateInput instanceof Date) {
+    const vnDateStr = dateInput.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  } else {
+    const now = new Date();
+    const vnDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  }
+  
+  const vnMidnight = new Date(`${dateStr}T00:00:00+07:00`);
+  return vnMidnight;
+}
+
+function getVietnamToday() {
+  const now = new Date();
+  const vnDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date(`${vnDateStr}T00:00:00+07:00`);
+}
+
 function formatDate(date) {
-  return date.toISOString().split("T")[0];
+  const vnDateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return vnDateStr;
 }
 
 function buildDefaultTimeRange() {
-  const today = new Date();
-  const until = new Date(today);
-  until.setDate(until.getDate());
-
+  const vnToday = getVietnamToday();
+  const until = new Date(vnToday);
+  
   const since = new Date(until);
-  since.setDate(since.getDate() - 14);
+  since.setDate(since.getDate() - 7);
 
   return {
     since: formatDate(since),
@@ -145,10 +168,17 @@ async function createZeroPerformanceRecords(accountId, timeRange) {
       return { created: 0 };
     }
 
+    // ✅ FIX: Query ads bằng external_account_id thay vì account_id
+    // Vì ads sync từ Facebook chỉ có external_account_id, không có account_id
+    const { withoutPrefix } = normalizeAccountPair(account.external_id);
+    
     // Lấy tất cả ads ACTIVE/PAUSED của account
     // ✅ FIX: Populate set_id với nested populate campaign_id (vì Ads không có campaign_id trực tiếp)
     const allAds = await Ads.find({
-      account_id: accountId,
+      $or: [
+        { account_id: accountId },
+        { external_account_id: { $in: [withoutPrefix, `act_${withoutPrefix}`] } }
+      ],
       status: { $in: ['ACTIVE', 'PAUSED'] }, // Bao gồm cả PAUSED để track
     }).populate({
       path: 'set_id',
@@ -157,18 +187,28 @@ async function createZeroPerformanceRecords(accountId, timeRange) {
       }
     });
 
+    // ✅ DEBUG: Log số lượng ads tìm thấy
+    console.log(`[adPerformanceService] 🔍 Found ${allAds.length} ads (ACTIVE/PAUSED) for account ${account.external_id} (external_account_id: ${withoutPrefix})`);
+
     if (allAds.length === 0) {
-      console.log(`[adPerformanceService] ℹ️ No ads found for account ${accountId}, skipping zero records creation`);
+      // ✅ DEBUG: Kiểm tra xem có ads nào trong account không (bất kỳ status)
+      const totalAds = await Ads.countDocuments({ 
+        $or: [
+          { account_id: accountId },
+          { external_account_id: { $in: [withoutPrefix, `act_${withoutPrefix}`] } }
+        ]
+      });
+      console.log(`[adPerformanceService] ℹ️ No ACTIVE/PAUSED ads found for account ${account.external_id}. Total ads in account: ${totalAds}`);
       return { created: 0 };
     }
 
-    // Tạo danh sách các ngày trong timeRange
-    const sinceDate = new Date(`${timeRange.since}T00:00:00Z`);
-    const untilDate = new Date(`${timeRange.until}T00:00:00Z`);
+    // Tạo danh sách các ngày trong timeRange (theo múi giờ VN)
+    const sinceDate = normalizeToVietnamMidnight(timeRange.since);
+    const untilDate = normalizeToVietnamMidnight(timeRange.until);
     const dates = [];
     const currentDate = new Date(sinceDate);
     while (currentDate <= untilDate) {
-      dates.push(new Date(currentDate));
+      dates.push(normalizeToVietnamMidnight(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -181,10 +221,15 @@ async function createZeroPerformanceRecords(accountId, timeRange) {
       }
     }).select('ads_id date').lean();
 
+    function formatDateKey(date) {
+      const vnDateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+      return vnDateStr;
+    }
+
     // Tạo Set để check nhanh: "adId_date" => true
     const existingKeys = new Set(
       existingPerformance.map(p => 
-        `${p.ads_id.toString()}_${p.date.toISOString().split('T')[0]}`
+        `${p.ads_id.toString()}_${formatDateKey(p.date)}`
       )
     );
 
@@ -198,7 +243,7 @@ async function createZeroPerformanceRecords(accountId, timeRange) {
       const campaign = adset?.campaign_id || null;
 
       for (const date of dates) {
-        const key = `${ad._id.toString()}_${date.toISOString().split('T')[0]}`;
+        const key = `${ad._id.toString()}_${formatDateKey(date)}`;
         
         // Chỉ tạo nếu chưa có record
         if (!existingKeys.has(key)) {

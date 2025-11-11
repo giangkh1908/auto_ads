@@ -1486,18 +1486,34 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
  * @param {string} accountId - MongoDB _id của AdsAccount
  * @returns {Promise<{saved: number, skipped: number}>}
  */
+function normalizeToVietnamMidnight(dateInput) {
+  let dateStr;
+  if (typeof dateInput === 'string') {
+    dateStr = dateInput.split('T')[0];
+  } else if (dateInput instanceof Date) {
+    const vnDateStr = dateInput.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  } else {
+    const now = new Date();
+    const vnDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    dateStr = vnDateStr;
+  }
+  
+  const vnMidnight = new Date(`${dateStr}T00:00:00+07:00`);
+  return vnMidnight;
+}
+
 function parseInsightDate(item) {
   const baseDate = item?.date_start || item?.date_stop;
   if (!baseDate) {
     return null;
   }
 
-  const parsed = new Date(`${baseDate}T00:00:00Z`);
+  const parsed = normalizeToVietnamMidnight(baseDate);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
 
-  parsed.setUTCHours(0, 0, 0, 0);
   return parsed;
 }
 
