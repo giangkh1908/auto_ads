@@ -23,6 +23,7 @@ export const startAdPerformanceCron = () => {
       
       let totalSynced = 0;
       let totalSkipped = 0;
+      let totalZeroRecords = 0;
       let rateLimitedAccounts = [];
       
       for (let i = 0; i < activeAccounts.length; i++) {
@@ -42,8 +43,9 @@ export const startAdPerformanceCron = () => {
           
           totalSynced += result.synced || 0;
           totalSkipped += result.skipped || 0;
+          totalZeroRecords += result.zeroRecordsCreated || 0;
           
-          console.log(`[${accountStartTime}] ✅ Account ${account.external_id}: Synced ${result.synced || 0} records, skipped ${result.skipped || 0} ads`);
+          console.log(`[${accountStartTime}] ✅ Account ${account.external_id}: Synced ${result.synced || 0} records, skipped ${result.skipped || 0} ads, created ${result.zeroRecordsCreated || 0} zero records`);
           
           if (i < activeAccounts.length - 1) {
             await delay(5000);
@@ -66,7 +68,8 @@ export const startAdPerformanceCron = () => {
         syncedAccounts: activeAccounts.length - rateLimitedAccounts.length,
         rateLimitedAccounts: rateLimitedAccounts.length,
         totalSynced: totalSynced,
-        totalSkipped: totalSkipped
+        totalSkipped: totalSkipped,
+        totalZeroRecords: totalZeroRecords
       };
       
       console.log(`[${endTime}] ✅ Sync job completed:`, summary);

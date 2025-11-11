@@ -1592,6 +1592,7 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
           set_id: adset?._id || null,
           campaign_id: campaign?._id || null,
           account_id: accountId,
+          external_account_id: account.external_id.replace('act_', ''), 
           date: date,
           
           impressions: parseFloat(item.impressions) || 0,

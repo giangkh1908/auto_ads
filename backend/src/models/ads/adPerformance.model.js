@@ -6,6 +6,13 @@ const adPerformanceSchema = new mongoose.Schema(
     set_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsSet", index: true },
     campaign_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsCampaign", index: true },
     account_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdsAccount", index: true },
+    
+    // ===== External IDs from Facebook (for fast queries without joins) =====
+    external_account_id: { type: String, index: true }, // act_xxx hoặc xxx
+    external_campaign_id: { type: String, index: true }, // Facebook Campaign ID
+    external_adset_id: { type: String, index: true },    // Facebook AdSet ID
+    external_ad_id: { type: String, index: true },       // Facebook Ad ID
+    
     date: { type: Date, required: true, index: true },
 
     impressions: { type: Number, default: 0 },
@@ -61,6 +68,8 @@ adPerformanceSchema.index({ set_id: 1, date: 1 });
 adPerformanceSchema.index({ account_id: 1, date: 1 });
 adPerformanceSchema.index({ date: 1 });
 
+adPerformanceSchema.index({ external_account_id: 1, date: 1 });
+
 // Indexes cho search và filtering
 adPerformanceSchema.index({ campaign_name: 1 });
 adPerformanceSchema.index({ adset_name: 1 });
@@ -70,6 +79,7 @@ adPerformanceSchema.index({ page_name: 1 });
 // Compound index cho aggregation queries
 adPerformanceSchema.index({ account_id: 1, campaign_id: 1, date: 1 });
 adPerformanceSchema.index({ account_id: 1, set_id: 1, date: 1 });
+adPerformanceSchema.index({ external_account_id: 1, external_campaign_id: 1, date: 1 });
 
 const AdPerformance = mongoose.model("AdPerformance", adPerformanceSchema);
 export default AdPerformance;
