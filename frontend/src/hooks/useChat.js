@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import chatService from "../services/chatService";
 import { useToast } from "./useToast";
 
-export function useChat(accountId, moduleType = null) {
+export function useChat(accountId) {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -11,11 +11,6 @@ export function useChat(accountId, moduleType = null) {
   const sendMessage = useCallback(
     async (message) => {
       if (!message.trim() || !accountId) return;
-
-      if (!moduleType) {
-        toast.error("Vui lòng chọn module trước khi chat");
-        return;
-      }
 
       const userMessage = {
         id: Date.now(),
@@ -32,7 +27,6 @@ export function useChat(accountId, moduleType = null) {
           message,
           account_id: accountId,
           conversation_id: conversationId,
-          module_type: moduleType,
         });
 
         if (response.success) {
@@ -71,7 +65,7 @@ export function useChat(accountId, moduleType = null) {
         setIsLoading(false);
       }
     },
-    [accountId, conversationId, moduleType, toast]
+    [accountId, conversationId, toast]
   );
 
   const clearMessages = useCallback(() => {

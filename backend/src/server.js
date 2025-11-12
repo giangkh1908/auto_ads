@@ -6,7 +6,10 @@ import path from "path";
 
 import { startAdPerformanceCron } from "./jobs/adPerformance.job.js"; 
 import { startAdHourlyInsightsCron } from "./jobs/adHourlyInsights.job.js";
-import { startAutoRuleScheduler } from './services/autoRuleScheduler.js'; 
+import { startAutoRuleScheduler } from './services/autoRuleScheduler.js';
+import { startPopulateDailySummaryCron } from "./jobs/populateDailySummary.job.js";
+import { startPopulateCampaignDailyCron } from "./jobs/populateCampaignDaily.job.js";
+import { startPopulateTrendDailyCron } from "./jobs/populateTrendDaily.job.js"; 
 //Import Routes
 import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
@@ -25,6 +28,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import aiRoutes from "./routes/ai/aiRoutes.js";
 import automationRuleRoutes from "./routes/automationRuleRoutes.js";
 import chatRoutes from "./routes/ai/chatRoutes.js"; 
+import { syncPromptEmbeddings } from "./services/chat/ragService.js";
 
 //Load các biến môi trường
 dotenv.config();
@@ -69,7 +73,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/automation-rules", automationRuleRoutes);
 app.use("/api/ai/chat", chatRoutes);
-connectDB();
+
 // Add a root route to check deployment status
 app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
@@ -84,13 +88,27 @@ app.get("/health", (req, res) => {
   });
 });
 
-startAutoRuleScheduler();
-startAdPerformanceCron(); 
-startAdHourlyInsightsCron();
+const startServer = async () => {
+  try {
+    await connectDB();
+    await syncPromptEmbeddings();
 
-// 🚀 Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+    startAutoRuleScheduler();
+    startAdPerformanceCron(); 
+    startAdHourlyInsightsCron();
+    startPopulateDailySummaryCron();
+    startPopulateCampaignDailyCron();
+    startPopulateTrendDailyCron();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("🚨 Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;

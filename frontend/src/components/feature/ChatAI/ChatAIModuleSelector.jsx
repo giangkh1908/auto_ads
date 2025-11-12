@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { chatService } from '../../../services/chatService';
-import './ChatAI.styles.css';
+import './ChatAIModuleSelector.css';
 
 const MODULE_ICONS = {
   PERF: '📊',

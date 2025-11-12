@@ -30,7 +30,6 @@ import Employee from "./pages/Shop/Employee.jsx";
 import History from "./pages/Shop/History.jsx";
 import ScrollToTop from "./utils/ScrollToTop.jsx";
 import { ROUTES, HEADER_ROUTES, AUTH_MODES } from "./constants/app.constants";
-import ChatAIPage from "./components/feature/ChatAI/ChatAIPage.jsx";
 
 function AppContent() {
   const [authVisible, setAuthVisible] = useState(false);
@@ -71,15 +70,6 @@ function AppContent() {
     <>
       {shouldShowHeader && <Header onLoginClick={handleLoginClick} />}
       <Routes>
-        {/* Route cho Chat AI (Full-screen) */}
-        <Route
-          path={ROUTES.CHAT_AI}
-          element={
-            <main className="page-content">
-              <ChatAIPage />
-            </main>
-          }
-        />
         {/* Route cho Home */}
         <Route
           path={ROUTES.HOME}

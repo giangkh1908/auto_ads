@@ -5,6 +5,7 @@ import ChatConversation from "../../models/ai/chatConversation.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
 import { v4 as uuidv4 } from "uuid";
+import SimpleRouter from "../../services/chat/simpleRouter.js";
 
 // ============================================
 // INTENT CLASSIFIER
@@ -262,18 +263,23 @@ async function executeToolWithIntent(originalIntent, params, conversation, conve
     }
   }
 
-  // Map intent -> tool name
-  const intentToolMap = {
-    OVERVIEW: "get_overview",
-    TOTAL_METRICS: "get_total_metrics",
-    COMPARE: "compare_campaigns",
-    TREND: "get_trend",
-    RANKING: "get_ranking",
-    LIST_CAMPAIGNS: "list_campaigns",
-  };
+    // Use tool from router if available, otherwise map from intent
+    let toolName = null;
+    if (params.tool) {
+      toolName = params.tool;
+    } else {
+      const intentToolMap = {
+        OVERVIEW: "get_overview",
+        TOTAL_METRICS: "get_total_metrics",
+        COMPARE: "compare_campaigns",
+        TREND: "get_trend",
+        RANKING: "get_ranking",
+        LIST_CAMPAIGNS: "list_campaigns",
+      };
+      toolName = intentToolMap[originalIntent] || null;
+    }
 
-  const toolName = intentToolMap[originalIntent] || null;
-  if (!toolName) {
+    if (!toolName) {
     const errorMsg = "⚠️ Không thể tiếp tục yêu cầu này.";
     conversation.messages.push({
       message_id: uuidv4(),
@@ -439,69 +445,15 @@ function detectNoData(toolName, data) {
 // CHAT CONTROLLER
 // ============================================
 
-// ============================================
-// MODULE CONFIGURATION
-// ============================================
-
-const MODULE_CONFIG = {
-  PERF: {
-    name: "Hiệu suất tổng quan",
-    allowed_intents: ["TOTAL_METRICS", "OVERVIEW", "LIST_CAMPAIGNS"],
-    tools: ["get_total_metrics", "get_overview", "list_campaigns"],
-    description: "Xem tổng quan hiệu suất, chỉ số trung bình, số lượng chiến dịch/adset/ads",
-  },
-  COMPARE: {
-    name: "So sánh chiến dịch",
-    allowed_intents: ["COMPARE", "RANKING", "LIST_CAMPAIGNS"],
-    tools: ["compare_campaigns", "get_ranking", "list_campaigns"],
-    description: "So sánh hiệu suất giữa các chiến dịch, xếp hạng top/bottom",
-  },
-  AUDIENCE: {
-    name: "Phân tích đối tượng",
-    allowed_intents: ["AUDIENCE_ANALYSIS"],
-    tools: ["analyze_audience"],
-    description: "Phân tích hiệu suất theo độ tuổi, giới tính, vị trí địa lý",
-  },
-  TREND: {
-    name: "Xu hướng theo thời gian",
-    allowed_intents: ["TREND"],
-    tools: ["get_trend"],
-    description: "Phân tích xu hướng theo ngày/tuần/tháng, tìm insight tăng/giảm",
-  },
-};
-
-function validateModuleIntent(module_type, intent) {
-  if (!module_type || !MODULE_CONFIG[module_type]) {
-    return { valid: false, error: "Module không hợp lệ. Vui lòng chọn module: PERF, COMPARE, AUDIENCE, hoặc TREND." };
-  }
-  
-  const module = MODULE_CONFIG[module_type];
-  if (!module.allowed_intents.includes(intent)) {
-    return { 
-      valid: false, 
-      error: `Câu hỏi này không thuộc chức năng của module "${module.name}". ${module.description}. Vui lòng hỏi câu khác hoặc chọn module phù hợp.` 
-    };
-  }
-  
-  return { valid: true };
-}
-
 export const chatAnalyze = async (req, res) => {
   try {
-    const { message, conversation_id, account_id, module_type } = req.body;
+    const { message, conversation_id, account_id } = req.body;
     const user_id = req.user._id;
 
     if (!message || !account_id) {
       return res.status(400).json({
         success: false,
         message: "Message and account_id are required",
-      });
-    }
-
-    if (!module_type) {
-      return res.status(400).json({
-        success: false,
-        message: "Module type is required. Please select a module: PERF, COMPARE, AUDIENCE, or TREND.",
       });
     }
 
@@ -578,11 +530,26 @@ export const chatAnalyze = async (req, res) => {
       );
     }
 
-    // Step 3: Classify intent (coarse)
-    const coarseIntent = classifyIntent(message);
+    // Step 3: Get conversation history for router
+    const chatHistory = conversation.messages
+      .slice(-10)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+    // Step 4: Use Simple Router with RAG
+    const router = new SimpleRouter();
+    const routingResult = await router.route(message, chatHistory);
+
+    logDebug("router_output", {
+      conversation_id: conversationId,
+      user_query: message,
+      router_result: routingResult,
+    });
 
     // Handle GENERAL_CHAT
-    if (coarseIntent === "GENERAL_CHAT") {
+    if (routingResult.intent === "GENERAL_CHAT") {
       const generalResponse =
         "Xin chào! Tôi là trợ lý phân tích quảng cáo Facebook. Tôi có thể giúp bạn:\n\n" +
         "📊 Xem tổng quan hiệu suất quảng cáo\n" +
@@ -608,131 +575,47 @@ export const chatAnalyze = async (req, res) => {
       });
     }
 
-    // Step 4: Router with structured output + Date parsing
-    // First, try to parse date range from message loosely (fallback)
-    const fallbackDate = parseViDateRange(message) || {};
-    let date_from = fallbackDate.date_from;
-    let date_to = fallbackDate.date_to;
-
-    // Step 5: Setup LLM
-    const useOpenAI = process.env.OPENAI_API_KEY ? true : false;
-    const llm = useOpenAI
-      ? new ChatOpenAI({
-          modelName: "gpt-4o-mini",
-          temperature: 0.3,
-        })
-      : new ChatGoogleGenerativeAI({
-          modelName: "gemini-2.0-flash-exp",
-          temperature: 0.3,
-        });
-
-    // Step 6: Get last 12 messages for context
-    const chatHistory = conversation.messages
-      .slice(-12) // Use a larger window for better context
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-    // Step 7: Ask LLM for structured router output
-    const systemPrompt = `Bạn là router phân tích quảng cáo Facebook. TRẢ LỜI CHỈ BẰNG JSON HỢP LỆ. Dựa vào toàn bộ lịch sử chat để hiểu ngữ cảnh.
-
-SCHEMA:
-{
-  "intent": "OVERVIEW|TOTAL_METRICS|COMPARE|TREND|RANKING|LIST_CAMPAIGNS|GENERAL_CHAT|CLARIFY",
-  "metrics": ["CPC","CTR","CPM","SPEND","IMPRESSIONS","CLICKS","RESULTS"]?,
-  "entities": [{"type": "campaign", "name": "..."}]?
-  "date_text": "nguyên văn người dùng nói về thời gian"?,
-  "missing": ["date_range"|"entities"|"metrics"]?
-}
-
-QUY TẮC:
-- Nếu hỏi "đếm số lượng", "có bao nhiêu" campaign/adset/ad -> intent=OVERVIEW.
-- Nếu hỏi về các chỉ số (CTR, CPC, chi tiêu, lượt hiển thị, reach) hoặc "số liệu" -> intent=TOTAL_METRICS.
-- Nếu hỏi "tên là gì", "liệt kê", "có những" campaign nào -> intent=LIST_CAMPAIGNS.
-- Nếu không chắc ngày hoặc campaign -> intent=CLARIFY và điền "missing".
-- Không bịa ID.
-- Ví dụ câu hỏi so sánh theo tên -> intent=COMPARE, entities với name raw.
-`;
-
-    const llmMessages = [
-        { role: "system", content: systemPrompt },
-        ...chatHistory,
-    ];
-
-    const llmResponse = await llm.invoke(llmMessages);
-
-    const llmText = llmResponse.content || "";
-    let routerOutput = {};
-    try {
-      const jsonMatch = llmText.match(/\{[\s\S]*\}/);
-      routerOutput = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-    } catch (e) {
-      routerOutput = {};
-    }
-
-    logDebug("router_output", { conversation_id: conversationId, user_query: message, router_raw: llmText, router_parsed: routerOutput });
-
-    // Normalize router fields
-    const intent = routerOutput.intent || coarseIntent || "UNKNOWN";
-    const metrics = normalizeMetrics(routerOutput.metrics);
-    const dateText = routerOutput.date_text || message;
+    // Step 5: Parse date range
+    const dateText = routingResult.date_text || message;
     const dateParsed = parseViDateRange(dateText);
-    if (dateParsed) {
-      date_from = dateParsed.date_from;
-      date_to = dateParsed.date_to;
-    }
+    let date_from = dateParsed?.date_from;
+    let date_to = dateParsed?.date_to;
 
-    // MODULE VALIDATION: Check if intent is allowed in this module
-    const moduleValidation = validateModuleIntent(module_type, intent);
-    if (!moduleValidation.valid) {
-      const errorResponse = moduleValidation.error;
-      
-      conversation.messages.push({
-        message_id: uuidv4(),
-        role: "assistant",
-        content: errorResponse,
-        timestamp: new Date(),
-        type: "GENERAL_CHAT",
-      });
-      
-      await conversation.save();
-      
-      return res.json({
-        success: true,
-        conversation_id: conversationId,
-        response: errorResponse,
-        intent: "OUT_OF_SCOPE",
-        meta: { errorCode: "module_mismatch", module_type },
-      });
-    }
+    // Normalize metrics
+    const metrics = normalizeMetrics(routingResult.metrics || []);
+    const finalIntent = routingResult.intent;
 
-    // Determine missing slots
-    const finalIntent = routerOutput.intent || coarseIntent || "UNKNOWN";
+    // Step 6: Determine missing slots
     const missingSet = new Set();
 
     // If LLM explicitly asks to clarify, trust its list of missing items.
-    if (finalIntent === 'CLARIFY') {
-        (routerOutput.missing || ['entities']).forEach(item => missingSet.add(item));
+    if (finalIntent === "CLARIFY") {
+      (routingResult.missing || ["entities"]).forEach((item) =>
+        missingSet.add(item)
+      );
     }
 
     // Server-side validation for required params based on intent
-    const needsDate = ["TOTAL_METRICS", "COMPARE", "TREND", "RANKING"].includes(finalIntent);
+    const needsDate = ["TOTAL_METRICS", "COMPARE", "TREND", "RANKING"].includes(
+      finalIntent
+    );
     if (needsDate && (!date_from || !date_to)) {
-        missingSet.add("date_range");
+      missingSet.add("date_range");
     }
 
     // Extract and resolve entities
-    const entityNames = Array.isArray(routerOutput.entities)
-      ? routerOutput.entities.filter((e) => e && e.type === "campaign" && e.name).map((e) => e.name)
+    const entityNames = Array.isArray(routingResult.entities)
+      ? routingResult.entities
+          .filter((e) => e && e.type === "campaign" && e.name)
+          .map((e) => e.name)
       : [];
-    
+
     let resolvedCampaignIds = [];
     let campaignSuggestions = [];
     const needsEntities = ["COMPARE"].includes(finalIntent);
 
     if (needsEntities && entityNames.length === 0) {
-        missingSet.add("entities");
+      missingSet.add("entities");
     } else if (entityNames.length > 0) {
       const resolution = await resolveCampaignNames(account_id, entityNames);
       for (const r of resolution) {
@@ -795,17 +678,32 @@ QUY TẮC:
       });
     }
 
-    // Map intent -> tool name
-    const intentToolMap = {
-      OVERVIEW: "get_overview",
-      TOTAL_METRICS: "get_total_metrics",
-      COMPARE: "compare_campaigns",
-      TREND: "get_trend",
-      RANKING: "get_ranking",
-      LIST_CAMPAIGNS: "list_campaigns",
-    };
+    // Use tool from router if available, otherwise map from intent
+    let toolName = routingResult.tool || null;
+    if (!toolName) {
+      const intentToolMap = {
+        OVERVIEW: "get_overview",
+        TOTAL_METRICS: "get_total_metrics",
+        COMPARE: "compare_campaigns",
+        TREND: "get_trend",
+        RANKING: "get_ranking",
+        LIST_CAMPAIGNS: "list_campaigns",
+      };
+      toolName = intentToolMap[finalIntent] || null;
+    }
 
-    const toolName = intentToolMap[finalIntent] || null;
+    // Setup LLM for response formatting
+    const useOpenAI = process.env.OPENAI_API_KEY ? true : false;
+    const llm = useOpenAI
+      ? new ChatOpenAI({
+          modelName: "gpt-4o-mini",
+          temperature: 0.3,
+        })
+      : new ChatGoogleGenerativeAI({
+          modelName: "gemini-2.0-flash-exp",
+          temperature: 0.3,
+        });
+
     let assistantResponse;
     let toolUsed = null;
     let rawData = null;
@@ -813,7 +711,7 @@ QUY TẮC:
 
     if (!toolName) {
       // Fallback: direct chat
-      assistantResponse = llmText || "Mình có thể giúp bạn phân tích quảng cáo. Bạn muốn xem gì?";
+      assistantResponse = "Mình có thể giúp bạn phân tích quảng cáo. Bạn muốn xem gì?";
     } else {
       const tool = analyticsTools.find((t) => t.name === toolName);
       if (!tool) {
@@ -949,30 +847,4 @@ function buildClarifyMessage(missing, campaignSuggestions) {
   return parts.join(" \n");
 }
 
-// ============================================
-// GET MODULES
-// ============================================
-
-export const getModules = async (req, res) => {
-  try {
-    const modules = Object.entries(MODULE_CONFIG).map(([key, config]) => ({
-      module_type: key,
-      name: config.name,
-      description: config.description,
-      allowed_intents: config.allowed_intents,
-    }));
-
-    return res.json({
-      success: true,
-      modules,
-    });
-  } catch (error) {
-    console.error("Error in getModules:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to get modules",
-      error: error.message,
-    });
-  }
-};
 

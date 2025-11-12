@@ -3,23 +3,9 @@ import API_CONFIG from "../config/api.config";
 
 class ChatService {
   /**
-   * Get available chat modules
-   */
-  async getModules() {
-    try {
-      const response = await axiosInstance.get(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/ai/chat/modules`
-      );
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
    * Send message to AI chat analytics
    */
-  async sendMessage({ message, account_id, conversation_id = null, module_type }) {
+  async sendMessage({ message, account_id, conversation_id = null }) {
     try {
       const response = await axiosInstance.post(
         `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/ai/chat/analyze`,
@@ -27,7 +13,6 @@ class ChatService {
           message,
           account_id,
           conversation_id,
-          module_type,
         }
       );
       return response.data;

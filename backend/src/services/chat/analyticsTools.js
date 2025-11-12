@@ -1,6 +1,9 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import AdPerformance from "../../models/ads/adPerformance.model.js";
+import AdPerformanceDailySummary from "../../models/ads/adPerformanceDailySummary.model.js";
+import AdPerformanceCampaignDaily from "../../models/ads/adPerformanceCampaignDaily.model.js";
+import AdPerformanceTrendDaily from "../../models/ads/adPerformanceTrendDaily.model.js";
 import AdHourlyInsight from "../../models/ads/adHourlyInsight.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
@@ -80,7 +83,7 @@ export const getTotalMetricsTool = tool(
 
       const accountObjId = await getAccountObjectId(account_id);
 
-      const result = await AdPerformance.aggregate([
+      const result = await AdPerformanceDailySummary.aggregate([
         {
           $match: {
             account_id: accountObjId,
@@ -93,16 +96,16 @@ export const getTotalMetricsTool = tool(
         {
           $group: {
             _id: null,
-            total_spend: { $sum: "$spend" },
-            total_impressions: { $sum: "$impressions" },
-            total_clicks: { $sum: "$clicks" },
-            total_reach: { $sum: "$reach" },
-            total_results: { $sum: "$results" },
-            total_conversions: { $sum: "$conversions" },
-            avg_ctr: { $avg: "$ctr" },
-            avg_cpc: { $avg: "$cpc" },
-            avg_cpm: { $avg: "$cpm" },
-            avg_frequency: { $avg: "$frequency" },
+            total_spend: { $sum: "$total_spend" },
+            total_impressions: { $sum: "$total_impressions" },
+            total_clicks: { $sum: "$total_clicks" },
+            total_reach: { $sum: "$total_reach" },
+            total_results: { $sum: "$total_results" },
+            total_conversions: { $sum: "$total_conversions" },
+            avg_ctr: { $avg: "$avg_ctr" },
+            avg_cpc: { $avg: "$avg_cpc" },
+            avg_cpm: { $avg: "$avg_cpm" },
+            avg_frequency: { $avg: "$avg_frequency" },
             days: { $addToSet: "$date" },
           },
         },
@@ -188,6 +191,14 @@ export const compareCampaignsTool = tool(
 
       const accountObjId = await getAccountObjectId(account_id);
 
+      let campaignObjectIds = [];
+      if (campaign_ids && campaign_ids.length > 0) {
+        const campaigns = await AdsCampaign.find({
+          external_id: { $in: campaign_ids },
+        });
+        campaignObjectIds = campaigns.map((c) => c._id);
+      }
+
       const matchStage = {
         account_id: accountObjId,
         date: {
@@ -196,29 +207,24 @@ export const compareCampaignsTool = tool(
         },
       };
 
-      if (campaign_ids && campaign_ids.length > 0) {
-        const campaigns = await AdsCampaign.find({
-          external_id: { $in: campaign_ids },
-        });
-        matchStage.campaign_id = {
-          $in: campaigns.map((c) => c._id),
-        };
+      if (campaignObjectIds.length > 0) {
+        matchStage.campaign_id = { $in: campaignObjectIds };
       }
 
-      const campaigns = await AdPerformance.aggregate([
+      const campaigns = await AdPerformanceCampaignDaily.aggregate([
         { $match: matchStage },
         {
           $group: {
             _id: "$campaign_id",
             campaign_name: { $first: "$campaign_name" },
-            total_spend: { $sum: "$spend" },
-            total_impressions: { $sum: "$impressions" },
-            total_clicks: { $sum: "$clicks" },
-            total_results: { $sum: "$results" },
-            avg_ctr: { $avg: "$ctr" },
-            avg_cpc: { $avg: "$cpc" },
-            avg_cpm: { $avg: "$cpm" },
-            avg_cost_per_result: { $avg: "$cost_per_result" },
+            total_spend: { $sum: "$total_spend" },
+            total_impressions: { $sum: "$total_impressions" },
+            total_clicks: { $sum: "$total_clicks" },
+            total_results: { $sum: "$total_results" },
+            avg_ctr: { $avg: "$avg_ctr" },
+            avg_cpc: { $avg: "$avg_cpc" },
+            avg_cpm: { $avg: "$avg_cpm" },
+            avg_cost_per_result: { $avg: "$avg_cost_per_result" },
           },
         },
         {
@@ -337,41 +343,104 @@ export const getTrendTool = tool(
         if (campaign) {
           matchStage.campaign_id = campaign._id;
         }
+      } else {
+        matchStage.campaign_id = null;
       }
 
-      const groupByField =
-        granularity === "hour"
-          ? {
-              date: "$date",
-              hour: { $hour: "$timestamp" },
-            }
-          : "$date";
-
-      const trend = await AdPerformance.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: groupByField,
-            avgMetric: { $avg: `$${metric}` },
+      if (granularity === "hour") {
+        const trend = await AdHourlyInsight.aggregate([
+          {
+            $match: {
+              account_id: accountObjId,
+              timestamp: {
+                $gte: new Date(date_from),
+                $lte: new Date(date_to),
+              },
+              ...(matchStage.campaign_id
+                ? { campaign_id: matchStage.campaign_id }
+                : {}),
+            },
           },
-        },
-        { $sort: { _id: 1 } },
-      ]);
+          {
+            $group: {
+              _id: {
+                date: {
+                  $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
+                },
+                hour: { $hour: "$timestamp" },
+              },
+              avgMetric: { $avg: `$${metric}` },
+            },
+          },
+          { $sort: { "_id.date": 1, "_id.hour": 1 } },
+        ]);
 
-      writer?.(`✅ Đã phân tích ${trend.length} điểm dữ liệu`);
+        const dataPoints = trend.map((t) => ({
+          timestamp: `${t._id.date} ${t._id.hour}:00`,
+          value: {
+            value: t.avgMetric,
+            formatted: formatMetric(metric, t.avgMetric),
+          },
+        }));
+
+        const firstValue = dataPoints[0]?.value.value || 0;
+        const lastValue =
+          dataPoints[dataPoints.length - 1]?.value.value || 0;
+        const changePercentage =
+          firstValue > 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+
+        let trendDirection = "stable";
+        if (Math.abs(changePercentage) > 5) {
+          trendDirection = changePercentage > 0 ? "increasing" : "decreasing";
+        }
+
+        writer?.(`✅ Đã phân tích ${trend.length} điểm dữ liệu`);
+
+        return JSON.stringify({
+          metric,
+          granularity: "hour",
+          period: { from: date_from, to: date_to },
+          data_points: dataPoints,
+          trend: {
+            direction: trendDirection,
+            change_percentage: changePercentage,
+            first_value: {
+              value: firstValue,
+              formatted: formatMetric(metric, firstValue),
+            },
+            last_value: {
+              value: lastValue,
+              formatted: formatMetric(metric, lastValue),
+            },
+          },
+        });
+      }
+
+      const trend = await AdPerformanceTrendDaily.find(matchStage)
+        .sort({ date: 1 })
+        .lean();
+
+      const metricFieldMap = {
+        spend: "spend",
+        ctr: "ctr",
+        cpc: "cpc",
+        cpm: "cpm",
+        impressions: "impressions",
+        clicks: "clicks",
+        results: "results",
+      };
+
+      const metricField = metricFieldMap[metric] || "spend";
 
       const dataPoints = trend.map((t) => ({
-        timestamp:
-          granularity === "hour"
-            ? `${t._id.date.toISOString().split("T")[0]} ${
-                t._id.hour
-              }:00`
-            : t._id.toISOString().split("T")[0],
+        timestamp: t.date.toISOString().split("T")[0],
         value: {
-          value: t.avgMetric,
-          formatted: formatMetric(metric, t.avgMetric),
+          value: t[metricField] || 0,
+          formatted: formatMetric(metric, t[metricField] || 0),
         },
       }));
+
+      writer?.(`✅ Đã phân tích ${trend.length} điểm dữ liệu`);
 
       // Detect trend direction
       const firstValue = dataPoints[0]?.value.value || 0;
@@ -449,19 +518,65 @@ export const getRankingTool = tool(
         },
       };
 
+      if (_entity_type === "campaign") {
+        const ranking = await AdPerformanceCampaignDaily.aggregate([
+          { $match: matchStage },
+          {
+            $group: {
+              _id: "$campaign_id",
+              entity_name: { $first: "$campaign_name" },
+              total_spend: { $sum: "$total_spend" },
+              total_impressions: { $sum: "$total_impressions" },
+              total_clicks: { $sum: "$total_clicks" },
+              avg_ctr: { $avg: "$avg_ctr" },
+              avg_cpc: { $avg: "$avg_cpc" },
+              avg_cpm: { $avg: "$avg_cpm" },
+              total_results: { $sum: "$total_results" },
+              avg_cost_per_result: { $avg: "$avg_cost_per_result" },
+            },
+          },
+          {
+            $sort: {
+              [`${_metric === "spend" ? "total_spend" : "avg_" + _metric}`]:
+                _order === "top" ? -1 : 1,
+            },
+          },
+          { $limit: _limit },
+        ]);
+
+        writer?.(`✅ Đã xếp hạng ${ranking.length} ${_entity_type}`);
+
+        const formatted = ranking.map((r, index) => ({
+          rank: index + 1,
+          entity_id: r._id.toString(),
+          entity_name: r.entity_name,
+          value: {
+            value:
+              _metric === "spend"
+                ? r.total_spend
+                : r[`avg_${_metric}`] || r[`total_${_metric}`],
+            formatted: formatMetric(
+              _metric,
+              _metric === "spend"
+                ? r.total_spend
+                : r[`avg_${_metric}`] || r[`total_${_metric}`]
+            ),
+          },
+        }));
+
+        return JSON.stringify({
+          entity_type: _entity_type,
+          metric: _metric,
+          order: _order,
+          ranking: formatted,
+        });
+      }
+
       const groupField =
-        _entity_type === "campaign"
-          ? "$campaign_id"
-          : _entity_type === "adset"
-          ? "$set_id"
-          : "$ads_id";
+        _entity_type === "adset" ? "$set_id" : "$ads_id";
 
       const nameField =
-        _entity_type === "campaign"
-          ? "campaign_name"
-          : _entity_type === "adset"
-          ? "adset_name"
-          : "ad_name";
+        _entity_type === "adset" ? "adset_name" : "ad_name";
 
       const ranking = await AdPerformance.aggregate([
         { $match: matchStage },
@@ -470,6 +585,8 @@ export const getRankingTool = tool(
             _id: groupField,
             entity_name: { $first: `$${nameField}` },
             total_spend: { $sum: "$spend" },
+            total_impressions: { $sum: "$impressions" },
+            total_clicks: { $sum: "$clicks" },
             avg_ctr: { $avg: "$ctr" },
             avg_cpc: { $avg: "$cpc" },
             avg_cpm: { $avg: "$cpm" },
