@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import facebook_icon from "../../assets/facebook.png";
 import { ROUTES, STORAGE_KEYS } from "../../constants/app.constants";
-import { Edit3, Pause, PlugZap, RefreshCcw, Repeat, Bell, Users, MessageCircle, Bot, Play, Calendar, Key, Store, Search as SearchIcon, Plus, Link2} from "lucide-react";
+import { Edit3, Pause, PlugZap, RefreshCcw, Repeat, Bell, Users, MessageCircle, Bot, Play, Calendar, Key, Store, Search as SearchIcon, Plus, Link2 } from "lucide-react";
+import profileService from "../../services/profileService";
 import shopService from "../../services/shopService";
-import { getShopCache, onShopChange } from "../../utils/shopCache";
-import axiosInstance from "../../utils/axios.js";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useMyPackage } from "../../hooks/useMyPackage.js";
 
 function Dashboard() {
   const [filterValue, setFilterValue] = useState("all");
@@ -19,87 +19,37 @@ function Dashboard() {
   const navigate = useNavigate();
   const [connectedPages, setConnectedPages] = useState([]);
   const { t } = useTranslation();
+  const { pkg, loading: pkgLoading, canAdd } = useMyPackage();
+  const canConnectPage = pkg && canAdd("pages"); // ← KIỂM TRA LIMIT PAGE
 
-  // Hàm load pages từ current shop
-  const loadConnectedPages = useCallback(async () => {
-    try {
-      // Lấy current shop từ cache hoặc API
-      let currentShop = null;
-      const cachedShop = getShopCache();
-      
-      if (cachedShop?.id) {
-        // Nếu có cache, vẫn cần lấy full shop data từ API để có facebook_pages
-        try {
-          const res = await axiosInstance.get("/api/shops/owner");
-          const data = res.data;
-          if (data.success && Array.isArray(data.data)) {
-            currentShop = data.data.find((s) => s.is_current || s._id === cachedShop.id);
-          }
-        } catch (apiError) {
-          console.error("Error fetching shops:", apiError);
-        }
-      } else {
-        // Nếu không có cache, lấy từ API
-        try {
-          const res = await axiosInstance.get("/api/shops/owner");
-          const data = res.data;
-          if (data.success && Array.isArray(data.data)) {
-            currentShop = data.data.find((s) => s.is_current);
-          }
-        } catch (apiError) {
-          console.error("Error fetching shops:", apiError);
-        }
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const me = await profileService.getCurrentProfile();
+        const shop = me?.data?.shopUser || me?.shopUser;
+        const pages = Array.isArray(shop?.facebook_pages)
+          ? shop.facebook_pages
+          : [];
+        const normalized = pages
+          .filter((p) => p.connected_status === "connected")
+          .map((p) => ({
+            id: p.page_id,
+            name: p.page_info?.name || "Facebook Page",
+            pageId: p.page_id,
+            link: `https://www.facebook.com/${p.id}`,
+            avatar:
+              p.page_info?.picture_url ||
+              `https://graph.facebook.com/${p.page_id}/picture?type=square`,
+            status: "active",
+            followerCount: 0,
+          }));
+        setConnectedPages(normalized);
+      } catch (e) {
+        console.error("Load dashboard shop info error:", e);
       }
-
-      if (!currentShop || !currentShop.facebook_pages) {
-        console.warn("Không tìm thấy current shop hoặc không có pages");
-        setConnectedPages([]);
-        return;
-      }
-
-      // Lấy pages từ current shop
-      const pages = Array.isArray(currentShop.facebook_pages)
-        ? currentShop.facebook_pages
-        : [];
-      const normalized = pages
-        .filter((p) => p.connected_status === "connected")
-        .map((p) => ({
-          id: p.page_id,
-          name: p.page_info?.name || "Facebook Page",
-          pageId: p.page_id,
-          link: p.page_info?.link || `https://www.facebook.com/${p.page_id}`,
-          avatar:
-            p.page_info?.picture_url ||
-            `https://graph.facebook.com/${p.page_id}/picture?type=square`,
-          status: "active",
-          followerCount: 0,
-        }));
-      setConnectedPages(normalized);
-    } catch (e) {
-      console.error("Load dashboard shop info error:", e);
-      setConnectedPages([]);
-    }
+    };
+    load();
   }, []);
-
-  // Load pages khi component mount
-  useEffect(() => {
-    loadConnectedPages();
-  }, [loadConnectedPages]);
-
-  // Lắng nghe sự kiện thay đổi shop để reload pages
-  useEffect(() => {
-    const removeListener = onShopChange((newShop) => {
-      if (newShop) {
-        // Reload pages khi shop thay đổi
-        loadConnectedPages();
-      } else {
-        // Nếu shop bị xóa, clear pages
-        setConnectedPages([]);
-      }
-    });
-
-    return removeListener;
-  }, [loadConnectedPages]);
 
   const handleRefresh = () => {
     console.log("Refreshing...");
@@ -142,39 +92,16 @@ function Dashboard() {
     }
     if (itemId === "disconnect") {
       try {
-        // Lấy current shop ID từ cache hoặc API
-        let currentShopId = null;
-        const cachedShop = getShopCache();
-        if (cachedShop?.id) {
-          currentShopId = cachedShop.id;
-        } else {
-          try {
-            const res = await axiosInstance.get("/api/shops/owner");
-            const data = res.data;
-            if (data.success && Array.isArray(data.data)) {
-              const currentShop = data.data.find((s) => s.is_current);
-              if (currentShop?._id) {
-                currentShopId = currentShop._id;
-              }
-            }
-          } catch (apiError) {
-            console.error("Error fetching shops:", apiError);
-          }
-        }
-
-        if (!currentShopId) {
-          toast.error("Không tìm thấy shop hiện tại");
-          return;
-        }
-
+        const me = await profileService.getCurrentProfile();
+        const shop = me?.data?.shopUser || me?.shopUser;
+        if (!shop?.shop_id) return;
         const res = await shopService.disconnectFacebookPage({
-          shopId: currentShopId,
+          shopId: shop.shop_id,
           pageId,
         });
         // ✅ Kiểm tra phản hồi
         if (res?.success) {
-          // Reload pages để đảm bảo UI được cập nhật
-          await loadConnectedPages();
+          setConnectedPages((prev) => prev.filter((p) => p.id !== pageId));
           toast.success(res.message || "Đã ngắt kết nối page.");
         } else {
           toast.warning(res.message || "Không thể ngắt kết nối page.");
@@ -192,7 +119,7 @@ function Dashboard() {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setOpenMenuId(null);
       }
-    };  
+    };
 
     document.addEventListener("click", handleClickOutside);
     return () => {
@@ -220,9 +147,8 @@ function Dashboard() {
           <div className="dashboard-header">
             <div className="dashboard-tabs">
               <button
-                className={`tab-button-dashboard ${
-                  activeTab === "my-bots" ? "active" : ""
-                }`}
+                className={`tab-button-dashboard ${activeTab === "my-bots" ? "active" : ""
+                  }`}
                 onClick={() => setActiveTab("my-bots")}
               >
                 {t("dashboard.my_page")}
@@ -282,13 +208,32 @@ function Dashboard() {
             <div className="pages-grid">
               {/* Add new page card */}
               <div
-                className="page-card add-page-card"
-                onClick={handleAddNewPage}
+                className={`page-card add-page-card ${!canConnectPage ? 'disabled' : ''}`}
+                onClick={() => canConnectPage && handleAddNewPage()}
+                style={{
+                  cursor: canConnectPage ? 'pointer' : 'not-allowed',
+                  opacity: canConnectPage ? 1 : 0.5,
+                }}
+                title={
+                  canConnectPage
+                    ? t("dashboard.connect_new_page")
+                    : pkg
+                      ? `Đã đạt giới hạn: ${pkg.usage?.pages || 0}/${pkg.limits?.pages || 0}`
+                      : "Cần gói dịch vụ để kết nối Page"
+                }
               >
                 <div className="add-page-content">
-                  <div className="add-icon"><Plus size={30} /></div>
+                  <div className="add-icon">
+                    <Plus size={30} />
+                  </div>
                   <div className="add-page-text">
-                    {t("dashboard.connect_new_page")} ({connectedPages.length}/10)
+                    {t("dashboard.connect_new_page")} (
+                    {pkgLoading 
+                      ? "..." 
+                      : pkg 
+                        ? `${pkg.usage?.pages || 0}/${pkg.limits?.pages || 0}` 
+                        : `${connectedPages.length}/?`}
+                    )
                   </div>
                 </div>
               </div>

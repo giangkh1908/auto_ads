@@ -7,9 +7,30 @@
 
 /* Full-width layout used when a fixed sidebar is present */
 .page-with-sidebar {
-  padding: 100px 24px 60px 24px; /* clear fixed header */
+  padding: 100px 24px 60px 24px; /* clear fixed header (top/right/bottom); left is dynamic below */
   min-height: calc(100vh - 140px);
 }
+
+/* Admin pages with horizontal sidebar navigation (below AdminHeader) */
+.page-with-admin-sidebar {
+  padding: 20px 24px;
+  margin-top: 110px; /* AdminHeader (60px) + AdminSidebar (50px) = 110px */
+  min-height: calc(100vh - 110px);
+  width: 100%;
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+/* Khi sidebar ở trạng thái thu gọn (body có class sidebar-collapsed) */
+/* body.sidebar-collapsed .page-with-sidebar {
+  padding-left: 124px;
+}
+
+body:not(.sidebar-collapsed) .page-with-sidebar {
+  padding-left: 254px;
+} */
 
 /* Auth page layout */
 .auth-page {
@@ -19,10 +40,16 @@
   justify-content: center;
 }
 
+html {
+  height: 100%;
+  scrollbar-gutter: stable;
+}
+
 body {
-  margin: 0px auto;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   background: #ffffff;
-  font-family: "Roboto", sans-serif;
   font-size: 14px;
   /* user-select: none; */
 }
@@ -30,9 +57,6 @@ body {
 /* html {
     scroll-behavior: smooth; // Giúp cuộn mượt hơn
 } */ /* Tắt smooth scroll để tránh animation */
-html {
-  scrollbar-gutter: stable;
-}
 
 /* Chrome, Edge, Safari */
 ::-webkit-scrollbar {

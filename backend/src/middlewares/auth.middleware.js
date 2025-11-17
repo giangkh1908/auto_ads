@@ -3,6 +3,8 @@ import User from '../models/user.model.js';
 import UserRole from '../models/userRole.model.js';
 import Role from '../models/role.model.js';
 import Shop from '../models/shops/shop.model.js';
+import UserPackage from "../models/userPackage.model.js"
+import ShopUser from "../models/shops/shopUser.model.js"
 /**
  * 🧩 Middleware xác thực Access Token
  */
@@ -119,6 +121,11 @@ export const requireEmailVerification = (req, res, next) => {
 export const authorize = (moduleName, action) => {
   return async (req, res, next) => {
     try {
+      // System Admin có quyền truy cập tất cả
+      if (req.user.internal_role === "System Admin") {
+        return next();
+      }
+
       const userId = req.user._id;
       const shopId = req.headers['x-shop-id'] || req.query.shop_id || null;
 
@@ -227,6 +234,71 @@ export const authorizeInShop = (module, action) => {
         message: "Internal authorization error.",
         error: error.message 
       });
+    }
+  };
+};
+
+export const checkFeature = (feature) => {
+  return async (req, res, next) => {
+    try {
+      const subscription = await Subscription.findOne({
+        user_id: req.user._id,
+        status: "active"
+      }).populate("package_id");
+
+      if (!subscription) {
+        return res.status(403).json({ message: "Không có gói dịch vụ" });
+      }
+
+      const hasFeature = subscription.package_id.features.includes(feature);
+      if (!hasFeature) {
+        return res.status(403).json({ message: "Tính năng không khả dụng trong gói của bạn" });
+      }
+
+      req.subscription = subscription; // truyền tiếp
+      next();
+    } catch (err) {
+      res.status(500).json({ message: "Lỗi server" });
+    }
+  };
+};
+
+export const checkPackageLimit = (resource) => {
+  return async (req, res, next) => {
+    try {
+      const userPackage = await UserPackage.findOne({
+        user_id: req.user._id,
+        status: "active",
+      });
+
+      if (!userPackage) {
+        return res.status(403).json({ message: "Không có gói dịch vụ" });
+      }
+
+      const limit = userPackage[resource];
+      let used = 0;
+
+      if (resource === "shops") {
+        used = await Shop.countDocuments({ owner_id: req.user._id, deleted_at: null });
+      } else if (resource === "employees") {
+        const shopIds = await Shop.find({ owner_id: req.user._id }).distinct("_id");
+        used = await ShopUser.countDocuments({
+          shop_id: { $in: shopIds },
+          user_id: { $ne: req.user._id },
+          status: "active",
+        });
+      }
+
+      if (used >= limit) {
+        return res.status(403).json({
+          message: `Đã đạt giới hạn ${resource}: ${used}/${limit}`,
+        });
+      }
+
+      req.packageLimit = { limit, used };
+      next();
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   };
 };

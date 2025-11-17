@@ -1,0 +1,254 @@
+.customer-log {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.customer-log-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.customer-log-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customer-log-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customer-log-search {
+  position: relative;
+}
+
+.customer-log-search-input {
+  width: 320px;
+  height: 36px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0 36px 0 12px;
+  outline: none;
+  font-size: 14px;
+}
+
+.customer-log-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.customer-log-search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.65;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.customer-log-date-range {
+  width: 220px;
+  height: 36px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.customer-log-date-range:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.customer-log-table {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.customer-log-row {
+  display: grid;
+  grid-template-columns: 0.9fr 0.64fr 0.9fr 0.63fr 0.9fr 0.75fr 0.6fr 1.83fr;
+  align-items: stretch;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.customer-log-header {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.customer-log-row:last-child {
+  border-bottom: none;
+}
+
+.customer-log-col {
+  padding: 12px 14px;
+  font-size: 14px;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  white-space: normal;
+  word-break: break-word;
+  border-right: 1px solid #e5e7eb;
+}
+
+.customer-log-col:last-child {
+  border-right: none;
+}
+
+.customer-log-header .customer-log-col {
+  padding: 15px 14px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  /* justify-content: center; */
+  box-sizing: border-box;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.customer-log-col-user {
+  font-weight: 500;
+  color: #111827;
+}
+
+.customer-log-col-userid {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-shopname {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-shopid {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-time {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-role {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-status {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-col-event {
+  color: #111827;
+  justify-content: center;
+}
+
+.customer-log-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 12px;
+  display: inline-block;
+}
+
+.customer-log-badge-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.customer-log-badge-inactive {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.customer-log-badge-banned {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+  .customer-log-row {
+    grid-template-columns: 1fr 0.8fr 1fr 0.8fr 1.2fr 1fr 0.9fr 0.8fr;
+  }
+  
+  .customer-log-search-input {
+    width: 280px;
+  }
+}
+
+@media (max-width: 992px) {
+  .customer-log-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .customer-log-toolbar-left,
+  .customer-log-toolbar-right {
+    width: 100%;
+  }
+  
+  .customer-log-search-input {
+    width: 100%;
+  }
+  
+  .customer-log-date-range {
+    width: 100%;
+  }
+  
+  .customer-log-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .customer-log-col {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .customer-log-col:last-child {
+    border-bottom: none;
+  }
+  
+  .customer-log-col-userid,
+  .customer-log-col-shopname,
+  .customer-log-col-shopid,
+  .customer-log-col-time,
+  .customer-log-col-role,
+  .customer-log-col-status,
+  .customer-log-col-event {
+    grid-column: 1 / -1;
+  }
+}
+
+.customer-log-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-log-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}

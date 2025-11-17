@@ -385,9 +385,17 @@
   border-color: #417ef8;
 }
 
-.auto-rule-popup-btn-save:hover {
+.auto-rule-popup-btn-save:hover:not(:disabled) {
   background: #3b80e0;
   border-color: #3b80e0;
+}
+
+.auto-rule-popup-btn-save:disabled {
+  background: #9ca3af;
+  color: #ffffff;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Custom Schedule */

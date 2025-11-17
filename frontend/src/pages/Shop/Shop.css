@@ -164,7 +164,7 @@
 
 .table-header-employee, .table-row-employee {
     display: grid;
-    grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 0.2fr 1fr 1fr 1fr 1fr 1fr;
     gap: 20px;
     padding: 20px;
     background: #f8fafc;
@@ -204,7 +204,7 @@
   gap: 12px;
 }
 
-.shop-avatar {
+.employee-avatar img {
   width: 40px;
   height: 40px;
   border-radius: 8px;

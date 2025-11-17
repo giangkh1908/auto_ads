@@ -4,6 +4,7 @@ import { useToast } from '../hooks/useToast'
 import authService from '../services/authService'
 import { STORAGE_KEYS, ROUTES } from '../constants/app.constants'
 import { AuthContext } from './AuthContext.js'
+import { getDefaultAdminRoute } from '../constants/adminConstants'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -150,19 +151,36 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem(STORAGE_KEYS.FB_PAGES)
         setFbPages([])
 
-        // Gọi getCurrentUser để lấy user với shop_id đầy đủ
-        const userWithShop = await refreshUserWithShopId()
-        setUser(userWithShop || user)
-
+        // Nếu user có internal_role, không cần lấy shop_id (vì không liên quan đến shop)
+        let finalUser = user
+        if (!user.internal_role) {
+          // Chỉ gọi getCurrentUser để lấy shop_id nếu user không có internal_role
+          const userWithShop = await refreshUserWithShopId()
+          finalUser = userWithShop || user
+        }
+        
+        setUser(finalUser)
         setIsAuthenticated(true)
 
         toast.success(response.message || 'Đăng nhập thành công!')
 
-        // Chuyển trang sau khi login thành công: mặc định về Dashboard
+        // Chuyển trang sau khi login thành công: kiểm tra internal_role để redirect
         setTimeout(() => {
           if (redirectTo) {
             navigate(redirectTo)
           } else {
+            const internalRole = finalUser?.internal_role
+            
+            if (internalRole) {
+              // User có internal_role -> redirect về admin page tương ứng
+              const adminRoute = getDefaultAdminRoute(internalRole)
+              if (adminRoute) {
+                navigate(adminRoute)
+                return
+              }
+            }
+            
+            // User không có internal_role -> redirect về Dashboard
             navigate(ROUTES.DASHBOARD)
           }
         }, 1000)
@@ -237,11 +255,23 @@ export const AuthProvider = ({ children }) => {
       console.log('Error refreshing user with shop_id (non-blocking):', error)
     })
 
-    // Điều hướng giống login thường
+    // Điều hướng giống login thường: kiểm tra internal_role để redirect
     setTimeout(() => {
       if (redirectTo) {
         navigate(redirectTo)
       } else {
+        const internalRole = loggedInUser?.internal_role
+        
+        if (internalRole) {
+          // User có internal_role -> redirect về admin page tương ứng
+          const adminRoute = getDefaultAdminRoute(internalRole)
+          if (adminRoute) {
+            navigate(adminRoute)
+            return
+          }
+        }
+        
+        // User không có internal_role -> redirect về Dashboard
         navigate(ROUTES.DASHBOARD)
       }
     }, 1000)

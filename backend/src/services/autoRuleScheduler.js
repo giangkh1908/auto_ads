@@ -1,8 +1,19 @@
 import cron from "node-cron";
 import AutomationRule from "../models/ads/autoRule.model.js";
 import { processRule } from "./autoRuleService.js";
+import { saveSystemLog } from "../utils/systemLog.js";
+import { FEATURE_KEYS, userHasFeature } from "./entitlementService.js";
 
 let schedulerTask = null;
+
+const resolveRuleOwnerId = (rule) => {
+  const candidate =
+    rule.subscriber_id?._id ||
+    rule.subscriber_id ||
+    rule.created_by?._id ||
+    rule.created_by;
+  return candidate ? candidate.toString() : null;
+};
 
 /**
  * Khởi chạy cron job scheduler
@@ -16,6 +27,15 @@ export function startAutoRuleScheduler() {
 
   console.log("Starting AutoRule scheduler...");
 
+  // Log scheduler started
+  saveSystemLog({
+    category: 'scheduler',
+    level: 'info',
+    action: 'SCHEDULER_STARTED',
+    description: 'Automation rule scheduler đã được khởi động',
+    success: true,
+  }).catch(err => console.error('Error logging scheduler start:', err));
+
   // Chạy mỗi phút: "* * * * *"
   schedulerTask = cron.schedule("* * * * *", async () => {
     try {
@@ -24,7 +44,6 @@ export function startAutoRuleScheduler() {
       console.error("Error in AutoRule scheduler:", error);
     }
   });
-
   console.log("AutoRule scheduler started. Running every minute.");
 }
 
@@ -36,6 +55,15 @@ export function stopAutoRuleScheduler() {
     schedulerTask.stop();
     schedulerTask = null;
     console.log("AutoRule scheduler stopped");
+    
+    // Log scheduler stopped
+    saveSystemLog({
+      category: 'scheduler',
+      level: 'info',
+      action: 'SCHEDULER_STOPPED',
+      description: 'Automation rule scheduler đã được dừng',
+      success: true,
+    }).catch(err => console.error('Error logging scheduler stop:', err));
   }
 }
 
@@ -63,10 +91,43 @@ async function processScheduledRules() {
 
     console.log(`Found ${rules.length} rule(s) to process`);
 
+    const ownerFeatureMap = new Map();
+    rules.forEach((rule) => {
+      const ownerId = resolveRuleOwnerId(rule);
+      if (ownerId) ownerFeatureMap.set(ownerId, null);
+    });
+
+    await Promise.all(
+      Array.from(ownerFeatureMap.keys()).map(async (ownerId) => {
+        const allowed = await userHasFeature(
+          ownerId,
+          FEATURE_KEYS.ADS_AUTO_RUN
+        );
+        ownerFeatureMap.set(ownerId, allowed);
+      })
+    );
+
+    const eligibleRules = rules.filter((rule) => {
+      const ownerId = resolveRuleOwnerId(rule);
+      if (!ownerId) return false;
+      const allowed = ownerFeatureMap.get(ownerId);
+      if (!allowed) {
+        console.log(
+          `Skip automation rule ${rule._id} - user ${ownerId} thiếu quyền ads_auto_run`
+        );
+        return false;
+      }
+      return true;
+    });
+
+    if (eligibleRules.length === 0) {
+      return;
+    }
+
     // Xử lý từng rule
     // Sử dụng Promise.allSettled để không bị gián đoạn nếu một rule lỗi
     const results = await Promise.allSettled(
-      rules.map((rule) => processRule(rule))
+      eligibleRules.map((rule) => processRule(rule))
     );
 
     // Log kết quả
@@ -83,7 +144,7 @@ async function processScheduledRules() {
       } else {
         errorCount++;
         console.error(
-          `Error processing rule ${rules[index]._id}:`,
+          `Error processing rule ${eligibleRules[index]._id}:`,
           result.reason
         );
       }
@@ -91,8 +152,23 @@ async function processScheduledRules() {
 
     if (successCount > 0 || triggeredCount > 0) {
       console.log(
-        `Processed ${rules.length} rule(s): ${successCount} success, ${errorCount} errors, ${triggeredCount} triggered`
+        `Processed ${eligibleRules.length} rule(s): ${successCount} success, ${errorCount} errors, ${triggeredCount} triggered`
       );
+      
+      // Log batch processing results
+      saveSystemLog({
+        category: 'scheduler',
+        level: errorCount > 0 ? 'warning' : 'info',
+        action: 'SCHEDULER_BATCH_PROCESSED',
+        description: `Đã xử lý ${eligibleRules.length} automation rule(s): ${successCount} thành công, ${errorCount} lỗi, ${triggeredCount} được kích hoạt`,
+        success: errorCount === 0,
+        meta: {
+          total: eligibleRules.length,
+          success: successCount,
+          errors: errorCount,
+          triggered: triggeredCount,
+        },
+      }).catch(err => console.error('Error logging batch results:', err));
     }
   } catch (error) {
     console.error("Error in processScheduledRules:", error);

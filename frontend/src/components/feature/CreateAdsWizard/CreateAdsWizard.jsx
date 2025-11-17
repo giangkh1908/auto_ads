@@ -21,6 +21,7 @@ import { useEditMode } from "../../../hooks/useEditMode.js";
 import { useFlexibleWizardPublish } from "../../../hooks/useWizardPublish.js";
 import { useProgressState } from "../../../hooks/useProgressState.js";
 import { useToast } from "../../../hooks/useToast.js";
+import { useMyPackage } from "../../../hooks/useMyPackage.js";
 
 // Import utils and constants
 import { getInitialWizardStep } from "../../../utils/wizardUtils.js";
@@ -30,7 +31,9 @@ import {
   TAB_TYPES,
 } from "../../../constants/wizardConstants.js";
 import { saveDraft } from "../../../services/adsWizardService.js";
-import { FB_OBJECTIVE_MAP, ADSET_CONFIG_BY_OBJECTIVE } from "../../../constants/wizardConstants.js";
+import { FB_OBJECTIVE_MAP, ADSET_CONFIG_BY_OBJECTIVE, INITIAL_DATA } from "../../../constants/wizardConstants.js";
+import axiosInstance from "../../../utils/axios.js";
+import { convertCountryCodesToNames, convertLocaleIdToLanguageCode } from "../../../utils/locationUtils.js";
 
 function CreateAdsWizard({
   onClose,
@@ -96,6 +99,8 @@ function CreateAdsWizard({
 
   const facebookPages = useFacebookPages();
   const toast = useToast();
+  const { hasFeature } = useMyPackage();
+  const contentAiEnabled = hasFeature("content_ai");
 
   // Sử dụng logic publish mới (linh hoạt)
   const {
@@ -399,6 +404,196 @@ function CreateAdsWizard({
     }
   };
 
+  // ==============================
+  // 🎯 HANDLE CREATECHILD SAVE: Chuyển từ CreateChild sang Wizard
+  // ==============================
+  const handleCreateChildSave = async (data) => {
+    try {
+      setLoading(true);
+      
+      const { campaignId, adsetMode, adset: adsetName, adsetId, ad: adName } = data;
+
+      if (!campaignId) {
+        toast.error("Vui lòng chọn campaign");
+        return;
+      }
+
+      // 1. Fetch campaign details
+      const campaignRes = await axiosInstance.get("/api/campaigns/database", {
+        params: { campaign_id: campaignId },
+      });
+      const campaignData = campaignRes.data.data;
+      
+      if (!campaignData) {
+        toast.error("Không tìm thấy campaign");
+        return;
+      }
+
+      // 2. Fetch adset details nếu selectExisting
+      let adsetData = null;
+      if (adsetMode === "selectExisting" && adsetId) {
+        const adsetRes = await axiosInstance.get("/api/adsets/database", {
+          params: { adset_id: adsetId },
+        });
+        adsetData = adsetRes.data.data;
+        
+        if (!adsetData) {
+          toast.error("Không tìm thấy adset");
+          return;
+        }
+      }
+
+      // 3. Map campaign data
+      const mappedCampaign = {
+        id: campaignData._id,
+        _id: campaignData._id,
+        external_id: campaignData.external_id,
+        name: campaignData.name || "Chiến dịch mới",
+        objective: campaignData.objective || "",
+        status: campaignData.status || "PAUSED",
+        budgetType: campaignData.daily_budget ? "CAMPAIGN" : "ADSET",
+        facebookPage: campaignData.page_name || null,
+        facebookPageId: campaignData.page_id || null,
+        facebookPageAvatar: campaignData.page_id
+          ? `https://graph.facebook.com/${campaignData.page_id}/picture?type=square`
+          : null,
+        daily_budget: campaignData.daily_budget,
+        lifetime_budget: campaignData.lifetime_budget,
+        start_time: campaignData.start_time,
+        stop_time: campaignData.stop_time,
+        createdAt: campaignData.created_at || new Date().toISOString(),
+      };
+
+      // 4. Map adset data (mới hoặc từ fetch)
+      let mappedAdset;
+      if (adsetMode === "createNew") {
+        // Tạo adset mới
+        const firstAdsetId = `temp_adset_${Date.now()}`;
+        mappedAdset = {
+          ...INITIAL_DATA.adset,
+          _id: firstAdsetId,
+          name: adsetName || "Nhóm quảng cáo mới",
+          // Copy targeting từ campaign nếu có
+          targeting: {
+            ...INITIAL_DATA.adset.targeting,
+            // Có thể thêm logic copy từ campaign nếu cần
+          },
+        };
+      } else {
+        // Map từ adset đã fetch
+        mappedAdset = {
+          id: adsetData._id,
+          _id: adsetData._id,
+          external_id: adsetData.external_id,
+          name: adsetData.name || "Nhóm quảng cáo mới",
+          status: adsetData.status || "PAUSED",
+          budgetType: adsetData.daily_budget ? "daily" : "lifetime",
+          budgetAmount: adsetData.daily_budget || adsetData.lifetime_budget,
+          daily_budget: adsetData.daily_budget,
+          lifetime_budget: adsetData.lifetime_budget,
+          start_time: adsetData.start_time,
+          end_time: adsetData.end_time,
+          schedule: {
+            start: adsetData.start_time
+              ? new Date(adsetData.start_time).toISOString().split("T")[0]
+              : "",
+            end: adsetData.end_time
+              ? new Date(adsetData.end_time).toISOString().split("T")[0]
+              : "",
+          },
+          targeting: {
+            // Map geo_locations.countries từ DB (country codes) sang locations (country names) cho FE
+            locations: adsetData.targeting?.geo_locations?.countries
+              ? convertCountryCodesToNames(adsetData.targeting.geo_locations.countries)
+              : ["Viet Nam"],
+            ageMin: adsetData.targeting?.age_min || 18,
+            ageMax: adsetData.targeting?.age_max || 65,
+            // Map gender và language từ DB
+            gender: adsetData.targeting?.genders?.[0] === 1 
+              ? "male" 
+              : adsetData.targeting?.genders?.[0] === 2 
+              ? "female" 
+              : adsetData.targeting?.gender || "all",
+            language: adsetData.targeting?.locales?.[0] 
+              ? (convertLocaleIdToLanguageCode(adsetData.targeting.locales[0]) || adsetData.targeting.locales[0])
+              : adsetData.targeting?.language || "vi",
+            publisher_platforms: adsetData.targeting?.publisher_platforms || ["facebook"],
+            facebook_positions: adsetData.targeting?.facebook_positions || ["feed", "video_feeds", "marketplace", "search"],
+            // Preserve other targeting fields
+            geo_locations: adsetData.targeting?.geo_locations,
+            age_min: adsetData.targeting?.age_min,
+            age_max: adsetData.targeting?.age_max,
+            ...(adsetData.targeting || {}),
+          },
+          placement: "AUTOMATIC",
+          optimization_goal: adsetData.optimization_goal || "REACH",
+          billing_event: adsetData.billing_event || "IMPRESSIONS",
+          bid_strategy: adsetData.bid_strategy || "LOWEST_COST_WITHOUT_CAP",
+          bid_amount: adsetData.bid_amount,
+          traffic_destination: adsetData.traffic_destination || adsetData.destination_type || null,
+          promoted_object: {
+            page_id: adsetData.page_id || campaignData.page_id || null,
+            pixel_id: adsetData.targeting?.promoted_object?.pixel_id || null,
+            custom_event_type: adsetData.targeting?.promoted_object?.custom_event_type || null,
+          },
+        };
+      }
+
+      // 5. Tạo ad mới (luôn luôn)
+      const firstAdsetId = mappedAdset._id || `temp_adset_${Date.now()}`;
+      const mappedAd = {
+        ...INITIAL_DATA.ad,
+        adset_id: firstAdsetId,
+        name: adName || "Quảng cáo mới",
+        page_id: campaignData.page_id || null,
+      };
+
+      // 6. Khởi tạo campaignsList
+      const newCampaignsList = [{
+        ...mappedCampaign,
+        adsets: [{
+          ...mappedAdset,
+          ads: [mappedAd],
+        }],
+      }];
+
+      setCampaignsList(newCampaignsList);
+      setSelectedCampaignIndex(0);
+      setSelectedAdsetIndex(0);
+      setSelectedAdIndex(0);
+
+      // 7. Set wizardStep phù hợp
+      let initialStep;
+      if (adsetMode === "createNew") {
+        initialStep = WIZARD_STEPS.ADSET; // Bắt đầu từ adset step
+      } else {
+        initialStep = WIZARD_STEPS.AD; // Bắt đầu từ ad step (vì ad luôn mới)
+      }
+
+      // Nếu campaign không có objective, bắt đầu từ campaign step
+      if (!campaignData.objective) {
+        initialStep = WIZARD_STEPS.CAMPAIGN;
+      }
+
+      setWizardStep(initialStep);
+      setActiveTab(TAB_TYPES.CAMPAIGN);
+
+      // 8. Sync state
+      setCampaign(mappedCampaign);
+      setAdset(mappedAdset);
+      setAd(mappedAd);
+
+      toast.success("Đã tải thông tin thành công");
+    } catch (error) {
+      console.error("Error handling CreateChild save:", error);
+      toast.error(
+        error?.response?.data?.message || "Lỗi khi tải thông tin. Vui lòng thử lại."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Không lưu nháp, thoát luôn
   const handleDiscardDraft = () => {
     setShowSaveDraftPopup(false);
@@ -534,6 +729,7 @@ function CreateAdsWizard({
                 campaign={campaign}
                 adsList={adsList}
                 setAdsList={setAdsList}
+                contentAiEnabled={contentAiEnabled}
               />
             )}
 
@@ -548,12 +744,9 @@ function CreateAdsWizard({
             <div className="create-child-full-mode">
               <CreateChild
                 onClose={() => setActiveTab(TAB_TYPES.CAMPAIGN)}
-                onSave={(data) => {
-                  console.log("CreateChild data:", data);
-                  // Handle save logic here
-                  setActiveTab(TAB_TYPES.CAMPAIGN);
-                }}
+                onSave={handleCreateChildSave}
                 isFullMode={true}
+                selectedAccountId={selectedAccountId}
               />
             </div>
           )}

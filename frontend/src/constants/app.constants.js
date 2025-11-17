@@ -45,6 +45,8 @@ export const ROUTES = {
   VERIFY_EMAIL: '/verify-email/:token',
   RESET_PASSWORD: '/reset-password/:token',
   NOT_FOUND: '*',
+  // Admin (tối thiểu dùng cho redirect System Admin)
+  ADMIN_SYSTEM_ADMIN_USER_MANAGEMENT: '/admin/system-admin/user-management',
 }
 
 // Valid routes for header display

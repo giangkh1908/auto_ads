@@ -10,6 +10,18 @@ import {
   updateAdStatus,
 } from "./fbAdsService.js";
 import { sendAutoRuleNotificationEmail } from "./emailService.js";
+import { saveSystemLog } from "../utils/systemLog.js";
+
+/**
+ * Chuẩn hóa account id: bỏ prefix act_ nếu có
+ * Rule có external_account_id dạng "act_xxx"
+ * AdPerformance lưu external_account_id không có prefix "act_"
+ */
+function normalizeAccountId(accountId) {
+  if (!accountId) return null;
+  const accountIdStr = String(accountId);
+  return accountIdStr.startsWith("act_") ? accountIdStr.substring(4) : accountIdStr;
+}
 
 /**
  * Mapping từ metric name trong rule sang field trong AdPerformance
@@ -203,29 +215,68 @@ export function calculateNextRunAt(schedule) {
 /**
  * So sánh condition với giá trị thực tế
  */
-function compareCondition(condition, actualValue) {
+function compareCondition(condition, actualValue, logContext = {}) {
+  const { operator, value, metric } = condition;
+  
+  // Log input values
+  if (logContext.enableLog) {
+    console.log(`[AutoRule Compare] Metric: ${metric}, Operator: ${operator}`);
+    console.log(`[AutoRule Compare] Condition value: ${value}, Actual value: ${actualValue} (type: ${typeof actualValue})`);
+  }
+  
   if (actualValue === null || actualValue === undefined) {
+    if (logContext.enableLog) {
+      console.log(`[AutoRule Compare] ❌ Actual value is null/undefined, returning false`);
+    }
     return false;
   }
 
-  const { operator, value } = condition;
   const numValue = Number(actualValue);
   const numConditionValue = Number(value);
 
   if (isNaN(numValue) || isNaN(numConditionValue)) {
+    if (logContext.enableLog) {
+      console.log(`[AutoRule Compare] ❌ Cannot convert to number. Actual: ${actualValue}, Condition: ${value}`);
+    }
     return false;
   }
 
+  let result = false;
+  let comparisonDetail = '';
+
   switch (operator) {
     case "GREATER_THAN":
-      return numValue > numConditionValue;
+      result = numValue > numConditionValue;
+      comparisonDetail = `${numValue} > ${numConditionValue}`;
+      break;
     case "LESS_THAN":
-      return numValue < numConditionValue;
+      result = numValue < numConditionValue;
+      comparisonDetail = `${numValue} < ${numConditionValue}`;
+      break;
     case "EQUAL_TO":
-      return Math.abs(numValue - numConditionValue) < 0.01; // Cho phép sai số nhỏ
+      const tolerance = 0.01;
+      const diff = Math.abs(numValue - numConditionValue);
+      result = diff < tolerance;
+      comparisonDetail = `|${numValue} - ${numConditionValue}| = ${diff} < ${tolerance}`;
+      break;
     default:
+      if (logContext.enableLog) {
+        console.log(`[AutoRule Compare] ❌ Unknown operator: ${operator}`);
+      }
       return false;
   }
+
+  // Log kết quả
+  if (logContext.enableLog) {
+    const status = result ? '✅ MATCH' : '❌ NO MATCH';
+    console.log(`[AutoRule Compare] ${status} - ${comparisonDetail}`);
+    
+    if (logContext.recordInfo) {
+      console.log(`[AutoRule Compare] Record: campaign_id=${logContext.recordInfo.campaign_id || 'N/A'}, set_id=${logContext.recordInfo.set_id || 'N/A'}, ads_id=${logContext.recordInfo.ads_id || 'N/A'}`);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -234,24 +285,34 @@ function compareCondition(condition, actualValue) {
  */
 export async function evaluateConditions(rule) {
   try {
+    const ruleName = rule.name || rule._id?.toString() || 'Unknown';
+    console.log(`[AutoRule Evaluate] ===== Bắt đầu đánh giá rule: "${ruleName}" =====`);
+    
     if (!rule.conditions || rule.conditions.length === 0) {
+      console.log(`[AutoRule Evaluate] ❌ Không có conditions, returning false`);
       return false;
     }
 
-    // Lấy ngày hiện tại (chỉ date part, bỏ qua time)
-    // Sử dụng local time để phù hợp với timezone của server
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
+    console.log(`[AutoRule Evaluate] Số lượng conditions: ${rule.conditions.length}`);
+    rule.conditions.forEach((cond, idx) => {
+      console.log(`[AutoRule Evaluate] Condition ${idx + 1}: ${cond.metric} ${cond.operator} ${cond.value} (${cond.unit || 'N/A'})`);
+    });
 
     // Build query filter
+    // Lấy external_account_id từ rule (có thể có prefix act_)
+    // AdPerformance lưu external_account_id không có prefix act_
+    const externalAccountId = rule.external_account_id;
+    if (!externalAccountId) {
+      console.log(`[AutoRule Evaluate] ❌ Không có external_account_id trong rule, returning false`);
+      return false;
+    }
+    
+    // Normalize: bỏ prefix act_ nếu có
+    const normalizedAccountId = normalizeAccountId(externalAccountId);
+    console.log(`[AutoRule Evaluate] External Account ID: ${externalAccountId} → Normalized: ${normalizedAccountId}`);
+    
     const filter = {
-      account_id: rule.account_id,
-      date: {
-        $gte: todayStart,
-        $lt: todayEnd,
-      },
+      external_account_id: normalizedAccountId,
     };
 
     // Thêm filter theo apply_to_ids
@@ -260,17 +321,22 @@ export async function evaluateConditions(rule) {
     // Nếu rule apply to ads: Query theo ads_id (ad_id)
     const { campaign_ids, adset_ids, ad_ids } = rule.apply_to_ids || {};
     
+    console.log(`[AutoRule Evaluate] Apply to IDs - Campaigns: ${campaign_ids?.length || 0}, Adsets: ${adset_ids?.length || 0}, Ads: ${ad_ids?.length || 0}`);
+    
     // Xây dựng OR conditions cho các entity types
     const orConditions = [];
     
     if (campaign_ids && campaign_ids.length > 0) {
       orConditions.push({ campaign_id: { $in: campaign_ids } });
+      console.log(`[AutoRule Evaluate] Filter by campaign_ids: ${campaign_ids.map(id => id.toString()).join(', ')}`);
     }
     if (adset_ids && adset_ids.length > 0) {
       orConditions.push({ set_id: { $in: adset_ids } });
+      console.log(`[AutoRule Evaluate] Filter by adset_ids: ${adset_ids.map(id => id.toString()).join(', ')}`);
     }
     if (ad_ids && ad_ids.length > 0) {
       orConditions.push({ ads_id: { $in: ad_ids } });
+      console.log(`[AutoRule Evaluate] Filter by ad_ids: ${ad_ids.map(id => id.toString()).join(', ')}`);
     }
     
     // Nếu có điều kiện OR, thêm vào filter
@@ -278,38 +344,108 @@ export async function evaluateConditions(rule) {
       filter.$or = orConditions;
     } else {
       // Nếu không có điều kiện nào, return false
+      console.log(`[AutoRule Evaluate] ❌ Không có apply_to_ids, returning false`);
       return false;
     }
 
-    // Query AdPerformance data
-    const adPerformanceData = await AdPerformance.find(filter).lean();
+    // Query AdPerformance data - sắp xếp để lấy bản ghi mới nhất
+    console.log(`[AutoRule Evaluate] 📊 Bước 1: Query AdPerformance với filter:`, JSON.stringify(filter, null, 2));
+    const adPerformanceData = await AdPerformance.find(filter)
+      .sort({ date: -1, created_at: -1 }) // Sắp xếp theo date mới nhất, sau đó created_at mới nhất
+      .lean();
+    console.log(`[AutoRule Evaluate] 📊 Tìm thấy ${adPerformanceData?.length || 0} record(s) AdPerformance`);
 
     if (!adPerformanceData || adPerformanceData.length === 0) {
+      console.log(`[AutoRule Evaluate] ❌ Không có dữ liệu AdPerformance, returning false`);
       return false;
     }
 
-    // Với mỗi condition, kiểm tra xem có bản ghi nào thỏa mãn không
-    for (const condition of rule.conditions) {
+    // Lấy bản ghi mới nhất (bản ghi đầu tiên sau khi sort)
+    console.log(`[AutoRule Evaluate] 📊 Bước 2: Xác định bản ghi mới nhất`);
+    const latestRecord = adPerformanceData[0];
+    const latestDate = latestRecord.date ? new Date(latestRecord.date) : null;
+    
+    console.log(`[AutoRule Evaluate] 📊 Ngày của bản ghi mới nhất: ${latestDate ? latestDate.toISOString() : 'N/A'}`);
+    console.log(`[AutoRule Evaluate] 📊 Bản ghi mới nhất (chi tiết):`, {
+      _id: latestRecord._id?.toString(),
+      campaign_id: latestRecord.campaign_id?.toString() || 'N/A',
+      set_id: latestRecord.set_id?.toString() || 'N/A',
+      ads_id: latestRecord.ads_id?.toString() || 'N/A',
+      date: latestDate ? latestDate.toISOString() : 'N/A',
+      created_at: latestRecord.created_at ? new Date(latestRecord.created_at).toISOString() : 'N/A',
+      external_account_id: latestRecord.external_account_id || 'N/A',
+    });
+
+    // Log tất cả các metrics có sẵn trong bản ghi mới nhất
+    console.log(`[AutoRule Evaluate] 📊 Bước 3: Các metrics có sẵn trong bản ghi mới nhất:`);
+    const availableMetrics = {};
+    Object.keys(METRIC_TO_FIELD_MAP).forEach(metric => {
+      const fieldName = METRIC_TO_FIELD_MAP[metric];
+      const value = latestRecord[fieldName];
+      availableMetrics[metric] = {
+        field: fieldName,
+        value: value !== null && value !== undefined ? value : 'N/A',
+        type: typeof value
+      };
+    });
+    console.log(`[AutoRule Evaluate] 📊 Available metrics:`, JSON.stringify(availableMetrics, null, 2));
+
+    // Với mỗi condition, kiểm tra với bản ghi mới nhất
+    console.log(`[AutoRule Evaluate] 📊 Bước 4: Bắt đầu so sánh ${rule.conditions.length} condition(s) với bản ghi mới nhất`);
+    for (let condIdx = 0; condIdx < rule.conditions.length; condIdx++) {
+      const condition = rule.conditions[condIdx];
       const fieldName = METRIC_TO_FIELD_MAP[condition.metric];
+      
+      console.log(`[AutoRule Evaluate] 🔍 --- Condition ${condIdx + 1}/${rule.conditions.length} ---`);
+      console.log(`[AutoRule Evaluate] 🔍 Metric: ${condition.metric}`);
+      console.log(`[AutoRule Evaluate] 🔍 Operator: ${condition.operator}`);
+      console.log(`[AutoRule Evaluate] 🔍 Condition value: ${condition.value} (${condition.unit || 'N/A'})`);
+      console.log(`[AutoRule Evaluate] 🔍 Mapped field: ${fieldName || 'NOT FOUND'}`);
+      
       if (!fieldName) {
-        console.warn(`Unknown metric: ${condition.metric}`);
+        console.warn(`[AutoRule Evaluate] ⚠️ Unknown metric: ${condition.metric} - Bỏ qua condition này`);
         continue;
       }
 
-      // Kiểm tra từng bản ghi AdPerformance
-      for (const record of adPerformanceData) {
-        const actualValue = record[fieldName];
+      // Lấy giá trị thực tế từ bản ghi mới nhất
+      const actualValue = latestRecord[fieldName];
+      console.log(`[AutoRule Evaluate] 🔍 Actual value từ bản ghi mới nhất: ${actualValue !== null && actualValue !== undefined ? actualValue : 'null/undefined'} (type: ${typeof actualValue})`);
 
-        // So sánh condition với giá trị thực tế
-        if (compareCondition(condition, actualValue)) {
-          return true; // Nếu 1 trong các điều kiện thỏa mãn, return true (OR logic)
-        }
+      const recordInfo = {
+        campaign_id: latestRecord.campaign_id?.toString() || 'N/A',
+        set_id: latestRecord.set_id?.toString() || 'N/A',
+        ads_id: latestRecord.ads_id?.toString() || 'N/A',
+        date: latestDate ? latestDate.toISOString() : 'N/A',
+        record_id: latestRecord._id?.toString(),
+      };
+
+      const logContext = {
+        enableLog: true,
+        recordInfo,
+      };
+
+      console.log(`[AutoRule Evaluate] 🔍 Bắt đầu so sánh: ${condition.metric} ${condition.operator} ${condition.value} vs ${actualValue}`);
+      
+      // So sánh condition với giá trị thực tế
+      const comparisonResult = compareCondition(condition, actualValue, logContext);
+      
+      if (comparisonResult) {
+        console.log(`[AutoRule Evaluate] ✅ Condition "${condition.metric} ${condition.operator} ${condition.value}" THỎA MÃN trên bản ghi mới nhất`);
+        console.log(`[AutoRule Evaluate] ✅ Record ID: ${latestRecord._id?.toString()}`);
+        console.log(`[AutoRule Evaluate] ✅ Date: ${latestDate ? latestDate.toISOString() : 'N/A'}`);
+        console.log(`[AutoRule Evaluate] ✅ Entity: campaign_id=${recordInfo.campaign_id}, set_id=${recordInfo.set_id}, ads_id=${recordInfo.ads_id}`);
+        console.log(`[AutoRule Evaluate] ===== Kết quả: TRUE (OR logic - 1 condition đã thỏa mãn) =====`);
+        return true; // Nếu 1 trong các điều kiện thỏa mãn, return true (OR logic)
+      } else {
+        console.log(`[AutoRule Evaluate] ❌ Condition "${condition.metric} ${condition.operator} ${condition.value}" KHÔNG thỏa mãn trên bản ghi mới nhất`);
+        console.log(`[AutoRule Evaluate] ❌ Actual value: ${actualValue !== null && actualValue !== undefined ? actualValue : 'null/undefined'}`);
       }
     }
 
+    console.log(`[AutoRule Evaluate] ===== Kết quả: FALSE (Không có condition nào thỏa mãn) =====`);
     return false;
   } catch (error) {
-    console.error("Error evaluating conditions:", error);
+    console.error(`[AutoRule Evaluate] ❌ Error evaluating conditions:`, error);
     return false;
   }
 }
@@ -691,10 +827,48 @@ export async function processRule(rule) {
     // Save rule
     await rule.save();
 
+    // Log automation rule execution
+    if (conditionsMet) {
+      await saveSystemLog({
+        category: 'automation',
+        level: 'success',
+        action: 'AUTOMATION_RULE_EXECUTED',
+        description: `Automation rule "${rule.name}" đã được thực thi thành công`,
+        target_type: 'AutomationRule',
+        target_id: rule._id.toString(),
+        target_name: rule.name,
+        success: true,
+        meta: {
+          rule_id: rule._id.toString(),
+          rule_name: rule.name,
+          action: rule.action,
+          triggered: true,
+        },
+      });
+    }
+
     return { success: true, triggered: conditionsMet };
   } catch (error) {
     errorMessage = error.message || String(error);
     console.error(`Error processing rule "${rule.name}" (${rule._id}):`, error);
+
+    // Log automation rule error
+    await saveSystemLog({
+      category: 'automation',
+      level: 'error',
+      action: 'AUTOMATION_RULE_ERROR',
+      description: `Lỗi khi thực thi automation rule: ${rule.name}`,
+      target_type: 'AutomationRule',
+      target_id: rule._id.toString(),
+      target_name: rule.name,
+      success: false,
+      error_message: errorMessage,
+      meta: {
+        rule_id: rule._id.toString(),
+        rule_name: rule.name,
+        action: rule.action,
+      },
+    });
 
     // Update error info
     rule.last_error = errorMessage;

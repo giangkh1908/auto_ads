@@ -7,7 +7,7 @@ import './Profile.css'
 import { getNames } from "country-list";
 import {User, AtSign, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
 import { validateRequired, validatePassword, validateEmail, validatePhone } from '../../utils/validation'
-import no_avatar from '../../assets/home.jpg';
+import no_avatar from '../../assets/no-avatar.jpg';
 
 function Profile() {
   const { t } = useTranslation()

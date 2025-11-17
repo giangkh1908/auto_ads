@@ -1,0 +1,250 @@
+.acc-trans-page {
+  padding: 20px;
+  margin-top: 60px; /* Space for AdminHeader */
+  min-height: calc(100vh - 60px);
+  background-color: #f5f5f5;
+}
+
+.acc-trans-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.acc-trans-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.acc-trans-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.acc-trans-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acc-trans-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.acc-trans-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.acc-trans-search-input {
+  padding: 8px 35px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 250px;
+}
+
+.acc-trans-search-icon {
+  position: absolute;
+  right: 10px;
+  color: #666;
+  pointer-events: none;
+}
+
+.acc-trans-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.acc-trans-select {
+  padding: 8px 30px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  min-width: 120px;
+}
+
+.acc-trans-select-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #666;
+}
+
+.acc-trans-date-range {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.acc-trans-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
+  flex-wrap: wrap;
+}
+
+.acc-trans-summary-item {
+  font-size: 14px;
+  color: #666;
+}
+
+.acc-trans-summary-item strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.acc-trans-summary-separator {
+  font-size: 14px;
+  color: #999;
+}
+
+.acc-trans-table {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.acc-trans-row {
+  display: grid;
+  grid-template-columns: 1.35fr 0.95fr 1.5fr 1fr 0.8fr 1fr 0.7fr 1.1fr 0.9fr 1fr 1.5fr; /* 11 columns */
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid #eee;
+  align-items: stretch;
+}
+
+.acc-trans-row:last-child {
+  border-bottom: none;
+}
+
+.acc-trans-header {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.acc-trans-col {
+  font-size: 14px;
+  color: #333;
+  padding: 15px;
+  border-right: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.acc-trans-col > * {
+  max-width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.acc-trans-col:last-child {
+  border-right: none;
+}
+
+.acc-trans-col-phone,
+.acc-trans-col-email,
+.acc-trans-col-transaction-id,
+.acc-trans-col-package,
+.acc-trans-col-amount,
+.acc-trans-col-method,
+.acc-trans-col-payment-time,
+.acc-trans-col-status,
+.acc-trans-col-action {
+  text-align: center;
+  justify-content: center;
+}
+
+.acc-trans-col-payment-time {
+  flex-direction: column;
+}
+
+.acc-trans-sub {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.acc-trans-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.acc-trans-badge-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.acc-trans-badge-approved,
+.acc-trans-badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.acc-trans-badge-rejected,
+.acc-trans-badge-failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.acc-trans-badge-cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.acc-trans-action-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.acc-trans-link {
+  color: #007bff;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.acc-trans-link:hover {
+  text-decoration: underline;
+}
+

@@ -15,6 +15,11 @@ const adPerformanceSchema = new mongoose.Schema(
     
     date: { type: Date, required: true, index: true },
 
+    external_account_id: {
+      type: String,
+      index: true,
+    },
+    
     impressions: { type: Number, default: 0 },
     reach: { type: Number, default: 0 },
     clicks: { type: Number, default: 0 },
@@ -67,7 +72,6 @@ adPerformanceSchema.index({ campaign_id: 1, date: 1 });
 adPerformanceSchema.index({ set_id: 1, date: 1 });
 adPerformanceSchema.index({ account_id: 1, date: 1 });
 adPerformanceSchema.index({ date: 1 });
-
 adPerformanceSchema.index({ external_account_id: 1, date: 1 });
 
 // Indexes cho search và filtering

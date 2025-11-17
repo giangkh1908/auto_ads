@@ -9,6 +9,7 @@ import {
   hardDeleteAdsAccount,
 } from "../../services/adsAccountService.js";
 import User from "../../models/user.model.js";
+import UserRole from "../../models/userRole.model.js";
 // Thêm imports
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
@@ -23,6 +24,8 @@ import {
 } from "../../services/fbAdsService.js";
 import axios from "axios";
 import { upsertOneAdAccount } from "../../services/adsAccountService.js";
+import AdsAccount from "../../models/ads/adsAccount.model.js";
+import Shop from "../../models/shops/shop.model.js";
 
 const FB_API = "https://graph.facebook.com/v23.0";
 
@@ -47,7 +50,18 @@ export async function syncAdsAccounts(req, res) {
 
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
-    const shopId = req.user?.shop_id || null; // Thêm dòng này để lấy shopId
+    
+    // Lấy shop_id từ UserRole với is_current = true
+    let shopId = null;
+    const currentUserRole = await UserRole.findOne({
+      user_id: adminUserId,
+      is_current: true,
+      shop_id: { $ne: null },
+      revoked_at: null,
+    }).lean();
+    if (currentUserRole?.shop_id) {
+      shopId = currentUserRole.shop_id;
+    }
 
     const docs = await upsertAdAccountsFromFacebook(accessToken, { shopUserId, adminUserId, shopId });
 
@@ -82,9 +96,22 @@ export async function listAdsAccountsCtrl(req, res) {
       });
     }
     
+    // Lấy shop_id từ UserRole với is_current = true (chỉ lấy accounts của current shop)
+    let shopId = null;
+    const currentUserRole = await UserRole.findOne({
+      user_id: userId,
+      is_current: true,
+      shop_id: { $ne: null },
+      revoked_at: null,
+    }).lean();
+    if (currentUserRole?.shop_id) {
+      shopId = currentUserRole.shop_id;
+    }
+    
     const result = await listAdsAccounts({ 
       userId, 
-      shopUserId, 
+      shopUserId,
+      shopId, 
       q, 
       status, 
       account_status, 
@@ -314,7 +341,49 @@ export async function listFacebookAdAccountsCtrl(req, res) {
       after = resp.data?.paging?.cursors?.after || null;
     } while (after);
 
-    return res.status(200).json({ items: all, total: all.length });
+    // Lấy current shop_id để check is_current_shop
+    const userId = req.user?._id || req.user?.id;
+    let currentShopId = null;
+    if (userId) {
+      const currentUserRole = await UserRole.findOne({
+        user_id: userId,
+        is_current: true,
+        shop_id: { $ne: null },
+        revoked_at: null,
+      }).lean();
+      if (currentUserRole?.shop_id) {
+        currentShopId = currentUserRole.shop_id;
+      }
+    }
+
+    // Check xem các account đã được kết nối với shop nào chưa
+    const externalIds = all.map(a => a.external_id);
+    const connectedAccounts = await AdsAccount.find({
+      external_id: { $in: externalIds },
+      shop_id: { $ne: null }
+    }).populate('shop_id', 'shop_name').lean();
+
+    // Tạo map để tra cứu nhanh
+    const connectedMap = {};
+    for (const acc of connectedAccounts) {
+      connectedMap[acc.external_id] = {
+        shop_id: acc.shop_id?._id || acc.shop_id,
+        shop_name: acc.shop_id?.shop_name || 'Unknown Shop',
+        is_current_shop: acc.shop_id?._id?.toString() === currentShopId?.toString()
+      };
+    }
+
+    // Thêm thông tin connected_shop và can_connect vào mỗi account
+    const itemsWithConnection = all.map(acc => {
+      const connectedInfo = connectedMap[acc.external_id];
+      return {
+        ...acc,
+        connected_shop: connectedInfo || null,
+        can_connect: !connectedInfo // Có thể connect nếu chưa có shop_id
+      };
+    });
+
+    return res.status(200).json({ items: itemsWithConnection, total: itemsWithConnection.length });
   } catch (err) {
     console.error("LIST FB AdAccounts error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "Lỗi lấy danh sách từ Facebook", error: err.message });
@@ -355,9 +424,33 @@ export async function connectAdAccountCtrl(req, res) {
     });
     const fbAcc = resp.data;
 
+    // Kiểm tra xem account đã được kết nối với shop nào chưa
+    const existingAccount = await AdsAccount.findOne({
+      external_id: fbAcc.id,
+      shop_id: { $ne: null }
+    }).populate('shop_id', 'shop_name').lean();
+
+    if (existingAccount) {
+      return res.status(400).json({
+        message: `Tài khoản quảng cáo này đã được kết nối với shop "${existingAccount.shop_id?.shop_name || 'Unknown Shop'}". Mỗi tài khoản quảng cáo chỉ có thể kết nối với một shop duy nhất.`,
+        success: false
+      });
+    }
+
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
-    const shopId = req.user?.shop_id || null;
+    
+    // Lấy shop_id từ UserRole với is_current = true
+    let shopId = null;
+    const currentUserRole = await UserRole.findOne({
+      user_id: adminUserId,
+      is_current: true,
+      shop_id: { $ne: null },
+      revoked_at: null,
+    }).lean();
+    if (currentUserRole?.shop_id) {
+      shopId = currentUserRole.shop_id;
+    }
 
     const saved = await upsertOneAdAccount(
       {

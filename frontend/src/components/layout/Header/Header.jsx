@@ -5,7 +5,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { STORAGE_KEYS } from "../../../constants/app.constants";
 import { saveShopCache, getShopCache, clearShopCache, onShopChange } from "../../../utils/shopCache";
 import "./Header.css";
-import avatar from "../../../assets/home.jpg";
+import avatar from "../../../assets/no-avatar.jpg";
 import {
   LayoutDashboard,
   Megaphone,
@@ -276,16 +276,8 @@ function Header({ onLoginClick }) {
           console.log(`Switched to: ${shop.shop_name}`);
         }
 
-        // Tự động reload trang shop nếu đang ở /shop/*
-        if (pathname.startsWith("/shop")) {
-          window.location.href = "/shop"; // Hard reload để cập nhật dữ liệu shop mới
-        } else if (
-          pathname.startsWith("/dashboard") ||
-          pathname.startsWith("/analytics")
-        ) {
-          // Reload nhẹ để cập nhật context
-          window.location.reload();
-        }
+        // Reload lại trang để cập nhật dữ liệu với shop mới
+        window.location.reload();
       } else {
         // API lỗi → không đổi shop
         if (window.showToast) {
@@ -323,8 +315,8 @@ function Header({ onLoginClick }) {
           </h1>
         </button>
 
-        {/* Nav khi không ở Home*/}
-        {pathname !== "/" && (
+        {/* Nav khi không ở Home hoặc ở service-package đã login*/}
+        {pathname !== "/" && !(pathname === "/service-package" && !isAuthenticated) && (
           <div className="app-nav">
             <button
               className={`nav-btn ${pathname === "/dashboard" ? "active" : ""}`}
@@ -374,8 +366,8 @@ function Header({ onLoginClick }) {
           </div>
         )}
 
-        {/* Nav 2 khi ở Home*/}
-        {pathname === "/" && (
+        {/* Nav 2 khi ở Home hoặc ở service-package chưa login*/}
+        {(pathname === "/" || (pathname === "/service-package" && !isAuthenticated)) && (
           <div className="app-nav-2">
             <button
               className={`nav-btn-2 ${pathname === "/guide" ? "active" : ""}`}
@@ -427,8 +419,8 @@ function Header({ onLoginClick }) {
               </ul>
             )}
           </div>
-          {/* Chỉ hiển thị menu user khi đã login và KHÔNG ở trang Home */}
-          {isAuthenticated && pathname !== "/" && (
+          {/* Chỉ hiển thị menu user khi đã login và KHÔNG ở trang Home, và nếu ở service-package thì phải đã login */}
+          {isAuthenticated && pathname !== "/" && !(pathname === "/service-package" && !isAuthenticated) && (
             <div className="user-menu">
               {/* SHOP SELECTOR */}
               <div className="shop-selector" onClick={() => toggleMenu("shop")}>
@@ -528,8 +520,8 @@ function Header({ onLoginClick }) {
             </div>
           )}
 
-          {/* Chỉ hiển thị nút Đăng nhập nếu CHƯA đăng nhập và ở Home */}
-          {!isAuthenticated && pathname === "/" && (
+          {/* Chỉ hiển thị nút Đăng nhập nếu CHƯA đăng nhập và ở Home hoặc service-package */}
+          {!isAuthenticated && (pathname === "/" || pathname === "/service-package") && (
             <button className="btn-login" onClick={onLoginClick}>
               {t("header.login")}
             </button>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import shopService from "../../services/shopService";
 import { ShoppingCart } from "lucide-react";
 import "./Order.css";
+import axiosInstance from '../../utils/axios';
+import { toast } from 'sonner';
+
 
 function Order() {
   const location = useLocation();
@@ -12,8 +14,6 @@ function Order() {
   const selectedPackageFromNav = location.state?.selectedPackage;
 
   // State management
-  const [shops, setShops] = useState([]);
-  const [selectedShop, setSelectedShop] = useState("");
   const [currentPackage] = useState({
     name: "STARTER",
     customers: 1,
@@ -21,20 +21,32 @@ function Order() {
     duration: "Không giới hạn",
   });
 
+  // Map package name to type
+  const mapPackageName = (name) => {
+    if (!name) return "CHATBOT";
+
+    const lower = name.toLowerCase();
+
+    if (lower.includes("chatbot ai")) return "CHATBOT AI";
+    if (lower.includes("chatbot")) return "CHATBOT";
+
+    return "CHATBOT";
+  };
+
+  const [packages, setPackages] = useState([]);
   // Order form state
   const [packageType, setPackageType] = useState(
-    selectedPackageFromNav?.name || "CHATBOT"
+    mapPackageName(selectedPackageFromNav?.name)
   );
-  const [pages, setPages] = useState(selectedPackageFromNav?.pages || 5);
-  const [customers, setCustomers] = useState(
-    selectedPackageFromNav?.customers || 10000
-  );
-  const [employees, setEmployees] = useState(3);
+  const [pages, setPages] = useState(selectedPackageFromNav?.pages);
+
+  const [employees, setEmployees] = useState(selectedPackageFromNav?.employees);
   const [duration, setDuration] = useState(
-    selectedPackageFromNav?.duration || "1 năm"
+    selectedPackageFromNav?.duration || "12months"
   );
-  const [credit, setCredit] = useState(1000); // Credit for CHATBOT AI
-  
+  const [minPages, setMinPages] = useState("");
+  const [minEmployees, setMinEmployees] = useState("");
+
   const [discountCode, setDiscountCode] = useState("");
   const [includeVAT, setIncludeVAT] = useState(false);
 
@@ -43,58 +55,102 @@ function Order() {
   const [companyName, setCompanyName] = useState("");
 
   // Package pricing (per month in VND)
-  const packagePricing = {
-    LIVECHAT: 98000,
-    CHATBOT: 290000,
-    "CHATBOT AI": 980000,
-  };
+  const [packagePricing, setPackagePricing] = useState({
+    CHATBOT: {},
+    "CHATBOT AI": {},
+  });
 
-  // Fetch shops
   useEffect(() => {
-    const fetchShops = async () => {
+    const fetchPackage = async () => {
       try {
-        const response = await shopService.getMyShops();
-        if (response?.items && response.items.length > 0) {
-          setShops(response.items);
-          // Auto-select first shop or saved shop
-          const savedShopId = localStorage.getItem("selectedShopId");
-          const shopToSelect = savedShopId
-            ? response.items.find((s) => s._id === savedShopId)?._id
-            : response.items[0]._id;
-          setSelectedShop(shopToSelect || "");
+        const res = await axiosInstance.get(`/api/package/`);
+        const list = res.data.data;
+        if (res.data.success) {
+          const mappedPrice = {
+            CHATBOT: {},
+            "CHATBOT AI": {},
+          };
+          list.forEach(pkg => {
+            const lower = pkg.name.toLowerCase();
+
+            const type =
+              lower.includes("chatbot ai") ? "CHATBOT AI" :
+                lower.includes("chatbot") ? "CHATBOT" : null;
+
+            const duration =
+              lower.includes("3") ? "3months" :
+                lower.includes("6") ? "6months" :
+                  lower.includes("12") ? "12months" : null;
+
+            if (type && duration) {
+              mappedPrice[type][duration] = pkg.price;
+            }
+          });
+          setPackages(list);
+          setPackagePricing(mappedPrice);
+        } else {
+          console.error("Failed to load packages:", res.data.message);
+          toast.error(res.data.message || "Không thể tải danh sách packages");
+          setPackages([]);
         }
       } catch (error) {
-        console.error("Error fetching shops:", error);
+        console.error("Lỗi tải package pricing:", error);
       }
     };
-    fetchShops();
+
+    fetchPackage();
   }, []);
+
+  useEffect(() => {
+    if (!packages.length) return;
+
+    // tìm package đầu tiên đúng loại
+    const matchedPackage = packages.find(pkg => {
+      const lower = pkg.name.toLowerCase();
+
+      if (packageType === "CHATBOT AI" && lower.includes("chatbot ai"))
+        return true;
+      if (packageType === "CHATBOT" && lower.includes("chatbot") && !lower.includes("ai"))
+        return true;
+
+      return false;
+    });
+
+    if (matchedPackage) {
+      setMinPages(matchedPackage.pages);
+      setMinEmployees(matchedPackage.employees);
+
+      // auto set pages / employees nếu chưa có hoặc nhỏ hơn min
+      setPages(matchedPackage.pages);
+      setEmployees(matchedPackage.employees);
+    }
+  }, [packageType, packages]);
 
   // Calculate total price
   const calculateTotal = () => {
-    const basePrice = packagePricing[packageType] || 0;
+    const basePrice = packagePricing[packageType]?.[duration] || 0;
     const durationMultiplier =
-      duration === "1 năm" ? 12 : duration === "6 tháng" ? 6 : 3;
-    return basePrice * durationMultiplier;
+      duration === "12months" ? 12 : duration === "6months" ? 6 : 3;
+    const employee = (employees - minEmployees) * 20000 * durationMultiplier || 0;
+    const page = (pages - minPages) * 20000 * durationMultiplier || 0;
+    // const creditAI = credit * 1000 || 0;
+    return basePrice * durationMultiplier + employee + page;
   };
 
   const totalPrice = calculateTotal();
 
   // Handle upgrade button
-  const handleUpgrade = () => {
-    if (!selectedShop) {
-      alert("Vui lòng chọn shop để nâng cấp");
-      return;
-    }
-    
+  const handleUpgrade = async () => {
+    // if (!selectedShop) {
+    //   alert("Vui lòng chọn shop để nâng cấp");
+    //   return;
+    // }
+
     // Prepare order data
     const orderData = {
-      shop: selectedShop,
       packageType,
       pages,
-      customers,
       employees,
-      credit: packageType === "CHATBOT AI" ? credit : null,
       duration,
       totalPrice,
       discountCode,
@@ -105,8 +161,28 @@ function Order() {
 
     console.log("Order data:", orderData);
 
-    // Navigate to checkout page with order data
-    navigate("/checkout", { state: { orderData } });
+    // Gọi API
+    try {
+      const res = await axiosInstance.post("/api/user-package/order", orderData);
+
+      if (res.data.success) {
+        const { transaction } = res.data;
+
+        // Điều hướng sang checkout và truyền transactionId
+        navigate("/checkout", {
+          state: {
+            orderData,
+            orderId: transaction._id,
+          },
+        });
+        console.log("order: ", orderData, transaction._id);
+      } else {
+        alert("Không thể tạo đơn hàng!");
+      }
+    } catch (error) {
+      console.error("Order error:", error);
+      alert("Lỗi tạo đơn hàng");
+    }
   };
 
   return (
@@ -114,10 +190,10 @@ function Order() {
       <div className="or-container">
         {/* Header */}
         <div className="or-header">
-          <h1 className="or-title">VUI LÒNG CHỌN SHOP ĐỂ NÂNG CẤP</h1>
+          {/* <h1 className="or-title">VUI LÒNG CHỌN SHOP ĐỂ NÂNG CẤP</h1> */}
 
           {/* Shop Selector */}
-          <select
+          {/* <select
             className="or-shop-select"
             value={selectedShop}
             onChange={(e) => setSelectedShop(e.target.value)}
@@ -128,7 +204,7 @@ function Order() {
                 {shop.shop_name}
               </option>
             ))}
-          </select>
+          </select> */}
           <br />
           {/* Current Package Info */}
           <div className="or-current-package">
@@ -145,14 +221,14 @@ function Order() {
           <div className="or-form-grid">
             {/* Package Type */}
             <div className="or-form-row">
-              <label className="or-label">Gói phần mềm</label>
+              <label className="or-label">Gói dịch vụ</label>
               <select
                 className="or-select"
                 value={packageType}
                 onChange={(e) => setPackageType(e.target.value)}
               >
                 {/* <option value="MIỄN PHÍ">MIỄN PHÍ</option> */}
-                <option value="LIVECHAT">LIVECHAT</option>
+                {/* <option value="LIVECHAT">LIVECHAT</option> */}
                 <option value="CHATBOT">CHATBOT</option>
                 <option value="CHATBOT AI">CHATBOT AI</option>
               </select>
@@ -168,35 +244,12 @@ function Order() {
                     className="or-input"
                     value={pages}
                     onChange={(e) => setPages(Number(e.target.value))}
-                    min="5"
+                    min={minPages}
                   />
                   <span className="or-input-label">Pages</span>
                 </div>
               </div>
             </div>
-
-            {/* Customers - only show if NOT LIVECHAT */}
-            {packageType !== "LIVECHAT" && (
-              <div className="or-form-row">
-                <label className="or-label"></label>
-                <div className="or-input-group">
-                  <div className="or-input-item">
-                    <select
-                      className="or-select"
-                      value={customers}
-                      onChange={(e) => setCustomers(Number(e.target.value))}
-                    >
-                      <option value="1000">1,000</option>
-                      <option value="5000">5,000</option>
-                      <option value="10000">10,000</option>
-                      <option value="20000">20,000</option>
-                      <option value="50000">50,000</option>
-                    </select>
-                    <span className="or-input-label">Khách hàng</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="or-form-row">
               <label className="or-label"></label>
@@ -207,14 +260,14 @@ function Order() {
                     className="or-input"
                     value={employees}
                     onChange={(e) => setEmployees(Number(e.target.value))}
-                    min="3"
+                    min={minEmployees}
                   />
                   <span className="or-input-label">Nhân viên</span>
                 </div>
               </div>
             </div>
 
-            {packageType === "CHATBOT AI" && (
+            {/* {packageType === "CHATBOT AI" && (
             <div className="or-form-row">
               <label className="or-label"></label>
               <div className="or-input-group">
@@ -231,13 +284,13 @@ function Order() {
                 </div>
               </div>
             </div>
-            )}
+            )} */}
 
             {/* Unit Price */}
             <div className="or-form-row">
               <label className="or-label">Đơn giá</label>
               <div className="or-price-display">
-                {packagePricing[packageType]?.toLocaleString("vi-VN")}đ / tháng
+                {(packagePricing[packageType]?.[duration] || 0).toLocaleString("vi-VN")}đ / tháng
               </div>
             </div>
 
@@ -249,9 +302,9 @@ function Order() {
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
               >
-                <option value="3 tháng">3 tháng</option>
-                <option value="6 tháng">6 tháng</option>
-                <option value="1 năm">1 năm</option>
+                <option value="3months">3 tháng</option>
+                {/* <option value="6months">6 tháng</option> */}
+                <option value="12months">1 năm</option>
               </select>
             </div>
 

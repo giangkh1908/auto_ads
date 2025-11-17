@@ -278,6 +278,10 @@
   font-size: 14px;
   grid-column: 1 / -1; /* Span all columns */
   background-color: #ffffff;
+  display: flex;
+  justify-content: center; /* Căn giữa theo chiều ngang */
+  align-items: center; /* Căn giữa theo chiều dọc */
+  height: 120px; /* Đảm bảo có chiều cao cố định */
 }
 
 /* Rule ID Cell - Allow text to wrap */
@@ -329,4 +333,3 @@
     overflow-x: scroll;
   }
 }
-

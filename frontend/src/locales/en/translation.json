@@ -88,7 +88,11 @@
       "registration_title": "REGISTER FOR SALES CHATBOT SCENARIO CONSULTATION",
       "registration_subtitle": "Free consultation on chatbot scenarios suitable for your business",
       "email_placeholder": "Enter your email",
-      "contact_me": "CONTACT ME"
+      "name_placeholder": "Your full name",
+      "phone_placeholder": "Phone number",
+      "contact_me": "CONTACT ME",
+      "call_me": "CALL ME",
+      "submitting": "Submitting..."
     },
     "templates": {
       "shopping": "Shopping",

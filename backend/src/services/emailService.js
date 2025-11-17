@@ -235,3 +235,58 @@ export const sendAutoRuleNotificationEmail = async (email, name, ruleData) => {
     throw new Error("Không thể gửi email thông báo quy tắc tự động");
   }
 };
+
+/**
+ * Gửi email thông tin đăng nhập cho nhân viên nội bộ mới
+ */
+export const sendStaffCredentialsEmail = async (email, password) => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: "Thông tin đăng nhập tài khoản nhân viên",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Chào mừng bạn đến với hệ thống!</h2>
+          <p>Tài khoản nhân viên của bạn đã được tạo thành công. Dưới đây là thông tin đăng nhập của bạn:</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
+            <h3 style="color: #333; margin-top: 0;">Thông tin đăng nhập:</h3>
+            <p style="margin: 10px 0;"><strong>Email:</strong> <span style="color: #007bff;">${email}</span></p>
+            <p style="margin: 10px 0;"><strong>Mật khẩu:</strong> <code style="background-color: #e9ecef; padding: 4px 8px; border-radius: 3px; font-size: 14px;">${password}</code></p>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404;"><strong>⚠️ Lưu ý quan trọng:</strong></p>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #856404;">
+              <li>Vui lòng đổi mật khẩu ngay sau khi đăng nhập lần đầu</li>
+              <li>Không chia sẻ thông tin đăng nhập với bất kỳ ai</li>
+              <li>Bảo mật thông tin tài khoản của bạn</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
+               style="background-color: #007bff; color: white; padding: 12px 30px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;">
+              Đăng nhập ngay
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">
+            Email này được gửi tự động bởi hệ thống. Nếu bạn không mong đợi email này, vui lòng liên hệ với quản trị viên.
+          </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Staff credentials email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending staff credentials email:", error);
+    throw new Error("Không thể gửi email thông tin đăng nhập");
+  }
+};

@@ -1,0 +1,181 @@
+.cs-sp-page {
+  padding: 20px;
+  margin-top: 60px; /* Space for AdminHeader */
+  min-height: calc(100vh - 60px);
+  background-color: #f5f5f5;
+}
+
+.cs-sp-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cs-sp-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.cs-sp-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cs-sp-search-input {
+  padding: 8px 35px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.cs-sp-search-icon {
+  position: absolute;
+  right: 10px;
+  color: #666;
+  pointer-events: none;
+}
+
+.cs-sp-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cs-sp-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.cs-sp-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.cs-sp-select {
+  padding: 8px 30px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  min-width: 100px;
+}
+
+.cs-sp-select-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #666;
+}
+
+.cs-sp-table {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.cs-sp-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 0.7fr 0.85fr 2.4fr;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid #eee;
+  align-items: stretch;
+}
+
+.cs-sp-row:last-child {
+  border-bottom: none;
+}
+
+.cs-sp-header {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.cs-sp-col {
+  font-size: 14px;
+  color: #333;
+  padding: 15px;
+  border-right: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cs-sp-col > * {
+  max-width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.cs-sp-col:last-child {
+  border-right: none;
+}
+
+.cs-sp-col-phone,
+.cs-sp-col-email,
+.cs-sp-col-package,
+.cs-sp-col-purchased,
+.cs-sp-col-expired,
+.cs-sp-col-segment,
+.cs-sp-col-user-status,
+.cs-sp-col-assigned {
+  text-align: center;
+  justify-content: center;
+}
+
+.cs-sp-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cs-sp-badge-active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cs-sp-badge-inactive {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cs-sp-badge-banned {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.cs-sp-badge-assigned {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cs-sp-badge-unassigned {
+  background: #fff3cd;
+  color: #856404;
+}

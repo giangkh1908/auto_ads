@@ -2,49 +2,81 @@ import mongoose from "mongoose";
 
 const packageSchema = new mongoose.Schema(
   {
-    // 📦 Tên gói dịch vụ
+    // Tên gói dịch vụ
     name: {
       type: String,
       required: [true, "Tên gói là bắt buộc"],
       trim: true,
-      unique: true,
     },
 
-    // 🧾 Mô tả gói
+    // Mô tả gói
     description: {
       type: String,
       trim: true,
       default: "",
     },
 
-    // 💰 Giá tiền
+    // Giá tiền
     price: {
       type: Number,
       required: [true, "Giá gói là bắt buộc"],
       min: 0,
     },
 
-    // ⏱️ Thời hạn (tính theo ngày)
+    month_period: {
+      type: Number,
+      required: [true, "Chu kỳ hiển thị là bắt buộc"], // "3", "12"
+    },
+
     duration_days: {
       type: Number,
       required: [true, "Số ngày sử dụng là bắt buộc"],
       min: 1,
     },
 
-    // 🧩 Các tính năng kèm theo
-    features: {
-      type: mongoose.Schema.Types.Mixed, // có thể là JSON tùy biến
-      default: {},
+    planType: {
+      type: String,
+      enum: ["3months", "1year"],
+      required: true,
     },
 
-    // 🔄 Trạng thái gói
+    pages: {
+      type: Number,
+      default: 3,
+    },
+
+    employees: {
+      type: Number,
+      default: 3,
+    },
+
+    shops: {
+      type: Number,
+      default: 20,
+    },
+
+    conversations: {
+      type: String,
+      default: "∞",
+    },
+
+    contacts: {
+      type: String,
+      default: "∞",
+    },
+
+    features: {
+      type: [String],
+      default: [],
+    },
+
+    // Trạng thái gói
     status: {
       type: String,
       enum: ["active", "inactive"],
       default: "active",
     },
 
-    // 🧠 Audit
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     updated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     deleted_at: { type: Date, default: null },
@@ -52,10 +84,9 @@ const packageSchema = new mongoose.Schema(
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
 
-// 📈 Indexes
-packageSchema.index({ name: 1 }, { unique: true });
+// packageSchema.index({ name: 1 }, { unique: true });
+packageSchema.index({ planType: 1 });
 packageSchema.index({ status: 1 });
-packageSchema.index({ deleted_at: 1 });
 
 const Package = mongoose.model("Package", packageSchema);
 export default Package;

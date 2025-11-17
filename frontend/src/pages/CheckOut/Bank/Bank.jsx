@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, Copy, Check } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import "./Bank.css";
+import axiosInstance from "../../../utils/axios.js";
+// import { STORAGE_KEYS } from "../../constants/app.constants";
 
 function Bank() {
   const location = useLocation();
@@ -14,8 +16,8 @@ function Bank() {
   const [timeLeft, setTimeLeft] = useState(600);
   const [copiedField, setCopiedField] = useState("");
 
-   // Get user identifier (phone or username)
-   const userIdentifier = user?.phone || user?.username || user?.email || "USER";
+  // Get user identifier (phone or username)
+  const userIdentifier = user?.phone || user?.username || user?.email || "USER";
 
   // Bank transfer details
   const bankDetails = {
@@ -72,11 +74,34 @@ function Bank() {
   };
 
   // Handle confirmation
-  const handleConfirm = () => {
-    // TODO: Implement verification logic
-    console.log("User confirmed bank transfer");
-    alert("Cảm ơn bạn! Chúng tôi sẽ xác nhận thanh toán trong ít phút.");
-    navigate("/dashboard");
+  const handleConfirm = async () => {
+    try {
+      // Gọi API xác nhận chuyển khoản
+      const res = await axiosInstance.patch(
+        `/api/payment-transactions/${orderId}/confirm-transfer`,
+        {}, // body rỗng
+        // {
+        //   headers: {
+        //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+        //   },
+        // }
+      );
+
+      if (res.data.success) {
+        alert("Cảm ơn bạn! Chúng tôi sẽ xác nhận thanh toán trong ít phút.");
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Lỗi xác nhận chuyển khoản:", error);
+      if (error.response?.status === 404) {
+        alert("Không tìm thấy giao dịch. Vui lòng thử lại.");
+      } else if (error.response?.status === 401) {
+        alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+        navigate("/login");
+      } else {
+        alert("Có lỗi xảy ra. Vui lòng thử lại sau.");
+      }
+    }
   };
 
   if (!orderData) return null;
@@ -200,4 +225,3 @@ function Bank() {
 }
 
 export default Bank;
-

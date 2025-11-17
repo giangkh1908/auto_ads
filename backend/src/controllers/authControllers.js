@@ -13,6 +13,7 @@ import {
   sendPasswordResetEmail,
 } from "../services/emailService.js";
 import jwt from "jsonwebtoken";
+import { saveSystemLog, getClientIp, getUserAgent } from "../utils/systemLog.js";
 
 // Hàm xác thực CAPTCHA bằng axios
 async function verifyCaptcha(token) {
@@ -170,6 +171,21 @@ export const register = async (req, res) => {
     // Gửi email xác nhận
     await sendVerificationEmail(email, full_name, token);
 
+    // Log registration
+    await saveSystemLog({
+      category: 'auth',
+      level: 'info',
+      action: 'USER_REGISTER',
+      user_id: user._id,
+      user_name: user.full_name,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+    });
+
     res.status(201).json({
       success: true,
       message:
@@ -205,6 +221,21 @@ export const verifyEmail = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user._id);
 
+    // Log email verification
+    await saveSystemLog({
+      category: 'auth',
+      level: 'success',
+      action: 'EMAIL_VERIFIED',
+      user_id: user._id,
+      user_name: user.full_name,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+    });
+
     res.status(200).json({
       success: true,
       message: "Xác nhận email thành công!",
@@ -229,26 +260,86 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email }).select("+password");
-    if (!user)
+    if (!user) {
+      // Log failed login attempt
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_FAILED',
+        description: `Đăng nhập thất bại: Email không tồn tại (${email})`,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Email không tồn tại',
+      });
       return res.status(401).json({
         success: false,
         message: "Email hoặc mật khẩu không chính xác.",
       });
+    }
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match)
+    if (!match) {
+      // Log failed login attempt
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_FAILED',
+        description: `Đăng nhập thất bại: Mật khẩu không đúng cho user ${user.email}`,
+        user_id: user._id,
+        user_name: user.full_name,
+        internal_role: user.internal_role,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Mật khẩu không đúng',
+      });
       return res.status(401).json({
         success: false,
         message: "Email hoặc mật khẩu không chính xác.",
       });
+    }
 
-    if (user.status !== "active")
+    if (user.status !== "active") {
+      // Log failed login attempt
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_FAILED',
+        description: `Đăng nhập thất bại: Tài khoản chưa được kích hoạt (${user.email})`,
+        user_id: user._id,
+        user_name: user.full_name,
+        internal_role: user.internal_role,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Tài khoản chưa được kích hoạt',
+      });
       return res
         .status(403)
         .json({ success: false, message: "Tài khoản chưa được kích hoạt." });
+    }
 
     const { accessToken, refreshToken } = generateTokens(user._id);
+    user.last_login_at = Date.now();
+    await user.save();
     user.password = undefined;
+
+    // Log successful login
+    await saveSystemLog({
+      category: 'auth',
+      level: 'success',
+      action: 'USER_LOGIN',
+      user_id: user._id,
+      user_name: user.full_name,
+      internal_role: user.internal_role,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+    });
 
     res.status(200).json({
       success: true,
@@ -286,6 +377,17 @@ export const facebookLogin = async (req, res) => {
     const fbData = await fbResp.json();
 
     if (!fbData.id || fbData.id !== facebookId) {
+      // Log failed Facebook authentication
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'FACEBOOK_LOGIN_FAILED',
+        description: `Đăng nhập Facebook thất bại: Xác thực Facebook thất bại (facebookId: ${facebookId})`,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Facebook authentication failed',
+      });
       return res
         .status(400)
         .json({ success: false, message: "Xác thực Facebook thất bại." });
@@ -357,11 +459,115 @@ export const facebookLogin = async (req, res) => {
         source: "system", // Đánh dấu là được tạo tự động từ hệ thống
       });
       console.log("✅ UserRole created for Facebook user");
+
+      // Log Facebook registration (new user created)
+      await saveSystemLog({
+        category: 'auth',
+        level: 'info',
+        action: 'USER_REGISTER',
+        description: `Người dùng đã đăng ký qua Facebook: ${user.full_name}`,
+        user_id: user._id,
+        user_name: user.full_name,
+        target_type: 'User',
+        target_id: user._id.toString(),
+        target_name: user.full_name,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: true,
+        meta: {
+          provider: 'facebook',
+          facebookId: user.facebookId,
+        },
+      });
     } else {
+      // User đã tồn tại - cập nhật thông tin
       user.avatar = fbData.picture?.data?.url || user.avatar;
       user.facebookAccessToken = longLivedToken;
+      user.last_login_at = Date.now();
+      user.facebookId = fbData.id; // Cập nhật facebookId nếu chưa có
+      
+      // Cập nhật status thành "active" nếu đang là "pending" (đăng nhập Facebook = đã xác thực)
+      if (user.status === "pending") {
+        user.status = "active";
+        user.emailVerified = true;
+      }
+      
       await user.save();
-      console.log("Đăng nhập thành công  ");
+      console.log("Đăng nhập thành công");
+
+      // Kiểm tra xem user có ShopUser và UserRole hay chưa
+      const existingShopUser = await ShopUser.findOne({
+        user_id: user._id,
+        removed_at: null,
+      });
+
+      const existingUserRole = await UserRole.findOne({
+        user_id: user._id,
+        revoked_at: null,
+      });
+
+      // Nếu chưa có ShopUser hoặc UserRole, tạo mới
+      if (!existingShopUser || !existingUserRole) {
+        console.log("⚠️ User thiếu ShopUser hoặc UserRole, đang tạo mới...");
+
+        // Tìm shop hiện có (nếu có) hoặc tạo mới
+        let shop = await Shop.findOne({
+          owner_id: user._id,
+          deleted_at: null,
+        });
+
+        if (!shop) {
+          // Tạo shop mặc định
+          shop = await Shop.create({
+            shop_name: user.full_name || fbData.name,
+            owner_id: user._id,
+            status: "active",
+            settings: {
+              currency: "VND",
+              timezone: "Asia/Ho_Chi_Minh",
+              language: "vi",
+            },
+            created_by: user._id,
+            updated_by: user._id,
+          });
+          console.log("✅ Shop created for existing Facebook user:", shop._id);
+        }
+
+        // Tạo ShopUser nếu chưa có
+        if (!existingShopUser) {
+          const shopUser = await ShopUser.create({
+            user_id: user._id,
+            shop_id: shop._id,
+            is_manager: true,
+            status: "active", // Đảm bảo status là "active" để được tính vào employee count
+          });
+          console.log("✅ ShopUser created for existing Facebook user:", shopUser._id);
+
+          // Tạo UserRole nếu chưa có
+          if (!existingUserRole) {
+            await UserRole.create({
+              user_id: user._id,
+              role_id: RoleEnum.SHOP_OWNER,
+              shop_id: shop._id,
+              shop_user_id: shopUser._id,
+              is_current: true,
+              source: "system", // Đánh dấu là được tạo tự động từ hệ thống
+            });
+            console.log("✅ UserRole created for existing Facebook user");
+          }
+        } else if (!existingUserRole) {
+          // Chỉ thiếu UserRole
+          await UserRole.create({
+            user_id: user._id,
+            role_id: RoleEnum.SHOP_OWNER,
+            shop_id: existingShopUser.shop_id,
+            shop_user_id: existingShopUser._id,
+            is_current: true,
+            source: "system", // Đánh dấu là được tạo tự động từ hệ thống
+          });
+          console.log("✅ UserRole created for existing Facebook user");
+        }
+      }
     }
 
     console.log("Fetching user's Facebook Pages...");
@@ -392,6 +598,27 @@ export const facebookLogin = async (req, res) => {
     // Tạo token đăng nhập
     const { accessToken: at, refreshToken: rt } = generateTokens(user._id);
 
+    // Log successful Facebook login
+    await saveSystemLog({
+      category: 'auth',
+      level: 'success',
+      action: 'USER_LOGIN',
+      description: `${user.full_name} đã đăng nhập thành công qua Facebook`,
+      user_id: user._id,
+      user_name: user.full_name,
+      internal_role: user.internal_role,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+      meta: {
+        provider: 'facebook',
+        facebookId: user.facebookId,
+      },
+    });
+
     // Gửi trả về FE cả user, tokens và pages
     return res.status(200).json({
       success: true,
@@ -400,6 +627,20 @@ export const facebookLogin = async (req, res) => {
     });
   } catch (error) {
     console.error("Facebook login error:", error);
+    
+    // Log Facebook login error
+    await saveSystemLog({
+      category: 'auth',
+      level: 'error',
+      action: 'FACEBOOK_LOGIN_ERROR',
+      description: `Lỗi khi đăng nhập Facebook: ${error.message || 'Lỗi hệ thống'}`,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: false,
+      error_message: error.message,
+      error_stack: error.stack?.substring(0, 2000),
+    });
+    
     return res.status(500).json({ success: false, message: "Lỗi hệ thống." });
   }
 };
@@ -449,6 +690,23 @@ export const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     await sendPasswordResetEmail(email, user.full_name, resetToken);
+
+    // Log password reset request
+    await saveSystemLog({
+      category: 'auth',
+      level: 'info',
+      action: 'PASSWORD_RESET_REQUEST',
+      user_id: user._id,
+      user_name: user.full_name,
+      internal_role: user.internal_role,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+    });
+
     res
       .status(200)
       .json({ success: true, message: "Email đặt lại mật khẩu đã được gửi!" });
@@ -479,6 +737,22 @@ export const resetPassword = async (req, res) => {
     user.passwordResetExpires = undefined;
     await user.save();
 
+    // Log password reset success
+    await saveSystemLog({
+      category: 'auth',
+      level: 'success',
+      action: 'PASSWORD_RESET_SUCCESS',
+      user_id: user._id,
+      user_name: user.full_name,
+      internal_role: user.internal_role,
+      target_type: 'User',
+      target_id: user._id.toString(),
+      target_name: user.full_name,
+      ip_address: getClientIp(req),
+      user_agent: getUserAgent(req),
+      success: true,
+    });
+
     res
       .status(200)
       .json({ success: true, message: "Đặt lại mật khẩu thành công!" });
@@ -494,6 +768,7 @@ export const getCurrentUser = async (req, res) => {
     const user = req.user;
     let shop = null;
     let shopId = null;
+    let shopUser = null;
 
     // Ưu tiên 1: Lấy shop_id từ UserRole với is_current = true (shop đang active)
     const currentUserRole = await UserRole.findOne({
@@ -522,6 +797,14 @@ export const getCurrentUser = async (req, res) => {
       }
     }
 
+    if (shopId) {
+      shopUser = await ShopUser.findOne({
+        user_id: user._id,
+        shop_id: shopId,
+        status: "active",
+      }).lean();
+    }
+
     // Thêm shop_id vào user object để frontend dùng
     const userWithShop = {
       ...user.toObject(),
@@ -533,6 +816,7 @@ export const getCurrentUser = async (req, res) => {
       data: {
         user: userWithShop,
         shop,
+        shopUser,
       },
     });
   } catch (error) {
@@ -679,6 +963,28 @@ export const resendVerificationEmail = async (req, res) => {
 };
 
 // Logout
-export const logout = async (_req, res) => {
+export const logout = async (req, res) => {
+  try {
+    // Log logout if user is authenticated
+    if (req.user) {
+      await saveSystemLog({
+        category: 'auth',
+        level: 'info',
+        action: 'USER_LOGOUT',
+        user_id: req.user._id,
+        user_name: req.user.full_name,
+        internal_role: req.user.internal_role,
+        target_type: 'User',
+        target_id: req.user._id.toString(),
+        target_name: req.user.full_name,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: true,
+      });
+    }
+  } catch (error) {
+    console.error('Error logging logout:', error);
+    // Không block logout flow nếu log lỗi
+  }
   res.status(200).json({ success: true, message: "Đăng xuất thành công." });
 };

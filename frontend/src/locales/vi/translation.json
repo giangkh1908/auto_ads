@@ -88,7 +88,11 @@
       "registration_title": "ĐĂNG KÝ TƯ VẤN KỊCH BẢN CHATBOT BÁN HÀNG",
       "registration_subtitle": "Tư vấn miễn phí về kịch bản chatbot phù hợp với doanh nghiệp của bạn",
       "email_placeholder": "Nhập email của bạn",
-      "contact_me": "LIÊN HỆ CHO TÔI"
+      "name_placeholder": "Họ tên của bạn",
+      "phone_placeholder": "Số điện thoại",
+      "contact_me": "LIÊN HỆ CHO TÔI",
+      "call_me": "GỌI CHO TÔI",
+      "submitting": "Đang xử lý..."
     },
     "templates": {
       "shopping": "Mua hàng",
@@ -371,7 +375,7 @@
        "package": "Gói dịch vụ",
        "employee_count": "Nhân viên",
        "page_count": "Trang",
-       "role": "Vai trò",
+       "role": "Quyền",
        "expired": "Hết hạn",
        "status": "Trạng thái",
        "action": "Hành động",

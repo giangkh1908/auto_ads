@@ -7,6 +7,7 @@ import { ROUTES, STORAGE_KEYS } from "../../constants/app.constants";
 import "./AccountManagement.css";
 import { CheckCircle, XCircle, Archive, Trash2, Play, Pause } from "lucide-react";
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup";
+import { onShopChange } from "../../utils/shopCache";
 
 function AccountManagement() {
   const { t, i18n } = useTranslation();
@@ -70,6 +71,17 @@ function AccountManagement() {
     fetchAccounts({ q: "", page, limit });
   }, [fetchAccounts, page, limit]);
 
+  /** Lắng nghe sự kiện thay đổi shop và reload accounts */
+  useEffect(() => {
+    const unsubscribe = onShopChange(() => {
+      // Khi shop thay đổi, reload danh sách accounts
+      setPage(1);
+      fetchAccounts({ q: searchText.trim(), page: 1, limit });
+    });
+    
+    return unsubscribe;
+  }, [fetchAccounts, limit, searchText]);
+
   /** Chỉ làm mới số liệu campaign/adset/ad từ Facebook (không đồng bộ DB, không reload list) */
   const handleSync = async () => {
     try {
@@ -125,7 +137,7 @@ function AccountManagement() {
     }
   }, [items, fetchAccountStats]);
 
-  /** Chuẩn hóa dữ liệu hiển thị */
+  /** Chuẩn hóa dữ liệu hiển thị (chỉ hiển thị accounts của current shop) */
   const accounts = useMemo(() => {
     return (items || []).map((acc, idx) => {
       const accountId = acc.external_id;
@@ -187,12 +199,83 @@ function AccountManagement() {
             description: t('account_management.archive_description', { name: accountName })
           });
           break;
-        case 'disconnect':
-          await axiosInstance.delete(`/api/ads-accounts/${accountId}`);
+        case 'disconnect': {
+          // Tìm account trong danh sách hiện tại để lấy external_id trước khi xóa
+          const accountToDelete = items.find(acc => acc._id === accountId || acc.id === accountId);
+          const externalId = accountToDelete?.external_id;
+          
+          const deleteResponse = await axiosInstance.delete(`/api/ads-accounts/${accountId}`);
+          
+          // Xóa tất cả cache liên quan đến tài khoản quảng cáo đã disconnect
+          if (externalId || deleteResponse?.data?.account?.external_id) {
+            const deletedExternalId = deleteResponse?.data?.account?.external_id || externalId;
+            
+            try {
+              // 1. Xóa cache FB_AD_ACCOUNTS (danh sách tài khoản quảng cáo từ Facebook)
+              const cachedAccounts = JSON.parse(
+                localStorage.getItem(STORAGE_KEYS.FB_AD_ACCOUNTS) || '[]'
+              );
+              
+              const updatedAccounts = cachedAccounts.filter(
+                (acc) => {
+                  const accExternalId = acc.external_id || acc.id;
+                  const accId = acc._id || acc.id;
+                  return accExternalId !== deletedExternalId && accId !== accountId;
+                }
+              );
+              
+              localStorage.setItem(
+                STORAGE_KEYS.FB_AD_ACCOUNTS,
+                JSON.stringify(updatedAccounts)
+              );
+              
+              // 2. Xóa selectedAdAccount nếu nó là account bị disconnect
+              const selectedAdAccount = localStorage.getItem('selectedAdAccount');
+              if (selectedAdAccount === deletedExternalId || selectedAdAccount === accountId) {
+                localStorage.removeItem('selectedAdAccount');
+                console.log('✅ Đã xóa selectedAdAccount:', selectedAdAccount);
+              }
+              
+              // 3. Xóa tất cả cache keys liên quan đến account trong localStorage
+              // Cache keys có format: `${entityType}_${contextId}_${accountId}` hoặc `${accountId}_${entityType}`
+              // Chỉ xóa các keys có pattern cụ thể để tránh xóa nhầm
+              const entityTypes = ['campaigns', 'adsets', 'ads'];
+              const cacheKeysToRemove = [];
+              
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                
+                // Kiểm tra các pattern cache keys của campaigns, adsets, ads
+                const matchesPattern = entityTypes.some(type => {
+                  // Pattern: `${type}_all_${accountId}` hoặc `${type}_${contextId}_${accountId}`
+                  const pattern1 = new RegExp(`^${type}_(all|\\w+)_(${deletedExternalId}|${accountId})$`);
+                  // Pattern: `${accountId}_${type}`
+                  const pattern2 = new RegExp(`^(${deletedExternalId}|${accountId})_${type}$`);
+                  return pattern1.test(key) || pattern2.test(key);
+                });
+                
+                if (matchesPattern) {
+                  cacheKeysToRemove.push(key);
+                }
+              }
+              
+              cacheKeysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                console.log('✅ Đã xóa cache key:', key);
+              });
+              
+              console.log('✅ Đã xóa tất cả cache của tài khoản quảng cáo:', deletedExternalId);
+            } catch (error) {
+              console.error('❌ Lỗi khi xóa cache tài khoản quảng cáo:', error);
+            }
+          }
+          
           toast.success(t('account_management.disconnect_success'), {
             description: t('account_management.disconnect_description', { name: accountName })
           });
           break;
+        }
         default:
           throw new Error(t('common.error'));
       }
@@ -364,14 +447,14 @@ function AccountManagement() {
                             </button>
                           )}
                           
-                          <button 
+                          {/* <button 
                             className="btn-archive-account"
                             onClick={() => showConfirmDialog(acc.id, acc.name, 'archive')}
                             disabled={loading}
                             title={t('account_management.archive')}
                           >
                             <Archive size={15} />
-                          </button>
+                          </button> */}
                           
                           <button 
                             className="btn-disconnect-account"

@@ -213,6 +213,13 @@
   color: #5b21b6;
 }
 
+.ai-locked-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #b45309;
+  line-height: 1.4;
+}
+
 .button-icon {
   font-size: 16px;
 }

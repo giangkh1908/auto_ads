@@ -310,3 +310,27 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Shop group styling */
+.shop-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.shop-group-header {
+  background-color: #f9fafb;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.shop-group-header:hover {
+  background-color: #f3f4f6;
+}
+
+.shop-group-content {
+  background-color: #ffffff;
+}

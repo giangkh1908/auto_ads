@@ -1,0 +1,155 @@
+.acc-report-page {
+  padding: 20px;
+  margin-top: 60px; /* Space for AdminHeader */
+  min-height: calc(100vh - 60px);
+  background-color: #f5f5f5;
+}
+
+.acc-report-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.acc-report-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.acc-report-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acc-report-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.acc-report-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.acc-report-select {
+  padding: 8px 30px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  min-width: 120px;
+}
+
+.acc-report-select-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #666;
+}
+
+.acc-report-date-range {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.acc-report-table {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #313030;
+}
+
+.acc-report-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr; /* 3 columns */
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid #313030;
+  align-items: stretch;
+}
+
+.acc-report-row:last-child {
+  border-bottom: none;
+}
+
+.acc-report-header {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #313030;
+}
+
+.acc-report-total {
+  background: #f8f9fa;
+  font-weight: 600;
+  border-top: 2px solid #313030;
+}
+
+.acc-report-col {
+  font-size: 14px;
+  color: #333;
+  padding: 15px;
+  border-right: 1px solid #313030;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.acc-report-col > * {
+  max-width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.acc-report-col:last-child {
+  border-right: none;
+}
+
+.acc-report-col-package {
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.acc-report-col-revenue,
+.acc-report-col-transactions {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.acc-report-total .acc-report-col-package {
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.acc-report-total .acc-report-col-revenue,
+.acc-report-total .acc-report-col-transactions {
+  text-align: right;
+  justify-content: flex-end;
+}
+

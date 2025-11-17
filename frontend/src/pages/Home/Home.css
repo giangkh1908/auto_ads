@@ -669,8 +669,15 @@
   max-width: 600px;
   margin: 0 auto;
   display: flex;
+  flex-direction: column;
   gap: 16px;
   animation: formSlideUp 1s ease-out;
+}
+
+.home-form-row {
+  display: flex;
+  gap: 16px;
+  width: 100%;
 }
 
 @keyframes formSlideUp {
@@ -699,7 +706,7 @@
 
 .home-form-group input {
   width: 100%;
-  padding: 16px 16px 16px 48px;
+  padding: 16px;
   border: none;
   border-radius: 50px;
   font-size: 1rem;
@@ -723,16 +730,33 @@
   transition: all 0.3s ease;
   white-space: nowrap;
   box-shadow: 0 8px 24px rgba(255, 51, 102, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
 }
 
-.submit-button:hover {
+.submit-button-home:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 32px rgba(255, 51, 102, 0.5);
 }
 
-.submit-button:active {
+.submit-button-home:active {
   transform: translateY(-1px);
 }
+
+.submit-button-home:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submit-button-home:disabled:hover {
+  transform: none;
+  box-shadow: 0 8px 24px rgba(255, 51, 102, 0.4);
+}
+
 
 /* Responsive Design */
 @media (max-width: 1024px) {
@@ -789,6 +813,14 @@
   
   .registration-form {
     flex-direction: column;
+  }
+
+  .home-form-row {
+    flex-direction: column;
+  }
+
+  .home-registration-form {
+    max-width: 100%;
   }
   
   .carousel-track {

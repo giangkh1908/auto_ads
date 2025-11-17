@@ -6,16 +6,6 @@ import { Plus, X, Info } from "lucide-react";
 const CustomSchedule = ({ customSchedule, onDayCheck, onTimeSlotChange, onAddTimeSlot, onRemoveTimeSlot }) => {
   return (
     <div className="auto-rule-popup-custom-schedule">
-      {/* <div className="auto-rule-popup-custom-schedule-header">
-        <div className="auto-rule-popup-custom-schedule-icon">
-          <Info size={20} />
-        </div>
-        <span className="auto-rule-popup-custom-schedule-title">Tùy chỉnh</span>
-      </div>
-      <p className="auto-rule-popup-custom-schedule-description">
-        Hãy điều chỉnh lịch chạy quy tắc để chạy vào những ngày và giờ cụ thể. Nếu thời gian bắt đầu và kết thúc giống nhau, quy tắc sẽ chạy mỗi ngày một lần trong vòng 30-60 phút sau thời gian đã đặt. Tất cả thời gian đều theo <strong>Giờ TP Hồ Chí Minh</strong>
-      </p> */}
-
       {/* Days Rows */}
       {customSchedule.days.map((day, dayIndex) => (
         <div key={dayIndex} className="auto-rule-popup-custom-schedule-day-group">

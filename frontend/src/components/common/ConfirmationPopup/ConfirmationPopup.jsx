@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Trash2, Archive, X, Play, Pause, Save } from 'lucide-react';
+import { AlertTriangle, Trash2, Archive, X, Play, Pause, Save, Check } from 'lucide-react';
 import './ConfirmationPopup.css';
 
 const ConfirmationPopup = ({ 
@@ -12,8 +12,15 @@ const ConfirmationPopup = ({
   confirmText = "Xác nhận", 
   cancelText = "Hủy",
   discardText = "Không lưu", // ✅ THÊM MỚI
-  type = "delete", // "delete" | "archive" | "activate" | "deactivate" | "save-draft"
-  isLoading = false 
+  type = "delete", // "delete" | "archive" | "activate" | "deactivate" | "save-draft" | "approve" | "reject"
+  isLoading = false,
+  // Input field props
+  showInput = false,
+  inputLabel = "",
+  inputPlaceholder = "",
+  inputValue = "",
+  onInputChange = () => {},
+  inputRequired = false
 }) => {
   if (!isOpen) return null;
 
@@ -35,6 +42,10 @@ const ConfirmationPopup = ({
         return <Pause size={24} className="confirmation-icon deactivate-icon" />;
       case 'save-draft': // ✅ THÊM MỚI
         return <Save size={24} className="confirmation-icon save-draft-icon" />;
+      case 'approve':
+        return <Check size={24} className="confirmation-icon approve-icon" />;
+      case 'reject':
+        return <X size={24} className="confirmation-icon reject-icon" />;
       default:
         return <AlertTriangle size={24} className="confirmation-icon warning-icon" />;
     }
@@ -52,6 +63,10 @@ const ConfirmationPopup = ({
         return 'btn-confirm-deactivate';
       case 'save-draft': // ✅ THÊM MỚI
         return 'btn-confirm-save-draft';
+      case 'approve':
+        return 'btn-confirm-approve';
+      case 'reject':
+        return 'btn-confirm-reject';
       default:
         return 'btn-confirm-default';
     }
@@ -79,6 +94,24 @@ const ConfirmationPopup = ({
         <div className="confirmation-content">
           <h3 className="confirmation-title">{title}</h3>
           <p className="confirmation-message">{message}</p>
+          
+          {/* Input field */}
+          {showInput && (
+            <div className="confirmation-input-container">
+              <label className="confirmation-input-label">
+                {inputLabel}
+                {inputRequired && <span className="confirmation-input-required">*</span>}
+              </label>
+              <textarea
+                className="confirmation-input"
+                placeholder={inputPlaceholder}
+                value={inputValue}
+                onChange={(e) => onInputChange(e.target.value)}
+                rows={3}
+                disabled={isLoading}
+              />
+            </div>
+          )}
         </div>
         
         <div className={`confirmation-footer ${hasThreeButtons ? 'three-buttons' : ''}`}>
@@ -104,7 +137,7 @@ const ConfirmationPopup = ({
           <button 
             className={`btn-confirm ${getConfirmButtonClass()}`}
             onClick={onConfirm}
-            disabled={isLoading}
+            disabled={isLoading || (showInput && inputRequired && !inputValue.trim())}
           >
             {isLoading ? (
               <div className="loading-spinner-popup">

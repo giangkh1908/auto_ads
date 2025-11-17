@@ -21,7 +21,7 @@ import { validateNonEmpty } from "../../../../utils/validation";
 import { CTA_OPTIONS } from "../../../../constants/ctaConstants";
 import { aiConfigService } from "../../../../services/aiConfigService";
 
-function AdStepInner({ ad, setAd, adset }, ref) {
+function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [showAIGeneration, setShowAIGeneration] = useState(false);
@@ -34,6 +34,12 @@ function AdStepInner({ ad, setAd, adset }, ref) {
   const [aiPromptConfig, setAiPromptConfig] = useState(null);
   const [defaultConfigId, setDefaultConfigId] = useState(null);
   const toast = useToast();
+
+  const ensureContentAi = () => {
+    if (contentAiEnabled) return true;
+    toast.warning("Tính năng AI nội dung chỉ khả dụng ở gói Chatbot AI+");
+    return false;
+  };
 
   // Get detailed requirements and guidance based on destination_type
   const getDestinationGuidance = () => {
@@ -155,6 +161,16 @@ function AdStepInner({ ad, setAd, adset }, ref) {
     primaryText: false,
     description: false,
   });
+
+  const getAiActionTooltip = () => {
+    if (!contentAiEnabled) {
+      return "Nâng cấp lên Chatbot AI+ để dùng AI nội dung";
+    }
+    if (!contextId) {
+      return "Thiết lập AI trước khi tạo nội dung";
+    }
+    return "Sinh nội dung bằng AI";
+  };
 
   useEffect(() => {
     loadDefaultConfig();
@@ -278,6 +294,7 @@ function AdStepInner({ ad, setAd, adset }, ref) {
 
   // Function to generate text content using AI
   const generateAIContent = async (field, maxLength = 100) => {
+    if (!ensureContentAi()) return;
     if (!contextId) {
       toast.warning("Vui lòng thiết lập AI trước", {
         description: "Hãy nhấn 'Tạo bằng AI' để thiết lập tham số AI",
@@ -320,6 +337,7 @@ function AdStepInner({ ad, setAd, adset }, ref) {
 
   // Function to generate AI images based on context
   const generateAIImages = async () => {
+    if (!ensureContentAi()) return;
     if (!contextId) {
       toast.warning("Vui lòng thiết lập AI trước", {
         description: "Hãy nhấn 'Tạo bằng AI' để thiết lập tham số AI",
@@ -496,20 +514,42 @@ function AdStepInner({ ad, setAd, adset }, ref) {
         <div className="btn-generate-ai-container">
           <button
             className="btn-generate-ai"
+            disabled={!contentAiEnabled}
             onClick={() => {
+              if (!ensureContentAi()) return;
               setShowAIConfig(!showAIConfig);
             }}
+            title={
+              contentAiEnabled
+                ? "Thiết lập tham số AI"
+                : "Nâng cấp lên Chatbot AI+ để dùng AI nội dung"
+            }
           >
             Tạo bằng AI
           </button>
 
           <button
             className="btn-ai-settings"
-            onClick={() => setShowAiConfigManager(true)}
-            title="Quản lý AI Configs"
+            disabled={!contentAiEnabled}
+            onClick={() => {
+              if (!ensureContentAi()) return;
+              setShowAiConfigManager(true);
+            }}
+            title={
+              contentAiEnabled
+                ? "Quản lý AI Configs"
+                : "Nâng cấp lên Chatbot AI+ để dùng AI nội dung"
+            }
           >
             <Settings size={18} />
           </button>
+
+          {!contentAiEnabled && (
+            <p className="ai-locked-hint">
+              Tính năng AI nội dung chỉ mở trong gói Chatbot AI+. Hãy nâng cấp để
+              tạo nội dung & hình ảnh tự động.
+            </p>
+          )}
 
           {/* AI Config Modal */}
           <AiPopup
@@ -628,8 +668,11 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                 <label className="field-label">Tiêu đề</label>
                 <button
                   onClick={() => generateAIContent('headline', 40)}
-                  disabled={isGenerating.headline || !contextId}
+                  disabled={
+                    !contentAiEnabled || isGenerating.headline || !contextId
+                  }
                   className="ai-generate-btn"
+                  title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
                   {isGenerating.headline ? 'Đang tạo...' : 'AI'}
@@ -652,8 +695,11 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                 <label className="field-label">Văn bản chính</label>
                 <button
                   onClick={() => generateAIContent('primaryText', 125)}
-                  disabled={isGenerating.primaryText || !contextId}
+                  disabled={
+                    !contentAiEnabled || isGenerating.primaryText || !contextId
+                  }
                   className="ai-generate-btn"
+                  title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
                   {isGenerating.primaryText ? 'Đang tạo...' : 'AI'}
@@ -676,8 +722,11 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                 <label className="field-label">Mô tả</label>
                 <button
                   onClick={() => generateAIContent('description', 30)}
-                  disabled={isGenerating.description || !contextId}
+                  disabled={
+                    !contentAiEnabled || isGenerating.description || !contextId
+                  }
                   className="ai-generate-btn"
+                  title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
                   {isGenerating.description ? 'Đang tạo...' : 'AI'}
@@ -766,6 +815,7 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                   <button
                     className="media-button ai-button"
                     onClick={() => {
+                      if (!ensureContentAi()) return;
                       if (!contextId) {
                         toast.warning("Vui lòng thiết lập AI trước", {
                           description: "Hãy nhấn 'Tạo bằng AI' để thiết lập tham số AI",
@@ -776,7 +826,10 @@ function AdStepInner({ ad, setAd, adset }, ref) {
                       // Gọi hàm tạo ảnh ngay lập tức
                       generateAIImages();
                     }}
-                    disabled={uploading || isGeneratingImages}
+                    disabled={
+                      !contentAiEnabled || uploading || isGeneratingImages
+                    }
+                    title={getAiActionTooltip()}
                   >
                     <Image size={18} className="button-icon" />
                     {isGeneratingImages ? "Đang tạo ảnh..." : "AI tạo ảnh"}

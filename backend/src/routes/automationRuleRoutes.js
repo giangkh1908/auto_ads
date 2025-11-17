@@ -8,11 +8,16 @@ import {
   toggleAutomationRule,
 } from "../controllers/automationRule.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import {
+  FEATURE_KEYS,
+  requireFeature,
+} from "../middlewares/featureGate.middleware.js";
 
 const router = express.Router();
 
 // Tất cả routes đều yêu cầu authentication
 router.use(authenticate);
+router.use(requireFeature(FEATURE_KEYS.ADS_AUTO_RUN));
 
 // GET /api/automation-rules - Lấy danh sách rules
 router.get("/", getAutomationRules);

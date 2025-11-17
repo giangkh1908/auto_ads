@@ -16,7 +16,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Tên không được quá 100 ký tự"],
     },
-
+    
+    internal_role: {
+      type: String,
+      enum: ["System Admin", "CS Staff", "Accountant"],
+      default: null,
+    },
+     
     email: {
       type: String,
       sparse: true,
@@ -105,7 +111,7 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: { type: Date, select: false },
 
     // 🧠 Audit
-    last_login_at: { type: Date },
+    last_login_at: {type: Date},
     last_login_ip: { type: String },
 
     // 🗑️ Soft delete

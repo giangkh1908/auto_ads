@@ -1,0 +1,108 @@
+.note-editor-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.note-editor-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.note-editor-textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.note-editor-textarea:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.note-editor-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.note-editor-counter {
+  font-size: 12px;
+  color: #666;
+}
+
+.note-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.note-editor-btn {
+  padding: 4px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.note-editor-btn:hover:not(:disabled) {
+  background-color: #f5f5f5;
+}
+
+.note-editor-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.note-editor-btn-save {
+  background-color: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.note-editor-btn-save:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.note-editor-btn-cancel {
+  color: #666;
+}
+
+.note-editor-btn-cancel:hover:not(:disabled) {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.note-editor-display {
+  padding: 8px 12px;
+  min-height: 36px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  word-wrap: break-word;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.note-editor-display:hover {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.note-editor-display.note-editor-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+

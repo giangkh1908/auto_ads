@@ -70,6 +70,7 @@ export async function upsertAdAccountsFromFacebook(accessToken, { shopUserId, ad
 export async function listAdsAccounts({
   userId,        // ID người dùng hiện tại
   shopUserId,    // ID shop user nếu có
+  shopId,        // ID shop hiện tại (chỉ lấy accounts của shop này)
   q,
   status, 
   account_status, 
@@ -79,23 +80,35 @@ export async function listAdsAccounts({
 }) {
   const filter = {};
   
-  // Thêm điều kiện lọc theo user
-  if (userId) {
-    filter.$or = [
-      { shop_admin_id: userId },
-      { shop_user_id: shopUserId || userId }
-    ];
+  // Ưu tiên: Lọc theo shop_id nếu có (chỉ hiển thị accounts của current shop)
+  if (shopId) {
+    filter.shop_id = shopId;
+  } else {
+    // Nếu không có shop_id, lọc theo user (fallback)
+    if (userId) {
+      filter.$or = [
+        { shop_admin_id: userId },
+        { shop_user_id: shopUserId || userId }
+      ];
+    }
   }
 
-  // Các điều kiện lọc khác
+  // Xử lý search query
   if (q) {
     const searchFilter = [
       { name: new RegExp(q, "i") },
       { external_id: new RegExp(q, "i") },
     ];
     
-    // Nếu đã có $or từ điều kiện user, gộp với điều kiện search
-    if (filter.$or) {
+    if (filter.shop_id) {
+      // Nếu có shop_id, dùng $and để kết hợp với search
+      filter.$and = [
+        { shop_id: filter.shop_id },
+        { $or: searchFilter }
+      ];
+      delete filter.shop_id;
+    } else if (filter.$or) {
+      // Nếu có $or từ user filter, gộp với search
       filter.$and = [{ $or: filter.$or }, { $or: searchFilter }];
       delete filter.$or;
     } else {
@@ -103,12 +116,31 @@ export async function listAdsAccounts({
     }
   }
   
-  if (status) filter.status = status;
-  if (typeof account_status !== "undefined") filter.account_status = Number(account_status);
+  // Thêm các điều kiện khác (status, account_status)
+  // Nếu đã có $and, thêm vào $and; nếu không, thêm trực tiếp vào filter
+  if (status) {
+    if (filter.$and) {
+      filter.$and.push({ status });
+    } else {
+      filter.status = status;
+    }
+  }
+  
+  if (typeof account_status !== "undefined") {
+    if (filter.$and) {
+      filter.$and.push({ account_status: Number(account_status) });
+    } else {
+      filter.account_status = Number(account_status);
+    }
+  }
 
   const skip = (Number(page) - 1) * Number(limit);
   const [items, total] = await Promise.all([
-    AdsAccount.find(filter).sort(sort).skip(skip).limit(Number(limit)),
+    AdsAccount.find(filter)
+      .populate('shop_id', 'shop_name status')
+      .sort(sort)
+      .skip(skip)
+      .limit(Number(limit)),
     AdsAccount.countDocuments(filter),
   ]);
 

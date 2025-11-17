@@ -1,0 +1,76 @@
+/* Admin Sidebar Navigation - Horizontal layout below AdminHeader */
+.admin-sidebar-nav {
+  position: fixed;
+  top: 60px; /* Below AdminHeader */
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 999;
+  height: 50px;
+}
+
+.admin-sidebar-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 30px;
+}
+
+.admin-sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.admin-sidebar-tab:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.admin-sidebar-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+  font-weight: 600;
+}
+
+.admin-sidebar-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-sidebar-tabs {
+    padding: 0 15px;
+    gap: 0;
+  }
+
+  .admin-sidebar-tab {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+
+  .admin-sidebar-tab svg {
+    width: 16px;
+    height: 16px;
+  }
+}

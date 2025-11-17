@@ -189,9 +189,6 @@ function MyShop() {
                     <div key={shop.id} className="table-row-shop">
                       <div className="table-cell-name" data-label={t('shop.shop_name')}>
                         <div className="shop-name">
-                          <div className="shop-avatar">
-                            {shop?.shopName?.charAt(0)?.toUpperCase() || "?"}
-                          </div>
                           <span>{shop.shopName}</span>
                           {shop.isCurrent && (
                             <span className="current-badge"><MapPin size={14} /></span>

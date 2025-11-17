@@ -1,0 +1,236 @@
+.cs-lead-page {
+  padding: 20px;
+  margin-top: 60px; /* Space for AdminHeader */
+  min-height: calc(100vh - 60px);
+  background-color: #f5f5f5;
+}
+
+.cs-lead-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cs-lead-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.cs-lead-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cs-lead-search-input {
+  padding: 8px 35px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.cs-lead-search-icon {
+  position: absolute;
+  right: 10px;
+  color: #666;
+  pointer-events: none;
+}
+
+.cs-lead-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cs-lead-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.cs-lead-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.cs-lead-status-select,
+.cs-lead-assigned-select,
+.cs-lead-note-select {
+  padding: 8px 30px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  min-width: 100px;
+  transition: all 0.2s;
+}
+
+.cs-lead-status-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cs-lead-status-select:disabled:hover {
+  border-color: #ddd;
+}
+
+.cs-lead-select-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #666;
+}
+
+.cs-lead-date-range {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.cs-lead-table {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.cs-lead-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 2.5fr;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid #eee;
+  align-items: stretch;
+}
+
+.cs-lead-row:last-child {
+  border-bottom: none;
+}
+
+.cs-lead-header {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.cs-lead-col {
+  font-size: 14px;
+  color: #333;
+  padding: 15px;
+  border-right: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cs-lead-col > * {
+  max-width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.cs-lead-col:last-child {
+  border-right: none;
+}
+
+.cs-lead-sub {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.cs-lead-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cs-lead-badge-assigned {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cs-lead-badge-unassigned {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cs-lead-assign-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.cs-lead-assign-btn:hover {
+  background-color: #f0f0f0;
+  color: #2563eb;
+  transform: scale(1.1);
+}
+
+.cs-lead-assign-btn:active {
+  transform: scale(0.95);
+}
+
+.cs-lead-assigned-btn {
+  color: #2563eb;
+}
+
+.cs-lead-assigned-btn:hover {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+.cs-lead-col-phone, .cs-lead-col-assigned, .cs-lead-col-status {
+  text-align: center;
+  justify-content: center;
+}
+
+.cs-lead-col-created {
+  text-align: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.cs-lead-loading,
+.cs-lead-empty {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

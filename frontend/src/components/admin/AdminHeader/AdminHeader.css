@@ -1,0 +1,274 @@
+/* Admin Header - Tông màu xanh tím */
+.admin-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  z-index: 1000;
+}
+
+.admin-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 30px;
+  max-width: 1600px;
+  margin: 0 auto;
+  height: 100%;
+}
+
+/* Logo */
+.admin-logo-btn {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.admin-app-title {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.admin-app-name {
+  font-size: 20px;
+  margin-right: 12px;
+  height: 40px;
+  width: 114.14px;
+  filter: brightness(0) invert(1); /* Đổi logo sang màu trắng */
+}
+
+/* Navigation Tabs */
+.admin-nav {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1010;
+}
+
+.admin-nav-btn {
+  background: transparent;
+  border: none;
+  font-weight: 500;
+  font-size: 15px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-nav-btn.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-bottom: 2px solid #ffffff;
+}
+
+/* Header Actions */
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.admin-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* User Info */
+.admin-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.admin-user-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.admin-user-role-badge {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* Language Wrapper */
+.admin-language-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.admin-btn-language {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.admin-btn-language img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.admin-dropdown-language {
+  position: absolute;
+  top: 35px;
+  right: 0;
+  transform-origin: top right;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  padding: 5px 0;
+  z-index: 9999;
+  width: 120px;
+  margin: 0;
+}
+
+.admin-dropdown-language li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #333;
+}
+
+.admin-dropdown-language li:hover {
+  background: #f3f3f3;
+}
+
+.admin-dropdown-language img {
+  width: 22px;
+  height: 15px;
+  border-radius: 2px;
+}
+
+/* Avatar */
+.admin-avatar-wrapper {
+  position: relative;
+}
+
+.admin-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: border-color 0.2s;
+}
+
+.admin-avatar:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Avatar Dropdown */
+.admin-dropdown-avatar {
+  position: absolute;
+  top: 95%;
+  right: 0;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0;
+  z-index: 10;
+  width: 280px;
+  min-height: 120px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.admin-dropdown-infor-avatar {
+  padding: 5px 15px;
+  margin-bottom: 3px;
+  font-weight: 500;
+  gap: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-dropdown-infor-avatar b {
+  font-size: 17px;
+  color: #333;
+}
+
+.admin-dropdown-infor-avatar small {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.admin-dropdown-option-avatar {
+  border-top: 1px solid #bebcbc;
+  font-size: 17px;
+}
+
+.admin-dropdown-option-avatar li {
+  padding: 7px 15px;
+  display: block;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-dropdown-option-avatar li:hover {
+  color: #667eea;
+  background: #eaeaea;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-nav {
+    gap: 8px;
+  }
+
+  .admin-nav-btn {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .admin-nav-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-user-info {
+    display: none; /* Ẩn user info trên mobile */
+  }
+}
+

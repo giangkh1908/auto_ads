@@ -484,7 +484,7 @@ function AutomationRule() {
                 </tr>
               ) : rules.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="empty-state">
+                  <td className="empty-state" colSpan={10}>
                     Chưa có quy tắc nào. Hãy tạo quy tắc mới để bắt đầu.
                   </td>
                 </tr>

@@ -1,23 +1,88 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, Globe, Settings,ShoppingCart,DollarSign,Package,TrendingUp,Users,Briefcase,Calendar,Megaphone,
-        MessageSquare,Reply,Bell,Key,List,ShoppingBag,Truck,Play,Mail,ArrowRight,Sparkles,
+        MessageSquare,Reply,Bell,Key,List,ShoppingBag,Truck,Play,Mail,ArrowRight,Sparkles,Phone,User,
 } from "lucide-react";
 import "./Home.css";
 import laptop_white from "../../assets/macbook-white.png";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { ROUTES } from "../../constants/app.constants";
+import leadService from "../../services/leadService";
+import { useToast } from "../../hooks/useToast";
 
 function Home({ onLoginClick }) {
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const toast = useToast();
 
-  const handleSubmit = (e) => {
+  // Format phone number (Vietnamese format: 0xxx xxx xxx or +84xxx xxx xxx)
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digit characters
+    const phoneNumber = value.replace(/\D/g, "");
+    
+    // Limit to 11 digits (for Vietnamese phone numbers)
+    const limitedNumber = phoneNumber.slice(0, 11);
+    
+    // Format: 0xxx xxx xxx
+    if (limitedNumber.length <= 4) {
+      return limitedNumber;
+    } else if (limitedNumber.length <= 7) {
+      return `${limitedNumber.slice(0, 4)} ${limitedNumber.slice(4)}`;
+    } else {
+      return `${limitedNumber.slice(0, 4)} ${limitedNumber.slice(4, 7)} ${limitedNumber.slice(7)}`;
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
+
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Email submitted:", email);
+    
+    // Validate
+    if (!name.trim() || !phone.trim()) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Remove spaces from phone for API call
+      const phoneNumber = phone.replace(/\s/g, "");
+      
+      const response = await leadService.createLead({
+        lead_name: name.trim(),
+        phone: phoneNumber,
+      });
+
+      if (response.success) {
+        toast.success(
+          response.message || "Đăng ký tư vấn thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất."
+        );
+        // Reset form
+        setName("");
+        setPhone("");
+      } else {
+        toast.error(response.message || "Có lỗi xảy ra khi đăng ký");
+      }
+    } catch (error) {
+      const errorMessage = error.message || "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau.";
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleButtonClick = () => {
@@ -41,21 +106,23 @@ function Home({ onLoginClick }) {
               <p className="hero-description">
                 {t("home.hero_description")}
               </p>
-              <button className="cta-button-home" onClick={handleButtonClick}>
-                {isAuthenticated && user?.avatar && (
-                  <img 
-                    src={user.avatar} 
-                    alt={user?.full_name || "Avatar"} 
-                    className="cta-avatar"
-                  />
-                )}
-                {isAuthenticated ? (
-                  <span>SỬ DỤNG NGAY</span>
-                ):(
-                  <span>{t("home.get_started")}</span>
-                )}
-                {/* <ArrowRight size={20} /> */}
-              </button>
+              {!user?.internal_role && (
+                <button className="cta-button-home" onClick={handleButtonClick}>
+                  {isAuthenticated && user?.avatar && (
+                    <img 
+                      src={user.avatar} 
+                      alt={user?.full_name || "Avatar"} 
+                      className="cta-avatar"
+                    />
+                  )}
+                  {isAuthenticated ? (
+                    <span>SỬ DỤNG NGAY</span>
+                  ):(
+                    <span>{t("home.get_started")}</span>
+                  )}
+                  {/* <ArrowRight size={20} /> */}
+                </button>
+              )}
             </div>
             <div className="hero-visual">
               <img
@@ -399,17 +466,37 @@ function Home({ onLoginClick }) {
             {t("home.registration_subtitle")}
           </p>
           <form className="home-registration-form" onSubmit={handleSubmit}>
-            <div className="home-form-group">
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                placeholder= {t("home.email_placeholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required={true}
-              />
+            <div className="home-form-row">
+              <div className="home-form-group">
+                <input
+                  type="text"
+                  placeholder={t("home.name_placeholder")}
+                  value={name}
+                  onChange={handleNameChange}
+                  required={true}
+                  maxLength={200}
+                />
+              </div>
+              <div className="home-form-group">
+                <input
+                  type="tel"
+                  placeholder={t("home.phone_placeholder")}
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  required={true}
+                  maxLength={13}
+                  pattern="[0-9\s]{10,13}"
+                />
+              </div>
             </div>
-            <button type="submit" className="submit-button-home">{t("home.contact_me")}</button>
+            <button 
+              type="submit" 
+              className="submit-button-home"
+              disabled={isSubmitting}
+            >
+              <Phone size={20} />
+              <span>{isSubmitting ? t("home.submitting") : t("home.call_me")}</span>
+            </button>
           </form>
         </div>
         <div className="wave-divider bottom">

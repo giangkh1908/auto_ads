@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { ROUTES } from '../../constants/app.constants'
+import { Lock, Eye, EyeOff } from 'lucide-react'
 import './ResetPassword.css'
 
 function ResetPassword() {
@@ -119,7 +120,7 @@ function ResetPassword() {
 
                 <form onSubmit={handleSubmit} className="reset-form">
                     <div className="input-group">
-                        <div className="input-icon" aria-hidden="true">🔒</div>
+                        <div className="input-icon-reset" aria-hidden="true"><Lock size={16} /></div>
                         <input
                             type={showPassword ? 'text' : 'password'}
                             placeholder={t('auth.new_password')}
@@ -131,20 +132,25 @@ function ResetPassword() {
                             className="input-action" 
                             onClick={() => setShowPassword(v => !v)}
                         >
-                            {showPassword ? '🙈' : '👁️'}
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </div>
                         {errors.password && <div className="error-message">{errors.password}</div>}
                     </div>
 
                     <div className="input-group">
-                        <div className="input-icon" aria-hidden="true">🔒</div>
+                        <div className="input-icon-reset" aria-hidden="true"><Lock size={16} /></div>
                         <input
                             type={showPassword ? 'text' : 'password'}
                             placeholder={t('auth.confirm_password')}
                             value={formData.confirmPassword}
                             onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                             className={errors.confirmPassword ? 'error' : ''}
-                        />
+                        /><div 
+                            className="input-action" 
+                            onClick={() => setShowPassword(v => !v)}
+                        >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </div>
                         {errors.confirmPassword && <div className="error-message">{errors.confirmPassword}</div>}
                     </div>
 

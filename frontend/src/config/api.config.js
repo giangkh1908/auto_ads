@@ -30,10 +30,30 @@ export const API_ENDPOINTS = {
 
   USERS: {
     LIST: `${API_CONFIG.BASE_URL}/api/users`,
+    CUSTOMERS: `${API_CONFIG.BASE_URL}/api/users/customers`,
+    INTERNAL: `${API_CONFIG.BASE_URL}/api/users/internal-staff`,
     DETAIL: (id) => `${API_CONFIG.BASE_URL}/api/users/${id}`,
+    SHOPS: (id) => `${API_CONFIG.BASE_URL}/api/users/${id}/shops`,
     CREATE: `${API_CONFIG.BASE_URL}/api/users`,
     UPDATE: (id) => `${API_CONFIG.BASE_URL}/api/users/${id}`,
     DELETE: (id) => `${API_CONFIG.BASE_URL}/api/users/${id}`,
+    CREATE_INTERNAL: `${API_CONFIG.BASE_URL}/api/users/internal`,
+  },
+
+  LOGS: {
+    CUSTOMERS: `${API_CONFIG.BASE_URL}/api/logs/customers`,
+    SYSTEM: `${API_CONFIG.BASE_URL}/api/system-logs`,
+  },
+
+  NOTES: {
+    LIST: (targetType, targetId) =>
+      `${API_CONFIG.BASE_URL}/api/notes?target_type=${targetType}&target_id=${targetId}`,
+    LATEST: (targetType, targetId) =>
+      `${API_CONFIG.BASE_URL}/api/notes/latest?target_type=${targetType}&target_id=${targetId}`,
+    BATCH: `${API_CONFIG.BASE_URL}/api/notes/batch`,
+    CREATE: `${API_CONFIG.BASE_URL}/api/notes`,
+    UPDATE: (id) => `${API_CONFIG.BASE_URL}/api/notes/${id}`,
+    DELETE: (id) => `${API_CONFIG.BASE_URL}/api/notes/${id}`,
   },
 
   ROLES: {
@@ -155,6 +175,13 @@ export const API_ENDPOINTS = {
       `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}`,
     TOGGLE: (id) =>
       `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/automation-rules/${id}/toggle`,
+  },
+
+  LEADS: {
+    LIST: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads`,
+    CREATE: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads`,
+    UPDATE_STATUS: (id) => `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads/${id}/status`,
+    ASSIGN: (id) => `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads/${id}/assign`,
   },
 };
 

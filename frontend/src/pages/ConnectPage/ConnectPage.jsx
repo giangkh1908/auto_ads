@@ -90,6 +90,7 @@ function ConnectPage() {
           ? `Đã kết nối với shop "${p.connected_shop.shop_name}"`
           : t('connect_page.status_not_connected'),
         connectedBy: p.connected_shop?.shop_name || null,
+        isConnectedToCurrentShop,
         isConnectedToOtherShop,
         canConnect: p.can_connect !== false, // Mặc định true nếu không có thông tin
         isSelected: false,
@@ -104,12 +105,12 @@ function ConnectPage() {
   ).length;
   const remainingCount = pages.length - connectedCount;
 
-  // Loại bỏ các page đã kết nối với shop khác hoặc không thể kết nối khỏi selectedPages
+  // Loại bỏ các page đã kết nối (với shop hiện tại hoặc shop khác) hoặc không thể kết nối khỏi selectedPages
   useEffect(() => {
     setSelectedPages((prev) =>
       prev.filter((pageId) => {
         const page = pages.find((p) => p.id === pageId);
-        return page && !page.isConnectedToOtherShop && page.canConnect;
+        return page && !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.canConnect;
       })
     );
   }, [pages]);
@@ -118,10 +119,12 @@ function ConnectPage() {
   const handlePageSelect = (pageId) => {
     const page = pages.find((p) => p.id === pageId);
     // Không cho phép chọn page:
+    // - Đã kết nối với shop hiện tại
     // - Đã kết nối với shop khác (không phải current shop)
     // - Không có quyền ADMIN
     // - Không thể kết nối (canConnect = false)
     if (page && (
+      page.isConnectedToCurrentShop ||
       page.isConnectedToOtherShop || 
       page.role !== "ADMIN" || 
       !page.canConnect
@@ -139,7 +142,7 @@ function ConnectPage() {
   //Xử lý chọn tất cả
   const handleSelectAll = () => {
     const selectablePages = filteredPages.filter(
-      (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
+      (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
 
     if (selectAll) {
@@ -222,7 +225,7 @@ function ConnectPage() {
   // Cập nhật trạng thái selectAll khi selectedPages thay đổi
   useEffect(() => {
     const selectablePages = filteredPages.filter(
-      (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
+      (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
     setSelectAll(
       selectablePages.length > 0 &&
@@ -298,7 +301,7 @@ function ConnectPage() {
                       disabled={
                         // Disable khi không còn checkbox nào có thể chọn
                         filteredPages.filter(
-                          (page) => !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
+                          (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
                         ).length === 0
                       }
                     />
@@ -348,7 +351,7 @@ function ConnectPage() {
                         checked={selectedPages.includes(page.id)}
                         onChange={() => handlePageSelect(page.id)}
                         className="page-checkbox"
-                        disabled={page.isConnectedToOtherShop || page.role !== "ADMIN" || !page.canConnect}
+                        disabled={page.isConnectedToCurrentShop || page.isConnectedToOtherShop || page.role !== "ADMIN" || !page.canConnect}
                       />
                     </div>
                   </div>

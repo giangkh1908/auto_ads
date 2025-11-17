@@ -6,6 +6,17 @@
   margin-top: -15px;
 }
 
+.analytics-entitlement-alert {
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px dashed #fb923c;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* Header Section */
 .analytics-header {
   display: flex;

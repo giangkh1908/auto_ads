@@ -4,6 +4,8 @@ import { CreditCard, Building2, Wallet, DollarSign } from "lucide-react";
 import bankIcon from "../../assets/cknh.png";
 import momoIcon from "../../assets/momo.png";
 import "./CheckOut.css";
+import axiosInstance from "../../utils/axios.js";
+import { STORAGE_KEYS } from "../../constants/app.constants";
 
 function CheckOut() {
   const location = useLocation();
@@ -13,8 +15,7 @@ function CheckOut() {
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState("bank");
 
-  // Generate random order ID
-  const [orderId] = useState(() => Math.floor(Math.random() * 900000 + 100000));
+  const orderId = location.state?.orderId;
 
   // If no order data, redirect back
   if (!orderData) {
@@ -22,25 +23,61 @@ function CheckOut() {
     return null;
   }
 
-  const handlePayment = () => {
-    // Navigate to Bank transfer page if payment method is bank
-    if (paymentMethod === "bank") {
-      navigate("/checkout/bank", {
-        state: {
-          orderData,
-          orderId,
-        },
-      });
-      return;
-    }
+  const handlePayment = async () => {
+    try {
+      // // 1. Gửi API tạo payment transaction
+      // const response = await fetch("http://localhost:5001/api/payment-transactions", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //   },
+      //   body: JSON.stringify({
+      //     package_id: orderData.packageId,
+      //     amount: orderData.totalPrice,
+      //     currency: "VND",
+      //   }),
+      // });
 
-    // TODO: Implement other payment methods
-    console.log("Processing payment with:", {
-      orderId,
-      paymentMethod,
-      orderData,
-    });
-    alert("Tính năng thanh toán đang được phát triển!");
+      // const result = await response.json();
+
+      // if (!result.success) {
+      //   alert("Không thể tạo giao dịch thanh toán!");
+      //   return;
+      // }
+
+      // const paymentId = result.data._id; // ⬅ Chính là orderId thực tế trong DB
+
+      // 2. Nếu payment method = bank → cập nhật method trong DB
+      if (paymentMethod === "bank") {
+        const res = await axiosInstance.patch(
+          `http://localhost:5001/api/payment-transactions/${orderId}/set-method`,
+          { method: "manual banking" },   // BODY
+          // {
+          //   headers: {
+          //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+          //   },
+          // }
+        );
+        const data = res.data;
+        if (data.success) {
+          // 3. Điều hướng sang trang bank kèm paymentId
+          navigate("/checkout/bank", {
+            state: {
+              orderData,
+              orderId, // ⬅ DÙNG ID THẬT TRONG DATABASE
+            },
+          });
+        }
+
+        return;
+      }
+
+      alert("Phương thức này đang được phát triển!");
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("Có lỗi xảy ra khi xử lý thanh toán!");
+    }
   };
 
   return (
@@ -187,4 +224,3 @@ function CheckOut() {
 }
 
 export default CheckOut;
-

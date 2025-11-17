@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { X, Plus, Info } from "lucide-react";
 import "./AutoRulePopup.css";
 import {
@@ -10,10 +10,11 @@ import {
   convertConditionToBE,
   convertScheduleToBE,
   ACTION_VI_TO_BE,
+  DAYS_OPTIONS,
 } from "../../../constants/autoRuleConstants";
 import { useAutoRuleForm } from "../../../hooks/useAutoRuleForm";
 import { useHierarchicalData } from "../../../hooks/useHierarchicalData";
-import { validateAndConvertToBackend } from "../../../utils/autoRuleValidation";
+import { validateAndConvertToBackend, validateAutoRule } from "../../../utils/autoRuleValidation";
 import HierarchicalSelector from "./HierarchicalSelector";
 import ConditionRow from "./ConditionRow";
 import CustomSchedule from "./CustomSchedule";
@@ -38,10 +39,57 @@ const AutoRulePopup = ({
   } = useHierarchicalData(accountId, isOpen, editingRule);
 
   const handleInputChange = useCallback((field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      // Nếu đang thay đổi schedule sang "custom", đảm bảo customSchedule có cấu trúc đúng
+      if (field === "schedule" && value === "custom") {
+        // Kiểm tra xem customSchedule có đầy đủ cấu trúc không
+        if (!prev.customSchedule || !prev.customSchedule.days || prev.customSchedule.days.length === 0) {
+          // Khởi tạo customSchedule với default values
+          return {
+            ...prev,
+            schedule: value,
+            customSchedule: {
+              days: DAYS_OPTIONS.map((day) => ({
+                day,
+                checked: false,
+                timeSlots: [{ startTime: "00:00", endTime: "00:00" }],
+              })),
+            },
+          };
+        }
+        // Nếu đã có customSchedule nhưng thiếu một số days, đảm bảo có đủ 7 days
+        const existingDays = prev.customSchedule.days.map(d => d.day);
+        const missingDays = DAYS_OPTIONS.filter(day => !existingDays.includes(day));
+        
+        if (missingDays.length > 0) {
+          const newDays = [...prev.customSchedule.days];
+          missingDays.forEach(day => {
+            newDays.push({
+              day,
+              checked: false,
+              timeSlots: [{ startTime: "00:00", endTime: "00:00" }],
+            });
+          });
+          // Sắp xếp lại theo thứ tự DAYS_OPTIONS
+          newDays.sort((a, b) => {
+            return DAYS_OPTIONS.indexOf(a.day) - DAYS_OPTIONS.indexOf(b.day);
+          });
+          
+          return {
+            ...prev,
+            schedule: value,
+            customSchedule: {
+              days: newDays,
+            },
+          };
+        }
+      }
+      
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
   }, [setFormData]);
 
   // Memoize selection change handler to prevent unnecessary re-renders
@@ -200,7 +248,23 @@ const AutoRulePopup = ({
     });
   }, [setFormData]);
 
+  // Validate form data
+  const validationErrors = useMemo(() => {
+    return validateAutoRule(formData);
+  }, [formData]);
+
+  const isFormValid = useMemo(() => {
+    return validationErrors.length === 0;
+  }, [validationErrors]);
+
   const handleSave = useCallback(() => {
+    // Double check validation before saving
+    if (!isFormValid) {
+      const errors = validateAutoRule(formData);
+      alert(errors.join("\n"));
+      return;
+    }
+
     try {
       // Validate and convert to backend format
       const backendData = validateAndConvertToBackend(
@@ -218,7 +282,7 @@ const AutoRulePopup = ({
       alert(error.message || "Có lỗi xảy ra khi lưu quy tắc");
       console.error("Error saving rule:", error);
     }
-  }, [formData, onSave, onClose]);
+  }, [formData, onSave, onClose, isFormValid]);
 
   if (!isOpen) return null;
 
@@ -239,7 +303,7 @@ const AutoRulePopup = ({
         <div className="auto-rule-popup-body">
           {/* Tên quy tắc */}
           <div className="auto-rule-popup-field">
-            <label className="auto-rule-popup-label">Tên quy tắc</label>
+            <label className="auto-rule-popup-label">* Tên quy tắc</label>
             <input
               type="text"
               className="auto-rule-popup-input"
@@ -252,7 +316,7 @@ const AutoRulePopup = ({
           {/* Áp dụng quy tắc cho & Hành động */}
           <div className="auto-rule-popup-row">
             <div className="auto-rule-popup-field auto-rule-popup-field-half">
-              <label className="auto-rule-popup-label">Áp dụng quy tắc cho</label>
+              <label className="auto-rule-popup-label">* Áp dụng quy tắc cho</label>
               {!accountId ? (
                 <div className="auto-rule-popup-error-text">
                   Vui lòng chọn tài khoản quảng cáo
@@ -468,6 +532,8 @@ const AutoRulePopup = ({
             type="button"
             className="auto-rule-popup-btn-save"
             onClick={handleSave}
+            disabled={!isFormValid}
+            title={!isFormValid ? validationErrors.join("\n") : ""}
           >
             Lưu quy tắc
           </button>
