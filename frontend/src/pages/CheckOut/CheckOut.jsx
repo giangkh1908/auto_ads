@@ -51,7 +51,7 @@ function CheckOut() {
       // 2. Nếu payment method = bank → cập nhật method trong DB
       if (paymentMethod === "bank") {
         const res = await axiosInstance.patch(
-          `http://localhost:5001/api/payment-transactions/${orderId}/set-method`,
+          `/api/payment-transactions/${orderId}/set-method`,
           { method: "manual banking" },   // BODY
           // {
           //   headers: {
