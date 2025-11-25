@@ -1,7 +1,7 @@
 import AnalyticsSnapshot from "../models/analytics/analyticsSnapshot.model.js";
 import Ads from "../models/ads/ads.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
-import { fetchAccountInsights } from "./fbAdsService.js";
+import { fetchAccountInsights, syncAllFromFacebook } from "./fbAdsService.js";
 import axios from "axios";
 
 const FB_API = "https://graph.facebook.com/v23.0";
@@ -70,14 +70,31 @@ export async function syncAnalyticsSnapshots(account) {
 
     let synced = 0;
     let errors = 0;
+    let structureSynced = false;
 
     for (const insight of insights) {
       try {
         // Find the ad in our database
-        const ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
+        let ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
+        
         if (!ad) {
-          console.log(`[analyticsSnapshotService] ⚠️ Ad not found in DB: ${insight.ad_id}`);
-          continue;
+          // If ad not found and we haven't synced structure yet, try syncing
+          if (!structureSynced) {
+            console.log(`[analyticsSnapshotService] ⚠️ Ad ${insight.ad_id} not found in DB. Triggering structure sync...`);
+            try {
+              await syncAllFromFacebook(accessToken, accountId);
+              structureSynced = true;
+              // Try finding the ad again after sync
+              ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
+            } catch (syncErr) {
+              console.error(`[analyticsSnapshotService] ❌ Structure sync failed:`, syncErr.message);
+            }
+          }
+
+          if (!ad) {
+            console.log(`[analyticsSnapshotService] ⚠️ Ad not found in DB: ${insight.ad_id}`);
+            continue;
+          }
         }
 
         // Get campaign objective, campaign_id, and page_name

@@ -886,15 +886,15 @@ export async function syncAllFromFacebook(accessToken, adAccountId) {
     const batch = [
       {
         method: 'GET',
-        relative_url: `${withPrefix}/campaigns?fields=id,name,status,objective,special_ad_categories,daily_budget,lifetime_budget,start_time,stop_time,effective_status&limit=500`
+        relative_url: `${withPrefix}/campaigns?fields=id,name,status,objective,special_ad_categories,daily_budget,lifetime_budget,start_time,stop_time,effective_status&limit=5000`
       },
       {
         method: 'GET',
-        relative_url: `${withPrefix}/adsets?fields=id,name,status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status&limit=500`
+        relative_url: `${withPrefix}/adsets?fields=id,name,status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status&limit=5000`
       },
       {
         method: 'GET',
-        relative_url: `${withPrefix}/ads?fields=id,name,status,adset_id,creative,effective_status&limit=500`
+        relative_url: `${withPrefix}/ads?fields=id,name,status,adset_id,creative,effective_status&limit=5000`
       }
     ];
 
