@@ -437,7 +437,7 @@ export async function fetchAdsetsFromFacebook(accessToken, adAccountId) {
     const response = await axios.get(url, {
       params: {
         fields:
-          "id,name,status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status",
+          "id,name,status,campaign{id},daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status",
         access_token: accessToken,
         limit: 100,
       },
@@ -467,7 +467,7 @@ export async function fetchAdsFromFacebook(accessToken, adAccountId) {
   } catch (err) {
     console.error(
       `Error fetching ads from Facebook for account ${adAccountId}:`,
-      err.response?.data || err.message
+      JSON.stringify(err.response?.data || err.message, null, 2)
     );
     return [];
   }
