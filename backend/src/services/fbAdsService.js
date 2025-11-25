@@ -597,7 +597,7 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     }
 
     // ✅ BATCH QUERY: Lấy tất cả campaigns một lần thay vì query từng cái (giải quyết N+1 problem)
-    const campaignExternalIds = [...new Set(adsets.map(s => s.campaign_id).filter(Boolean))];
+    const campaignExternalIds = [...new Set(adsets.map(s => s.campaign?.id || s.campaign_id).filter(Boolean))];
     const campaignsMap = new Map();
     
     if (campaignExternalIds.length > 0) {
@@ -612,10 +612,11 @@ export async function syncAdSetsFromFacebook(accessToken, adAccountId) {
     const validAdsets = [];
 
     for (const s of adsets) {
-      const campaignId = campaignsMap.get(s.campaign_id);
+      const externalCampaignId = s.campaign?.id || s.campaign_id;
+      const campaignId = campaignsMap.get(externalCampaignId);
       if (!campaignId) {
         console.warn(
-          `⚠️ Bỏ qua adset ${s.id} vì chưa tìm thấy campaign external_id=${s.campaign_id} trong DB.`
+          `⚠️ Bỏ qua adset ${s.id} vì chưa tìm thấy campaign external_id=${externalCampaignId} trong DB.`
         );
         continue;
       }
