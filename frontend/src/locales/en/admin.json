@@ -1,0 +1,652 @@
+{
+  "leadPage": {
+    "title": "Lead Management",
+    "search": "Search",
+    "searchPlaceholder": "Name, Phone",
+    "status": "Status",
+    "assignedStatus": "Assigned Status",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "leadName": "Lead Name",
+      "phone": "Phone",
+      "createdAt": "Created At",
+      "status": "Status",
+      "assignedStatus": "Assigned Status",
+      "note": "Note"
+    },
+    "statuses": {
+      "all": "All",
+      "new": "New",
+      "contacted": "Contacted"
+    },
+    "assignedStatuses": {
+      "all": "All",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned"
+    },
+    "actions": {
+      "assign": "Assign Lead",
+      "unassign": "Unassign Lead",
+      "assignTooltip": "Click to assign lead",
+      "unassignTooltip": "Click to unassign lead",
+      "changeStatus": "Change Status",
+      "changeStatusTooltip": "Only assigned user can change status"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "noData": "No data",
+      "assignSuccess": "Lead assigned successfully",
+      "unassignSuccess": "Lead unassigned",
+      "updateStatusSuccess": "Status updated successfully",
+      "assignError": "Error assigning lead",
+      "unassignError": "Error unassigning lead",
+      "updateStatusError": "Error updating status",
+      "userNotFound": "Cannot identify user",
+      "onlyAssignedCanChange": "Only assigned user can change status",
+      "fetchError": "Error fetching leads"
+    },
+    "note": {
+      "placeholder": "Click to add note...",
+      "disabledMessage": "Please assign lead to add note"
+    }
+  },
+  "paymentPage": {
+    "title": "Payment Management",
+    "summary": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "total": "Total"
+    },
+    "search": "Search",
+    "searchPlaceholder": "ID, Name, Phone, Email, Transaction ID",
+    "package": "Package",
+    "paymentMethod": "Payment Method",
+    "status": "Status",
+    "assignedStatus": "Assigned Status",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "package": "Package",
+      "method": "Method",
+      "paymentTime": "Payment Time",
+      "status": "Status",
+      "assignedStatus": "Assigned Status",
+      "action": "Action",
+      "note": "Note"
+    },
+    "assignedStatuses": {
+      "all": "All",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned"
+    },
+    "actions": {
+      "assign": "Assign Transaction",
+      "unassign": "Unassign Transaction",
+      "assignTooltip": "Click to assign to you",
+      "unassignTooltip": "Click to unassign transaction",
+      "approveReject": "Approve/Reject",
+      "viewInvoice": "View Invoice"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "assignSuccess": "Transaction assigned successfully",
+      "unassignSuccess": "Transaction unassigned",
+      "assignError": "Error assigning transaction",
+      "unassignError": "Error unassigning transaction",
+      "userNotFound": "Cannot identify user",
+      "fetchError": "Error loading transactions",
+      "fetchErrorGeneric": "Cannot load transaction list"
+    },
+    "note": {
+      "placeholder": "Click to add note...",
+      "disabledMessage": "Please assign transaction to add note"
+    }
+  },
+  "servicePackagePage": {
+    "title": "Service Package Management",
+    "search": "Search",
+    "searchPlaceholder": "ID, Name, Phone, Email",
+    "package": "Package",
+    "segment": "Segment",
+    "userStatus": "User Status",
+    "assignedStatus": "Assigned Status",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "package": "Package",
+      "purchasedDate": "Purchased Date",
+      "expiredDate": "Expired Date",
+      "segment": "Segment",
+      "userStatus": "User Status",
+      "assignedStatus": "Assigned Status",
+      "note": "Note"
+    },
+    "segments": {
+      "all": "All",
+      "expiringSoon": "Expiring Soon",
+      "recentlyExpired": "Recently Expired",
+      "newSignup": "New Signup",
+      "noIssue": "No Issue"
+    },
+    "userStatuses": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned"
+    },
+    "assignedStatuses": {
+      "all": "All",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned"
+    },
+    "actions": {
+      "assign": "Assign Package",
+      "unassign": "Unassign Package",
+      "assignTooltip": "Click to assign package",
+      "unassignTooltip": "Click to unassign package"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "assignSuccess": "Package assigned successfully",
+      "unassignSuccess": "Package unassigned",
+      "assignError": "Error assigning salesman",
+      "unassignError": "Error unassigning salesman",
+      "userNotFound": "Cannot identify user",
+      "fetchError": "Error loading service packages",
+      "fetchErrorGeneric": "Cannot load service package list"
+    },
+    "note": {
+      "placeholder": "Click to add note...",
+      "disabledMessage": "Please assign package to add note"
+    }
+  },
+  "systemLog": {
+    "title": "System Log",
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "role": "Role",
+    "category": "Category",
+    "level": "Level",
+    "action": "Action",
+    "success": "Success",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "user": "User",
+      "role": "Role",
+      "time": "Time",
+      "event": "Event",
+      "action": "Action",
+      "category": "Category",
+      "level": "Level",
+      "success": "Success"
+    },
+    "roles": {
+      "all": "All",
+      "systemAdmin": "System Admin",
+      "csStaff": "CS Staff",
+      "accountant": "Accountant",
+      "system": "System"
+    },
+    "categories": {
+      "all": "All",
+      "auth": "Authentication",
+      "admin": "Admin",
+      "system": "System",
+      "automation": "Automation",
+      "scheduler": "Scheduler",
+      "security": "Security",
+      "api": "API",
+      "other": "Other"
+    },
+    "levels": {
+      "all": "All",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error",
+      "success": "Success"
+    },
+    "successOptions": {
+      "all": "All",
+      "true": "Success",
+      "false": "Failed"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "noData": "No data",
+      "error": "Error loading system logs"
+    },
+    "pagination": {
+      "showing": "Showing",
+      "of": "/",
+      "logs": "logs",
+      "page": "Page",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "system": {
+      "system": "System"
+    }
+  },
+  "common": {
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "assigned": "Assigned",
+    "unassigned": "Unassigned",
+    "pending": "Pending",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "noData": "No data",
+    "error": "Error occurred",
+    "success": "Success",
+    "failed": "Failed",
+    "canceled": "Canceled",
+    "new": "New",
+    "contacted": "Contacted"
+  },
+  "header": {
+    "role": "Role",
+    "email": "Email",
+    "tabs": {
+      "leads": "Leads",
+      "servicePackage": "Service Package",
+      "payment": "Payment",
+      "transactions": "Transactions",
+      "paymentReports": "Payment Reports",
+      "paymentManagement": "Payment Management",
+      "userManagement": "User Management",
+      "systemMonitoring": "System Monitoring"
+    }
+  },
+  "internalPage": {
+    "title": "Internal Staff Management",
+    "search": "Search",
+    "searchPlaceholder": "Name, Phone, Email",
+    "status": "Status",
+    "role": "Role",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "role": "Role",
+      "createdAt": "Created At",
+      "lastLogin": "Last Login",
+      "status": "Status",
+      "action": "Action",
+      "note": "Note"
+    },
+    "statuses": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "roles": {
+      "all": "All",
+      "systemAdmin": "System Admin",
+      "csStaff": "CS Staff",
+      "accountant": "Accountant"
+    },
+    "actions": {
+      "addNew": "Add New",
+      "activate": "Activate",
+      "deactivate": "Deactivate"
+    },
+    "counters": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "total": "Total"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "confirmActivate": "Confirm Activation",
+      "confirmActivateMessage": "Are you sure you want to activate account \"{{name}}\"?",
+      "confirmDeactivate": "Confirm Deactivation",
+      "confirmDeactivateMessage": "Are you sure you want to deactivate account \"{{name}}\"?",
+      "updateStatusError": "Error updating status",
+      "addStaffError": "Error adding staff"
+    }
+  },
+  "customerPage": {
+    "title": "Customer Management",
+    "search": "Search",
+    "searchPlaceholder": "Name, Phone, Email",
+    "status": "Status",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "shop": "Shop",
+      "createdAt": "Created At",
+      "lastLogin": "Last Login",
+      "status": "Status",
+      "action": "Action"
+    },
+    "statuses": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "ban": "Ban",
+      "unban": "Unban",
+      "viewEditDetails": "View & Edit Details"
+    },
+    "counters": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned",
+      "total": "Total"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "confirmActivate": "Confirm Activation",
+      "confirmActivateMessage": "Are you sure you want to activate account \"{{name}}\"?",
+      "confirmDeactivate": "Confirm Deactivation",
+      "confirmDeactivateMessage": "Are you sure you want to deactivate account \"{{name}}\"?",
+      "confirmBan": "Confirm Ban",
+      "confirmBanMessage": "Are you sure you want to ban account \"{{name}}\"?",
+      "confirmUnban": "Confirm Unban",
+      "confirmUnbanMessage": "Are you sure you want to unban account \"{{name}}\"? The account will be activated again.",
+      "activateSuccess": "Successfully activated account \"{{name}}\"",
+      "deactivateSuccess": "Successfully deactivated account \"{{name}}\"",
+      "banSuccess": "Successfully banned account \"{{name}}\"",
+      "unbanSuccess": "Successfully unbanned account \"{{name}}\"",
+      "updateStatusError": "Error updating status"
+    }
+  },
+  "paymentManagement": {
+    "title": "Payment Management",
+    "search": "Search",
+    "searchPlaceholder": "Name, Phone, Email, Transaction ID",
+    "package": "Package",
+    "paymentMethod": "Payment Method",
+    "status": "Status",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "userId": "User ID",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "transactionId": "Transaction ID",
+      "package": "Package",
+      "amount": "Amount",
+      "method": "Method",
+      "paymentTime": "Payment Time",
+      "status": "Status",
+      "action": "Action",
+      "note": "Note"
+    },
+    "statuses": {
+      "all": "All",
+      "pending": "Pending",
+      "success": "Success",
+      "failed": "Failed",
+      "canceled": "Canceled",
+      "rejected": "Rejected",
+      "initializing": "Initializing"
+    },
+    "summary": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "failed": "Failed",
+      "canceled": "Canceled",
+      "initializing": "Initializing",
+      "total": "Total"
+    },
+    "actions": {
+      "approveReject": "Approve/Reject",
+      "approve": "Approve",
+      "reject": "Reject",
+      "viewInvoice": "View Invoice"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "fetchError": "Error loading transactions",
+      "fetchErrorGeneric": "Cannot load transaction list",
+      "confirmApprove": "Confirm Approve Transaction",
+      "confirmApproveMessage": "Are you sure you want to approve transaction {{transactionId}} from {{name}}?",
+      "confirmReject": "Confirm Reject Transaction",
+      "confirmRejectMessage": "Are you sure you want to reject transaction {{transactionId}} from {{name}}?",
+      "approveSuccess": "Transaction approved successfully",
+      "approveError": "Cannot approve transaction",
+      "approveErrorGeneric": "Error approving transaction",
+      "rejectSuccess": "Transaction rejected",
+      "rejectError": "Cannot reject transaction",
+      "rejectErrorGeneric": "Error rejecting transaction",
+      "rejectReasonLabel": "Reject Reason",
+      "rejectReasonPlaceholder": "Enter reject reason..."
+    }
+  },
+  "transactionsPage": {
+    "title": "Transactions",
+    "search": "Search",
+    "searchPlaceholder": "ID, Name, Phone, Email, Transaction ID",
+    "package": "Package",
+    "paymentMethod": "Payment Method",
+    "status": "Status",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "transactionId": "Transaction ID",
+      "package": "Package",
+      "amount": "Amount",
+      "method": "Method",
+      "paymentTime": "Payment Time",
+      "status": "Status",
+      "action": "Action",
+      "remark": "Remark"
+    },
+    "summary": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "total": "Total"
+    },
+    "actions": {
+      "approveReject": "Approve/Reject",
+      "viewInvoice": "View Invoice",
+      "download": "Download"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "fetchError": "Error loading transactions",
+      "fetchErrorGeneric": "Cannot load transaction list"
+    }
+  },
+  "reportPage": {
+    "title": "Payment Reports",
+    "paymentMethod": "Payment Method",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "package": "Package",
+      "totalRevenue": "Total Revenue",
+      "numberOfTransactions": "Number of Transactions"
+    },
+    "total": "TOTAL",
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "fetchError": "Error loading report data",
+      "fetchErrorGeneric": "Cannot load report data"
+    }
+  },
+  "addNewStaff": {
+    "title": "Add New Staff",
+    "email": "Email",
+    "emailPlaceholder": "Enter email",
+    "role": "Role",
+    "required": "*",
+    "add": "Add",
+    "processing": "Processing...",
+    "messages": {
+      "emailRequired": "Please enter email",
+      "roleRequired": "Please select role",
+      "addSuccess": "Staff added successfully!",
+      "addError": "Failed to add staff",
+      "addErrorGeneric": "Error adding staff"
+    }
+  },
+  "customerUpdate": {
+    "title": "User Details",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter full name",
+    "userId": "User ID",
+    "email": "Email",
+    "emailPlaceholder": "Enter email address",
+    "phone": "Phone Number",
+    "phonePlaceholder": "Enter phone number",
+    "country": "Country",
+    "countryPlaceholder": "Enter country",
+    "servicePackage": "Service Package",
+    "note": "Note",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "loading": "Loading information...",
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned",
+      "pending": "Pending"
+    },
+    "messages": {
+      "loadError": "Cannot load user information",
+      "loadErrorGeneric": "Error loading user information",
+      "updateSuccess": "User information updated successfully!",
+      "updateError": "Error updating",
+      "updateErrorGeneric": "Error updating user"
+    }
+  },
+  "customerLog": {
+    "title": "Customer Log",
+    "search": "Search",
+    "searchPlaceholder": "User, UserID, Shop name, ShopID",
+    "dateRange": "Date Range",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "user": "User",
+      "userId": "UserID",
+      "shopName": "Shop name",
+      "shopId": "ShopID",
+      "time": "Time",
+      "role": "Role",
+      "userStatus": "User Status",
+      "event": "Event"
+    },
+    "roles": {
+      "marketer": "Marketer",
+      "marketingAdmin": "Marketing Admin",
+      "shopOwner": "Shop Owner",
+      "nA": "N/A"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "noData": "No data",
+      "fetchError": "Error loading customer logs"
+    }
+  },
+  "viewShop": {
+    "title": "Shop Details",
+    "columns": {
+      "shopName": "Shop Name",
+      "role": "Role"
+    },
+    "messages": {
+      "loading": "Loading data...",
+      "error": "Error loading shop data",
+      "errorGeneric": "Cannot load shop data",
+      "empty": "User has no shops"
+    }
+  },
+  "sidebar": {
+    "customer": "Customer",
+    "internal": "Internal",
+    "systemLog": "System Log",
+    "customerLog": "Customer Log"
+  },
+  "invoice": {
+    "title": "Invoice",
+    "loading": "Loading invoice...",
+    "download": "Download PDF",
+    "headerTitle": "INVOICE",
+    "sellerInfo": {
+      "title": "Seller Information:",
+      "companyName": "Company Name:",
+      "address": "Address:"
+    },
+    "buyerInfo": {
+      "title": "Buyer Information:",
+      "name": "Owner Name:",
+      "email": "Email:",
+      "phone": "Phone:"
+    },
+    "invoiceDetails": {
+      "title": "Invoice Details:",
+      "invoiceNo": "Invoice No.:",
+      "invoiceDate": "Invoice Date:",
+      "transactionId": "Transaction ID:",
+      "paymentMethod": "Payment Method:",
+      "paymentTime": "Payment Time:",
+      "status": "Status:"
+    },
+    "serviceDetails": {
+      "title": "Service Details:",
+      "package": "Service Package",
+      "pages": "Number of Pages",
+      "employees": "Number of Staffs",
+      "unitPrice": "Unit Price (VND/month)",
+      "duration": "Package Duration",
+      "subtotal": "Grand Total (VND)",
+      "grandTotal": "Grand Total"
+    },
+    "status": {
+      "paid": "PAID"
+    },
+    "disclaimer": "This invoice is automatically issued after successful payment.",
+    "messages": {
+      "loadError": "Cannot load invoice",
+      "loadErrorGeneric": "Error loading invoice",
+      "notFound": "Invoice not found",
+      "generatingPDF": "Generating PDF...",
+      "downloadSuccess": "PDF downloaded successfully",
+      "downloadError": "Error downloading PDF"
+    }
+  }
+}
+

@@ -45,7 +45,7 @@ function CampaignStepInner({ campaign, setCampaign }, ref) {
             <label className="field-label">Cách mua</label>
             <select className="conversion-select">
               <option value="Đấu giá">Đấu giá</option>
-              <option value="Đặt trước">Đặt trước</option>
+              {/* <option value="Đặt trước">Đặt trước</option> */}
             </select>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   MousePointer,
   X,
   Settings,
+  Crown,
 } from "lucide-react";
 import AiPopup from "../AiPopup/AiPopup";
 import AiPromptConfig from "../AiPromptConfig/AiPromptConfig";
@@ -20,6 +21,7 @@ import { useToast } from "../../../../hooks/useToast";
 import { validateNonEmpty } from "../../../../utils/validation";
 import { CTA_OPTIONS } from "../../../../constants/ctaConstants";
 import { aiConfigService } from "../../../../services/aiConfigService";
+import { toast } from "sonner";
 
 function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const fileInputRef = useRef(null);
@@ -513,9 +515,12 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
         <div className="btn-generate-ai-container">
           <button
-            className="btn-generate-ai"
-            disabled={!contentAiEnabled}
+            className={`btn-generate-ai ${!contentAiEnabled ? 'premium-feature' : ''}`}
             onClick={() => {
+              if (!contentAiEnabled) {
+                toast.error("Tính năng này yêu cầu gói ChatBot AI");
+                return;
+              }
               if (!ensureContentAi()) return;
               setShowAIConfig(!showAIConfig);
             }}
@@ -526,6 +531,11 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
             }
           >
             Tạo bằng AI
+            {!contentAiEnabled && (
+              <span className="premium-badge">
+                <Crown size={12} />
+              </span>
+            )}
           </button>
 
           <button
@@ -543,13 +553,6 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           >
             <Settings size={18} />
           </button>
-
-          {!contentAiEnabled && (
-            <p className="ai-locked-hint">
-              Tính năng AI nội dung chỉ mở trong gói Chatbot AI+. Hãy nâng cấp để
-              tạo nội dung & hình ảnh tự động.
-            </p>
-          )}
 
           {/* AI Config Modal */}
           <AiPopup

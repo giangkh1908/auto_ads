@@ -87,6 +87,7 @@ export const API_ENDPOINTS = {
     PAGES: `${API_CONFIG.BASE_URL}/api/shops/facebook/pages`,
     CONNECT: `${API_CONFIG.BASE_URL}/api/shops/facebook/connect`,
     DISCONNECT: `${API_CONFIG.BASE_URL}/api/shops/facebook/disconnect`,
+    UPDATE_PAGE_STATUS: `${API_CONFIG.BASE_URL}/api/shops/facebook/page-status`,
     REFRESH_TOKEN: `${API_CONFIG.BASE_URL}/api/shops/facebook/refresh-token`,
   },
 
@@ -182,6 +183,11 @@ export const API_ENDPOINTS = {
     CREATE: `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads`,
     UPDATE_STATUS: (id) => `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads/${id}/status`,
     ASSIGN: (id) => `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/leads/${id}/assign`,
+  },
+
+  INVOICES: {
+    BY_TRANSACTION: (transactionId) => `${API_CONFIG.BASE_URL}/api/invoices/transaction/${transactionId}`,
+    DETAIL: (id) => `${API_CONFIG.BASE_URL}/api/invoices/${id}`,
   },
 };
 

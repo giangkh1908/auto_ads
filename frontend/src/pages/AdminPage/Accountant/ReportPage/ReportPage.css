@@ -153,3 +153,147 @@
   justify-content: flex-end;
 }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .acc-report-page {
+    padding: 16px;
+    margin-top: 58px;
+  }
+
+  .acc-report-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .acc-report-toolbar-left {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .acc-report-date-range {
+    width: 100%;
+  }
+
+  .acc-report-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .acc-report-table {
+    overflow-x: auto;
+  }
+
+  .acc-report-row {
+    min-width: 600px;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .acc-report-page {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .acc-report-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .acc-report-toolbar-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .acc-report-date-range,
+  .acc-report-select {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .acc-report-table {
+    overflow-x: auto;
+  }
+
+  .acc-report-row {
+    grid-template-columns: 1fr;
+    min-width: 400px;
+  }
+
+  .acc-report-header {
+    display: none;
+  }
+
+  .acc-report-col {
+    border-right: none;
+    border-bottom: 1px solid #313030;
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .acc-report-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .acc-report-col:last-child {
+    border-bottom: none;
+  }
+
+  .acc-report-col-package,
+  .acc-report-col-revenue,
+  .acc-report-col-transactions {
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .acc-report-total .acc-report-col-package,
+  .acc-report-total .acc-report-col-revenue,
+  .acc-report-total .acc-report-col-transactions {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .acc-report-page {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .acc-report-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .acc-report-date-range,
+  .acc-report-select {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .acc-report-row {
+    min-width: 350px;
+  }
+
+  .acc-report-col {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .acc-report-col::before {
+    font-size: 11px;
+  }
+}
+

@@ -8,6 +8,11 @@ const facebookPageSchema = new mongoose.Schema(
     page_access_token: { type: String },
     picture_url: { type: String },
     connected_status: { type: String, enum: ["connected", "disconnected"], default: "connected" },
+    page_status: {
+      type: String,
+      enum: ["active", "pause"],
+      default: "active",
+    },
     connected_at: { type: Date, default: Date.now },
     assigned_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assigned_at: { type: Date, default: Date.now },

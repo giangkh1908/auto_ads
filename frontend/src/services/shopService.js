@@ -47,6 +47,15 @@ class ShopService {
     }
   }
 
+  async updatePageStatus({ pageId, pageStatus }) {
+    try {
+      const res = await axiosInstance.patch(API_ENDPOINTS.SHOP_FACEBOOK.UPDATE_PAGE_STATUS, { pageId, pageStatus })
+      return res.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  }
+
   async refreshFacebookToken() {
     try {
       const res = await axiosInstance.post(API_ENDPOINTS.SHOP_FACEBOOK.REFRESH_TOKEN)

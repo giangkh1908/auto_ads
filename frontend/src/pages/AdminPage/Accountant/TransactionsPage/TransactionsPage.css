@@ -132,7 +132,7 @@
 
 .acc-trans-row {
   display: grid;
-  grid-template-columns: 1.35fr 0.95fr 1.5fr 1fr 0.8fr 1fr 0.7fr 1.1fr 0.9fr 1fr 1.5fr; /* 11 columns */
+  grid-template-columns: 1.2fr 0.95fr 1.5fr 1fr 0.7fr 1fr 0.7fr 0.8fr 0.8fr 1fr; /* 11 columns */
   gap: 0;
   padding: 0;
   border-bottom: 1px solid #eee;
@@ -224,9 +224,69 @@
   color: #721c24;
 }
 
+.acc-trans-badge-canceled,
 .acc-trans-badge-cancelled {
   background: #e2e3e5;
   color: #383d41;
+}
+
+.acc-trans-badge-initializing {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.acc-trans-action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.acc-trans-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  padding: 0;
+}
+
+.acc-trans-action-btn:hover {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+}
+
+.acc-trans-action-view {
+  border-color: #3b82f6;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.acc-trans-action-view:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.acc-trans-action-download {
+  border-color: #22c55e;
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.acc-trans-action-download:hover {
+  background: #dcfce7;
+  border-color: #16a34a;
+}
+
+.acc-trans-action-text {
+  font-size: 14px;
+  color: #666;
 }
 
 .acc-trans-action-links {
@@ -246,5 +306,190 @@
 
 .acc-trans-link:hover {
   text-decoration: underline;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .acc-trans-page {
+    padding: 16px;
+    margin-top: 58px;
+  }
+
+  .acc-trans-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .acc-trans-toolbar-left {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .acc-trans-toolbar-right {
+    width: 100%;
+    margin-top: 0;
+    justify-content: flex-start;
+  }
+
+  .acc-trans-search-input {
+    width: 100%;
+    min-width: 200px;
+  }
+
+  .acc-trans-date-range {
+    width: 100%;
+  }
+
+  .acc-trans-table {
+    overflow-x: auto;
+  }
+
+  .acc-trans-row {
+    grid-template-columns: 1.2fr 0.85fr 1.4fr 0.9fr 0.75fr 0.9fr 0.65fr 1fr 0.85fr 0.9fr 1.4fr;
+    min-width: 1200px;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .acc-trans-page {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .acc-trans-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .acc-trans-toolbar-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .acc-trans-toolbar-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .acc-trans-search-input,
+  .acc-trans-date-range {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .acc-trans-select {
+    width: 100%;
+    min-width: auto;
+    font-size: 13px;
+  }
+
+  .acc-trans-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .acc-trans-summary-separator {
+    display: none;
+  }
+
+  .acc-trans-table {
+    overflow-x: auto;
+  }
+
+  .acc-trans-row {
+    grid-template-columns: 1fr;
+    min-width: 900px;
+  }
+
+  .acc-trans-header {
+    display: none;
+  }
+
+  .acc-trans-col {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .acc-trans-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .acc-trans-col:last-child {
+    border-bottom: none;
+  }
+
+  .acc-trans-col-phone,
+  .acc-trans-col-email,
+  .acc-trans-col-transaction-id,
+  .acc-trans-col-package,
+  .acc-trans-col-amount,
+  .acc-trans-col-method,
+  .acc-trans-col-payment-time,
+  .acc-trans-col-status,
+  .acc-trans-col-action {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .acc-trans-page {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .acc-trans-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .acc-trans-search-input,
+  .acc-trans-date-range,
+  .acc-trans-select {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .acc-trans-summary-item {
+    font-size: 12px;
+  }
+
+  .acc-trans-row {
+    min-width: 800px;
+  }
+
+  .acc-trans-col {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .acc-trans-col::before {
+    font-size: 11px;
+  }
+
+  .acc-trans-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+
+  .acc-trans-link {
+    font-size: 12px;
+  }
 }
 

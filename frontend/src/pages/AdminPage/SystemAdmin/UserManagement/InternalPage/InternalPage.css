@@ -144,14 +144,14 @@
 
 .amu-internal .amu-row {
   display: grid;
-  grid-template-columns: 1.1fr 0.8fr 1.36fr 1fr 140px 140px 95px 120px 1.5fr;
+  grid-template-columns: 1.1fr 0.8fr 1.36fr 1fr 0.8fr 0.8fr 0.8fr;
   align-items: stretch;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .amu-internal .amu-header {
   display: grid;
-  grid-template-columns: 1.1fr 0.8fr 1.36fr 1fr 140px 140px 95px 120px 1.5fr;
+  grid-template-columns: 1.1fr 0.8fr 1.36fr 1fr 0.8fr 0.8fr 0.8fr;
   background: #f8fafc;
   font-weight: 600;
   color: #334155;
@@ -184,7 +184,8 @@
 .amu-internal .amu-col.amu-col-action,
 .amu-internal .amu-col.amu-col-status,
 .amu-internal .amu-col.amu-col-note,
-.amu-internal .amu-col.amu-col-role {
+.amu-internal .amu-col.amu-col-role,
+.amu-internal .amu-col.amu-col-email {
   justify-content: center;
   align-items: center;
 }

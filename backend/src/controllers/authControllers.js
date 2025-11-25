@@ -8,6 +8,7 @@ import Shop from "../models/shops/shop.model.js";
 import ShopUser from "../models/shops/shopUser.model.js";
 import UserRole from "../models/userRole.model.js";
 import { RoleEnum } from "../constants/enum.js";
+import { ErrorCode, getErrorMessage } from "../constants/errorCode.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -300,8 +301,59 @@ export const login = async (req, res) => {
       });
     }
 
-    if (user.status !== "active") {
+    // Kiểm tra status của user
+    if (user.status === "inactive") {
       // Log failed login attempt
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_FAILED',
+        description: `Đăng nhập thất bại: Tài khoản đã bị vô hiệu hoá (${user.email})`,
+        user_id: user._id,
+        user_name: user.full_name,
+        internal_role: user.internal_role,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Tài khoản đã bị vô hiệu hoá',
+      });
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: ErrorCode.AUTH_010,
+          message: getErrorMessage(ErrorCode.AUTH_010, 'vi'),
+        },
+        status: 'inactive',
+      });
+    }
+
+    if (user.status === "banned") {
+      // Log failed login attempt
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_FAILED',
+        description: `Đăng nhập thất bại: Tài khoản đã bị cấm (${user.email})`,
+        user_id: user._id,
+        user_name: user.full_name,
+        internal_role: user.internal_role,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: 'Tài khoản đã bị cấm',
+      });
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: ErrorCode.AUTH_011,
+          message: getErrorMessage(ErrorCode.AUTH_011, 'vi'),
+        },
+        status: 'banned',
+      });
+    }
+
+    if (user.status !== "active") {
+      // Các status khác (pending, etc.)
       await saveSystemLog({
         category: 'security',
         level: 'warning',
@@ -480,7 +532,56 @@ export const facebookLogin = async (req, res) => {
         },
       });
     } else {
-      // User đã tồn tại - cập nhật thông tin
+      // User đã tồn tại - kiểm tra status trước khi cho phép đăng nhập
+      if (user.status === "inactive") {
+        await saveSystemLog({
+          category: 'security',
+          level: 'warning',
+          action: 'FACEBOOK_LOGIN_FAILED',
+          description: `Đăng nhập Facebook thất bại: Tài khoản đã bị vô hiệu hoá (${user.email})`,
+          user_id: user._id,
+          user_name: user.full_name,
+          internal_role: user.internal_role,
+          ip_address: getClientIp(req),
+          user_agent: getUserAgent(req),
+          success: false,
+          error_message: 'Tài khoản đã bị vô hiệu hoá',
+        });
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: ErrorCode.AUTH_010,
+            message: getErrorMessage(ErrorCode.AUTH_010, 'vi'),
+          },
+          status: 'inactive',
+        });
+      }
+
+      if (user.status === "banned") {
+        await saveSystemLog({
+          category: 'security',
+          level: 'warning',
+          action: 'FACEBOOK_LOGIN_FAILED',
+          description: `Đăng nhập Facebook thất bại: Tài khoản đã bị cấm (${user.email})`,
+          user_id: user._id,
+          user_name: user.full_name,
+          internal_role: user.internal_role,
+          ip_address: getClientIp(req),
+          user_agent: getUserAgent(req),
+          success: false,
+          error_message: 'Tài khoản đã bị cấm',
+        });
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: ErrorCode.AUTH_011,
+            message: getErrorMessage(ErrorCode.AUTH_011, 'vi'),
+          },
+          status: 'banned',
+        });
+      }
+
+      // Cập nhật thông tin user
       user.avatar = fbData.picture?.data?.url || user.avatar;
       user.facebookAccessToken = longLivedToken;
       user.last_login_at = Date.now();

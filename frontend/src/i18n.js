@@ -9,17 +9,21 @@ import adsEN from './locales/en/ads.json';
 import adsVI from './locales/vi/ads.json';
 import commonEN from './locales/en/common.json';
 import commonVI from './locales/vi/common.json';
+import adminEN from './locales/en/admin.json';
+import adminVI from './locales/vi/admin.json';
 
 const resources = {
   en: {
     translation: translationEN,
     ads: adsEN,
-    common: commonEN
+    common: commonEN,
+    admin: adminEN
   },
   vi: {
     translation: translationVI,
     ads: adsVI,
-    common: commonVI
+    common: commonVI,
+    admin: adminVI
   }
 };
 
@@ -52,8 +56,22 @@ i18n
 
     // React specific options
     react: {
-      useSuspense: true
-    }
+      useSuspense: true,
+      bindI18n: 'languageChanged loaded',
+      bindI18nStore: 'added removed',
+      transEmptyNodeValue: '',
+      transSupportBasicHtmlNodes: true,
+      transWrapTextNodes: '',
+      transKeepBasicHtmlNodesFor: ['br', 'strong', 'i', 'p', 'b']
+    },
+    
+    // Đảm bảo tất cả component re-render khi thay đổi ngôn ngữ
+    keySeparator: '.',
+    nsSeparator: ':',
+    
+    // Tự động reload khi thay đổi ngôn ngữ
+    updateMissing: false,
+    saveMissing: false
   });
 
 export default i18n;

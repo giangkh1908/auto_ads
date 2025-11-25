@@ -57,7 +57,6 @@ export default function AdsTable({
               <th>{t('management.impressions')}</th>
               <th>{t('management.reach')}</th>
               <th>{t('management.results')}</th>
-              <th>{t('management.quality')}</th>
               <th>{t('management.creator')}</th>
               <th>{t('management.actions')}</th>
             </tr>
@@ -155,7 +154,6 @@ export default function AdsTable({
                 <td className="text-center">{row.impressions || "0"}</td>
                 <td className="text-center">{row.reach || "0"}</td>
                 <td className="text-center">{row.results || "0"}</td>
-                <td className="text-center">{row.quality || "0"}</td>
                 <td className="text-center">
                   {row.created_by?.full_name || row.created_by?.email || t('labels.not_set')}
                 </td>

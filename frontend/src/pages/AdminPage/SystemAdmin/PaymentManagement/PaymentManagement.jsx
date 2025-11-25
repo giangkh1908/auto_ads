@@ -1,95 +1,116 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import "./PaymentManagement.css";
 import { Search, ChevronDown, Check, X, FileText } from "lucide-react";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
 import paymentTransactionService from "../../../../services/paymentTransactionService";
 import { toast } from "sonner";
 import ConfirmationPopup from "../../../../components/common/ConfirmationPopup/ConfirmationPopup";
-
-const STATUSES = [
-  "All",
-  "Pending",
-  "Success",
-  "Failed",
-  "Canceled",
-  "Initializing",
-];
+import Invoice from "../../../../components/feature/Invoice/Invoice";
 
 // Helper function để map transaction data từ DB sang format UI
-const mapTransactionData = (txn) => {
-  const user = txn.user_id || {};
-  const pkg = txn.package_id || {};
-  
-  // Format amount
-  const formattedAmount = txn.amount
-    ? new Intl.NumberFormat("vi-VN").format(txn.amount) + " VND"
-    : "-";
-
-  // Format payment time
-  const formatDate = (date) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    const seconds = String(d.getSeconds()).padStart(2, "0");
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-  };
-
-  // Map status từ lowercase sang uppercase với format đúng
-  const statusMap = {
-    pending: "Pending",
-    success: "Success",
-    failed: "Failed",
-    canceled: "Canceled",
-    cancelled: "Canceled",
-    initializing: "Initializing",
-  };
-
-  // Map method từ DB sang UI
-  const methodMap = {
-    momo: "Momo",
-    vnpay: "VietQR",
-    vietqr: "VietQR",
-    "manual banking": "Manual Banking",
-  };
-
-  // Xác định note: nếu status là canceled/cancelled và có rejectReason thì hiển thị rejectReason
-  const status = (txn.status || "").toLowerCase();
-  const isCanceled = status === "canceled" || status === "cancelled";
-  const note = isCanceled && txn.metadata?.rejectReason 
-    ? txn.metadata.rejectReason 
-    : txn.metadata?.note || "";
-
-  return {
-    id: txn._id,
-    userId: user._id || txn.user_id?._id || txn.user_id || "-", // Lấy user_id (ObjectId) từ user đã populate
-    name: user.full_name || "-", // Bắt buộc phải có
-    phone: user.phone || "", // Có thể để trống
-    email: user.email || "", // Có thể để trống
-    transactionId: txn.provider_ref || `TXN-${txn._id}`, // Bắt buộc phải có
-    package: pkg.name || "-", // Bắt buộc phải có
-    amount: formattedAmount, // Bắt buộc phải có
-    method: methodMap[txn.method?.toLowerCase()] || 
-            (txn.method?.toLowerCase().includes("bank") ? "Manual Banking" : txn.method) || 
-            "-", // Có thể để trống - fallback cho các biến thể banking
-    paymentTime: formatDate(txn.payment_at || txn.created_at), // Bắt buộc phải có
-    status: statusMap[status] || txn.status || "Pending", // Bắt buộc phải có
-    action: txn.status === "pending" ? "Approve/Reject" : txn.status === "success" ? "View Invoice" : "-",
-    note: note, // Hiển thị rejectReason nếu status là canceled
-  };
-};
+// Lưu ý: Hàm này cần được di chuyển vào trong component để có thể sử dụng translation
 
 export default function PaymentManagement() {
+  const { t, i18n } = useTranslation("admin");
+  const [rawTransactions, setRawTransactions] = useState([]); // Lưu raw data từ API để re-map khi đổi ngôn ngữ
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [packageFilter, setPackageFilter] = useState("All");
-  const [methodFilter, setMethodFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [dateRange, setDateRange] = useState(""); // format: "dd/mm/yyyy - dd/mm/yyyy"
+  const [packageFilter, setPackageFilter] = useState(t("common.all"));
+  const [methodFilter, setMethodFilter] = useState(t("common.all"));
+  const [statusFilter, setStatusFilter] = useState(t("common.all"));
+  const [dateRange, setDateRange] = useState("");
+
+  // Helper function để map transaction data từ DB sang format UI
+  const mapTransactionData = useCallback((txn) => {
+    const user = txn.user_id || {};
+    const pkg = txn.package_id || {};
+    
+    // Format amount
+    const formattedAmount = txn.amount
+      ? new Intl.NumberFormat("vi-VN").format(txn.amount) + " VND"
+      : "-";
+
+    // Format payment time
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      const seconds = String(d.getSeconds()).padStart(2, "0");
+      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    };
+
+    // Map status từ lowercase sang translated format
+    const statusMap = {
+      pending: t("paymentManagement.statuses.pending"),
+      success: t("paymentManagement.statuses.success"),
+      failed: t("paymentManagement.statuses.failed"),
+      canceled: t("paymentManagement.statuses.canceled"),
+      cancelled: t("paymentManagement.statuses.canceled"),
+      rejected: t("paymentManagement.statuses.rejected"),
+      initializing: t("paymentManagement.statuses.initializing"),
+    };
+
+    // Map method từ DB sang UI
+    const methodMap = {
+      momo: "Momo",
+      vnpay: "VietQR",
+      vietqr: "VietQR",
+      "manual banking": "Manual Banking",
+    };
+
+    // Xác định note: nếu status là canceled/cancelled/rejected và có rejectReason thì hiển thị rejectReason
+    const status = (txn.status || "").toLowerCase();
+    const isCanceled = status === "canceled" || status === "cancelled" || status === "rejected";
+    const note = isCanceled && txn.metadata?.rejectReason 
+      ? txn.metadata.rejectReason 
+      : txn.metadata?.note || "";
+
+    return {
+      id: txn._id,
+      userId: user._id || txn.user_id?._id || txn.user_id || "-", // Lấy user_id (ObjectId) từ user đã populate
+      name: user.full_name || "-", // Bắt buộc phải có
+      phone: user.phone || "", // Có thể để trống
+      email: user.email || "", // Có thể để trống
+      transactionId: txn.provider_ref || `TXN-${txn._id}`, // Bắt buộc phải có
+      package: pkg.name || "-", // Bắt buộc phải có
+      amount: formattedAmount, // Bắt buộc phải có
+      method: methodMap[txn.method?.toLowerCase()] || 
+              (txn.method?.toLowerCase().includes("bank") ? "Manual Banking" : txn.method) || 
+              "-", // Có thể để trống - fallback cho các biến thể banking
+      paymentTime: formatDate(txn.payment_at || txn.created_at), // Bắt buộc phải có
+      status: statusMap[status] || t("paymentManagement.statuses.pending"), // Map với giá trị đã translate
+      statusOriginal: status, // Lưu status gốc để filter
+      action: txn.status === "pending" ? t("paymentManagement.actions.approveReject") : txn.status === "success" ? t("paymentManagement.actions.viewInvoice") : "-",
+      note: note, // Hiển thị rejectReason nếu status là canceled
+    };
+  }, [t]);
+
+  const STATUSES = useMemo(() => [
+    t("common.all"),
+    t("paymentManagement.statuses.pending"),
+    t("paymentManagement.statuses.success"),
+    t("paymentManagement.statuses.failed"),
+    t("paymentManagement.statuses.canceled"),
+    t("paymentManagement.statuses.rejected"),
+    t("paymentManagement.statuses.initializing"),
+  ], [t]);
+  
+  // Get packages and methods lists
+  const packagesList = useMemo(() => {
+    const packages = new Set(transactions.map((txn) => txn.package).filter(Boolean));
+    return [t("common.all"), ...Array.from(packages).sort()];
+  }, [transactions, t]);
+
+  const methodsList = useMemo(() => {
+    const methods = new Set(transactions.map((txn) => txn.method).filter(Boolean));
+    return [t("common.all"), ...Array.from(methods).sort()];
+  }, [transactions, t]);
   
   // State cho confirmation popup
   const [confirmationPopup, setConfirmationPopup] = useState({
@@ -106,6 +127,11 @@ export default function PaymentManagement() {
   const [rejectReason, setRejectReason] = useState("");
   // Ref để lưu giá trị rejectReason mới nhất (tránh closure issue)
   const rejectReasonRef = useRef("");
+  // State cho invoice modal
+  const [invoiceModal, setInvoiceModal] = useState({
+    isOpen: false,
+    transactionId: null,
+  });
   
   // Cập nhật ref mỗi khi rejectReason thay đổi
   useEffect(() => {
@@ -117,8 +143,19 @@ export default function PaymentManagement() {
     setLoading(true);
     try {
       const params = {};
-      if (statusFilter !== "All") {
-        params.status = statusFilter.toLowerCase();
+      const allValue = t("common.all");
+      // Convert translated status back to original status for API
+      if (statusFilter !== "All" && statusFilter !== allValue) {
+        // Find original status from translated value by comparing with STATUSES
+        const statusIndex = STATUSES.indexOf(statusFilter);
+        if (statusIndex > 0) {
+          // Map index to original status
+          const originalStatuses = ["pending", "success", "failed", "canceled", "rejected", "initializing"];
+          const originalStatus = originalStatuses[statusIndex - 1]; // -1 because index 0 is "All"
+          if (originalStatus) {
+            params.status = originalStatus;
+          }
+        }
       }
 
       const response = await paymentTransactionService.getPaymentTransactions(
@@ -126,96 +163,104 @@ export default function PaymentManagement() {
       );
 
       if (response.success) {
-        // Map dữ liệu từ DB sang format UI
-        const mappedTransactions = response.data.map(mapTransactionData);
+        // Lưu raw data và map với translation hiện tại
+        setRawTransactions(response.data);
+        const mappedTransactions = response.data.map((txn) => mapTransactionData(txn));
         setTransactions(mappedTransactions);
       } else {
-        toast.error(response.message || "Không thể tải danh sách giao dịch");
+        toast.error(response.message || t("paymentManagement.messages.fetchErrorGeneric"));
         setTransactions([]);
       }
     } catch (error) {
       console.error("Error fetching payment transactions:", error);
-      toast.error("Lỗi khi tải danh sách giao dịch");
+      toast.error(t("paymentManagement.messages.fetchError"));
       setTransactions([]);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, t, mapTransactionData, STATUSES]);
 
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
-
-  // Lấy danh sách packages và methods động từ transactions
-  const packagesList = useMemo(() => {
-    const packages = new Set(transactions.map((t) => t.package).filter(Boolean));
-    return ["All", ...Array.from(packages).sort()];
-  }, [transactions]);
-
-  const methodsList = useMemo(() => {
-    const methods = new Set(transactions.map((t) => t.method).filter(Boolean));
-    return ["All", ...Array.from(methods).sort()];
-  }, [transactions]);
+  
+  // Re-map data khi ngôn ngữ thay đổi
+  useEffect(() => {
+    if (rawTransactions.length > 0) {
+      const mappedTransactions = rawTransactions.map((txn) => mapTransactionData(txn));
+      setTransactions(mappedTransactions);
+      // Reset filters về "All" khi đổi ngôn ngữ
+      setPackageFilter(t("common.all"));
+      setMethodFilter(t("common.all"));
+      setStatusFilter(t("common.all"));
+    }
+  }, [i18n.language, rawTransactions, mapTransactionData, t]);
 
   // Reset filter nếu giá trị không còn trong danh sách
   useEffect(() => {
-    if (packageFilter !== "All" && !packagesList.includes(packageFilter)) {
-      setPackageFilter("All");
+    const allValue = t("common.all");
+    if (packageFilter !== "All" && packageFilter !== allValue && !packagesList.includes(packageFilter)) {
+      setPackageFilter(allValue);
     }
-  }, [packagesList, packageFilter]);
+  }, [packagesList, packageFilter, t]);
 
   useEffect(() => {
-    if (methodFilter !== "All" && !methodsList.includes(methodFilter)) {
-      setMethodFilter("All");
+    const allValue = t("common.all");
+    if (methodFilter !== "All" && methodFilter !== allValue && !methodsList.includes(methodFilter)) {
+      setMethodFilter(allValue);
     }
-  }, [methodsList, methodFilter]);
+  }, [methodsList, methodFilter, t]);
 
   // Calculate summary statistics
   const summary = useMemo(() => {
-    const pending = transactions.filter((t) => t.status === "Pending").length;
-    const approved = transactions.filter((t) => t.status === "Success").length;
-    const failed = transactions.filter((t) => t.status === "Failed").length;
+    const pending = transactions.filter((txn) => txn.status === t("paymentManagement.statuses.pending")).length;
+    const approved = transactions.filter((txn) => txn.status === t("paymentManagement.statuses.success")).length;
+    const failed = transactions.filter((txn) => txn.status === t("paymentManagement.statuses.failed")).length;
     const cancelled = transactions.filter(
-      (t) => t.status === "Canceled"
+      (txn) => txn.status === t("paymentManagement.statuses.canceled")
+    ).length;
+    const rejected = transactions.filter(
+      (txn) => txn.status === t("paymentManagement.statuses.rejected")
     ).length;
     const initializing = transactions.filter(
-      (t) => t.status === "Initializing"
+      (txn) => txn.status === t("paymentManagement.statuses.initializing")
     ).length;
     const total = transactions.length;
-    return { pending, approved, failed, cancelled, initializing, total };
-  }, [transactions]);
+    return { pending, approved, failed, cancelled, rejected, initializing, total };
+  }, [transactions, t]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return transactions.filter((t) => {
+    return transactions.filter((txn) => {
       // Search theo ID, Name, Phone, Email, Transaction ID
       const matchSearch =
         !s ||
-        t.userId.toLowerCase().includes(s) ||
-        t.name.toLowerCase().includes(s) ||
-        (t.phone || "").toLowerCase().includes(s) ||
-        (t.email || "").toLowerCase().includes(s) ||
-        t.transactionId.toLowerCase().includes(s);
+        txn.userId.toLowerCase().includes(s) ||
+        txn.name.toLowerCase().includes(s) ||
+        (txn.phone || "").toLowerCase().includes(s) ||
+        (txn.email || "").toLowerCase().includes(s) ||
+        txn.transactionId.toLowerCase().includes(s);
 
       // Lọc theo package (so sánh chính xác)
+      const allValue = t("common.all");
       const matchPackage =
-        packageFilter === "All" 
+        packageFilter === "All" || packageFilter === allValue
           ? true 
-          : t.package === packageFilter || t.package?.trim() === packageFilter?.trim();
+          : txn.package === packageFilter || txn.package?.trim() === packageFilter?.trim();
 
       // Lọc theo payment method (so sánh chính xác)
       const matchMethod =
-        methodFilter === "All" 
+        methodFilter === "All" || methodFilter === allValue
           ? true 
-          : t.method === methodFilter || t.method?.trim() === methodFilter?.trim();
+          : txn.method === methodFilter || txn.method?.trim() === methodFilter?.trim();
 
       // Lọc theo status
       const matchStatus =
-        statusFilter === "All" ? true : t.status === statusFilter;
+        statusFilter === "All" || statusFilter === allValue ? true : txn.status === statusFilter;
 
       // Lọc theo khoảng ngày
       let matchDate = true;
-      if (dateRange.includes("-") && t.paymentTime !== "-") {
+      if (dateRange.includes("-") && txn.paymentTime !== "-") {
         const [from, to] = dateRange.split("-").map((v) => v.trim());
         // Định dạng: dd/mm/yyyy
         const parse = (d) => {
@@ -227,7 +272,7 @@ export default function PaymentManagement() {
         const toTs = parse(to);
         if (fromTs || toTs) {
           // So sánh với paymentTime (lấy phần ngày)
-          const paymentDate = t.paymentTime.split(" ")[0];
+          const paymentDate = txn.paymentTime.split(" ")[0];
           const paymentTs = parse(paymentDate);
           if (paymentTs) {
             if (fromTs && paymentTs < fromTs) matchDate = false;
@@ -246,6 +291,7 @@ export default function PaymentManagement() {
     statusFilter,
     dateRange,
     transactions,
+    t,
   ]);
 
   const handleAction = (transaction, actionType) => {
@@ -254,8 +300,11 @@ export default function PaymentManagement() {
       setConfirmationPopup({
         isOpen: true,
         type: "approve",
-        title: "Xác nhận duyệt giao dịch",
-        message: `Bạn có chắc chắn muốn duyệt giao dịch ${transaction.transactionId} của ${transaction.name}?`,
+        title: t("paymentManagement.messages.confirmApprove"),
+        message: t("paymentManagement.messages.confirmApproveMessage", { 
+          transactionId: transaction.transactionId, 
+          name: transaction.name 
+        }),
         transaction: transaction,
         onConfirm: () => handleApproveConfirm(transaction),
         isLoading: false,
@@ -265,19 +314,30 @@ export default function PaymentManagement() {
       setConfirmationPopup({
         isOpen: true,
         type: "reject",
-        title: "Xác nhận từ chối giao dịch",
-        message: `Bạn có chắc chắn muốn từ chối giao dịch ${transaction.transactionId} của ${transaction.name}?`,
+        title: t("paymentManagement.messages.confirmReject"),
+        message: t("paymentManagement.messages.confirmRejectMessage", { 
+          transactionId: transaction.transactionId, 
+          name: transaction.name 
+        }),
         transaction: transaction,
         onConfirm: () => {
           // Đọc rejectReason mới nhất từ state khi confirm được gọi
           handleRejectConfirm(transaction);
         },
         isLoading: false,
+        showInput: true,
+        inputLabel: t("paymentManagement.messages.rejectReasonLabel"),
+        inputPlaceholder: t("paymentManagement.messages.rejectReasonPlaceholder"),
+        inputValue: rejectReason,
+        onInputChange: setRejectReason,
+        inputRequired: true,
       });
     } else if (actionType === "view-invoice") {
       // Handle view invoice
-      console.log("Viewing invoice for transaction:", transaction.id);
-      // TODO: Implement view invoice functionality
+      setInvoiceModal({
+        isOpen: true,
+        transactionId: transaction.id,
+      });
     }
   };
 
@@ -292,16 +352,16 @@ export default function PaymentManagement() {
       );
       
       if (response.success) {
-        toast.success("Đã duyệt giao dịch thành công");
+        toast.success(t("paymentManagement.messages.approveSuccess"));
         setConfirmationPopup(prev => ({ ...prev, isOpen: false, isLoading: false }));
         await fetchTransactions();
       } else {
-        toast.error(response.message || "Không thể duyệt giao dịch");
+        toast.error(response.message || t("paymentManagement.messages.approveError"));
         setConfirmationPopup(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error("Error approving transaction:", error);
-      toast.error("Có lỗi xảy ra khi duyệt giao dịch");
+      toast.error(t("paymentManagement.messages.approveErrorGeneric"));
       setConfirmationPopup(prev => ({ ...prev, isLoading: false }));
     }
   };
@@ -330,18 +390,18 @@ export default function PaymentManagement() {
       console.log("Reject response:", response);
       
       if (response.success) {
-        toast.success("Đã từ chối giao dịch");
+        toast.success(t("paymentManagement.messages.rejectSuccess"));
         setConfirmationPopup(prev => ({ ...prev, isOpen: false, isLoading: false }));
         setRejectReason(""); // Reset reject reason
         rejectReasonRef.current = ""; // Reset ref
         await fetchTransactions();
       } else {
-        toast.error(response.message || "Không thể từ chối giao dịch");
+        toast.error(response.message || t("paymentManagement.messages.rejectError"));
         setConfirmationPopup(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error("Error rejecting transaction:", error);
-      toast.error("Có lỗi xảy ra khi từ chối giao dịch");
+      toast.error(t("paymentManagement.messages.rejectErrorGeneric"));
       setConfirmationPopup(prev => ({ ...prev, isLoading: false }));
     }
   };
@@ -351,9 +411,9 @@ export default function PaymentManagement() {
       {/* Summary Statistics */}
       <div className="payment-mgmt-summary">
         <span>
-          Pending: {summary.pending} | Approved: {summary.approved} | Failed:{" "}
-          {summary.failed} | Canceled: {summary.cancelled} | Initializing:{" "}
-          {summary.initializing} | Total: {summary.total}
+          {t("paymentManagement.summary.pending")}: {summary.pending} | {t("paymentManagement.summary.approved")}: {summary.approved} | {t("paymentManagement.summary.failed")}:{" "}
+          {summary.failed} | {t("paymentManagement.summary.canceled")}: {summary.cancelled} | {t("paymentManagement.summary.initializing")}:{" "}
+          {summary.initializing} | {t("paymentManagement.summary.total")}: {summary.total}
         </span>
       </div>
 
@@ -361,11 +421,11 @@ export default function PaymentManagement() {
       <div className="payment-mgmt-toolbar">
         <div className="payment-mgmt-toolbar-left">
           <div className="payment-mgmt-filter-group">
-            <label className="payment-mgmt-filter-label">Search</label>
+            <label className="payment-mgmt-filter-label">{t("paymentManagement.search")}</label>
             <div className="payment-mgmt-search">
               <input
                 className="payment-mgmt-search-input"
-                placeholder="Name, Phone, Email, Transaction ID"
+                placeholder={t("paymentManagement.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -375,7 +435,7 @@ export default function PaymentManagement() {
             </div>
           </div>
           <div className="payment-mgmt-filter-group">
-            <label className="payment-mgmt-filter-label">Package</label>
+            <label className="payment-mgmt-filter-label">{t("paymentManagement.package")}</label>
             <div className="payment-mgmt-select-wrapper">
               <select
                 className="payment-mgmt-select"
@@ -393,7 +453,7 @@ export default function PaymentManagement() {
           </div>
 
           <div className="payment-mgmt-filter-group">
-            <label className="payment-mgmt-filter-label">Payment Method</label>
+            <label className="payment-mgmt-filter-label">{t("paymentManagement.paymentMethod")}</label>
             <div className="payment-mgmt-select-wrapper">
               <select
                 className="payment-mgmt-select"
@@ -411,7 +471,7 @@ export default function PaymentManagement() {
           </div>
 
           <div className="payment-mgmt-filter-group">
-            <label className="payment-mgmt-filter-label">Status</label>
+            <label className="payment-mgmt-filter-label">{t("paymentManagement.status")}</label>
             <div className="payment-mgmt-select-wrapper">
               <select
                 className="payment-mgmt-select"
@@ -433,7 +493,7 @@ export default function PaymentManagement() {
           <DateRangePicker
             value={dateRange}
             onChange={(value) => setDateRange(value)}
-            placeholder="dd/mm/yyyy - dd/mm/yyyy"
+              placeholder={t("paymentManagement.dateRangePlaceholder")}
           />
         </div>
       </div>
@@ -441,31 +501,31 @@ export default function PaymentManagement() {
       {/* Loading indicator */}
       {loading && (
         <div style={{ textAlign: "center", padding: "20px" }}>
-          Đang tải dữ liệu...
+          {t("paymentManagement.messages.loading")}
         </div>
       )}
 
       {/* Table */}
       <div className="payment-mgmt-table">
         <div className="payment-mgmt-row payment-mgmt-header">
-          <div className="payment-mgmt-col payment-mgmt-col-userid">User ID</div>
-          <div className="payment-mgmt-col payment-mgmt-col-name">Name</div>
-          <div className="payment-mgmt-col payment-mgmt-col-phone">Phone</div>
-          <div className="payment-mgmt-col payment-mgmt-col-email">Email</div>
+          <div className="payment-mgmt-col payment-mgmt-col-userid">{t("paymentManagement.columns.userId")}</div>
+          <div className="payment-mgmt-col payment-mgmt-col-name">{t("paymentManagement.columns.name")}</div>
+          <div className="payment-mgmt-col payment-mgmt-col-phone">{t("paymentManagement.columns.phone")}</div>
+          <div className="payment-mgmt-col payment-mgmt-col-email">{t("paymentManagement.columns.email")}</div>
           <div className="payment-mgmt-col payment-mgmt-col-transactionid">
-            Transaction ID
+            {t("paymentManagement.columns.transactionId")}
           </div>
           <div className="payment-mgmt-col payment-mgmt-col-package">
-            Package
+            {t("paymentManagement.columns.package")}
           </div>
-          <div className="payment-mgmt-col payment-mgmt-col-amount">Amount</div>
-          <div className="payment-mgmt-col payment-mgmt-col-method">Method</div>
+          <div className="payment-mgmt-col payment-mgmt-col-amount">{t("paymentManagement.columns.amount")}</div>
+          <div className="payment-mgmt-col payment-mgmt-col-method">{t("paymentManagement.columns.method")}</div>
           <div className="payment-mgmt-col payment-mgmt-col-paymenttime">
-            Payment Time
+            {t("paymentManagement.columns.paymentTime")}
           </div>
-          <div className="payment-mgmt-col payment-mgmt-col-status">Status</div>
-          <div className="payment-mgmt-col payment-mgmt-col-action">Action</div>
-          <div className="payment-mgmt-col payment-mgmt-col-note">Note</div>
+          <div className="payment-mgmt-col payment-mgmt-col-status">{t("paymentManagement.columns.status")}</div>
+          <div className="payment-mgmt-col payment-mgmt-col-action">{t("paymentManagement.columns.action")}</div>
+          {/* <div className="payment-mgmt-col payment-mgmt-col-note">{t("paymentManagement.columns.note")}</div> */}
         </div>
 
         {filtered.map((transaction) => (
@@ -499,34 +559,34 @@ export default function PaymentManagement() {
             </div>
             <div className="payment-mgmt-col payment-mgmt-col-status">
               <span
-                className={`payment-mgmt-badge payment-mgmt-badge-${transaction.status.toLowerCase()}`}
+                className={`payment-mgmt-badge payment-mgmt-badge-${transaction.statusOriginal || "pending"}`}
               >
                 {transaction.status}
               </span>
             </div>
             <div className="payment-mgmt-col payment-mgmt-col-action">
-              {transaction.status === "Pending" ? (
+              {transaction.status === t("paymentManagement.statuses.pending") ? (
                 <div className="payment-mgmt-action-buttons">
                   <button
                     className="payment-mgmt-action-btn payment-mgmt-action-approve"
                     onClick={() => handleAction(transaction, "approve")}
-                    title="Approve"
+                    title={t("paymentManagement.actions.approve")}
                   >
                     <Check size={16} />
                   </button>
                   <button
                     className="payment-mgmt-action-btn payment-mgmt-action-reject"
                     onClick={() => handleAction(transaction, "reject")}
-                    title="Reject"
+                    title={t("paymentManagement.actions.reject")}
                   >
                     <X size={16} />
                   </button>
                 </div>
-              ) : transaction.status === "Success" ? (
+              ) : transaction.status === t("paymentManagement.statuses.success") ? (
                 <button
                   className="payment-mgmt-action-btn payment-mgmt-action-view"
                   onClick={() => handleAction(transaction, "view-invoice")}
-                  title="View Invoice"
+                  title={t("paymentManagement.actions.viewInvoice")}
                 >
                   <FileText size={16} />
                 </button>
@@ -534,9 +594,9 @@ export default function PaymentManagement() {
                 "-"
               )}
             </div>
-            <div className="payment-mgmt-col payment-mgmt-col-note">
+            {/* <div className="payment-mgmt-col payment-mgmt-col-note">
               {transaction.note || "-"}
-            </div>
+            </div> */}
           </div>
         ))}
       </div>
@@ -563,6 +623,13 @@ export default function PaymentManagement() {
         inputValue={rejectReason}
         onInputChange={setRejectReason}
         inputRequired={false}
+      />
+
+      {/* Invoice Modal */}
+      <Invoice
+        isOpen={invoiceModal.isOpen}
+        onClose={() => setInvoiceModal({ isOpen: false, transactionId: null })}
+        transactionId={invoiceModal.transactionId}
       />
     </div>
   );

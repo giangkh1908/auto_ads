@@ -6,12 +6,9 @@ import path from "path";
 
 import { startAdPerformanceCron } from "./jobs/adPerformance.job.js"; 
 import { startAdHourlyInsightsCron } from "./jobs/adHourlyInsights.job.js";
+import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js";
 import { startAutoRuleScheduler } from './services/autoRuleScheduler.js';
-import { startPopulateDailySummaryCron } from "./jobs/populateDailySummary.job.js";
-import { startPopulateCampaignDailyCron } from "./jobs/populateCampaignDaily.job.js";
-import { startPopulateTrendDailyCron } from "./jobs/populateTrendDaily.job.js";
-import chatRoutes from "./routes/ai/chatRoutes.js"; 
-import { syncPromptEmbeddings } from "./services/chat/ragService.js";
+import { startCancelExpiredPaymentsCron } from "./jobs/cancelExpiredPayments.job.js";
 
 //Import Routes
 import userRoutes from './routes/userRoutes.js';
@@ -27,8 +24,11 @@ import adsSetRoutes from "./routes/ads/adsSetRoutes.js";
 import adsRoutes from "./routes/ads/adsRoutes.js";
 import creativeRoutes from "./routes/ads/creativeRoutes.js";
 import adPerformanceRoutes from "./routes/ads/adPerformanceRoutes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import locationRoutes from "./routes/ads/locationRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import aiRoutes from "./routes/ai/aiRoutes.js";
+import chatRoutes from "./routes/ai/chatRoutes.js";
 import automationRuleRoutes from "./routes/automationRuleRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
 import systemLogRoutes from "./routes/systemLogRoutes.js";
@@ -37,6 +37,10 @@ import leadRoutes from "./routes/leadRoutes.js";
 import packageRoutes from './routes/packageRoutes.js';
 import userPackageRoutes from './routes/package/userPackageRoutes.js';
 import paymentTransactionsRoutes from './routes/transaction/paymentTransactionsRoutes.js';
+import stripeTransactionsRoutes from './routes/transaction/stripeTransactionsRoutes.js';
+import zaloPayTransactionsRoutes from './routes/transaction/zaloPayTransactionsRoutes.js';
+import vnPayTransactionsRoutes from './routes/transaction/vnPayTransactionsRoutes.js';
+import invoiceRoutes from './routes/invoice/invoiceRoutes.js';
 
 //Load các biến môi trường
 dotenv.config();
@@ -75,7 +79,9 @@ app.use("/api/campaigns", adsCampaignRoutes);
 app.use("/api/adsets", adsSetRoutes);
 app.use("/api/ads", adsRoutes);
 app.use("/api/ads/performance", adPerformanceRoutes);
+app.use("/api/analytics", analyticsRoutes);
 app.use("/api/creatives", creativeRoutes);
+app.use("/api/location", locationRoutes);
 app.use("/api/ads-wizard", adsWizardRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
@@ -88,11 +94,16 @@ app.use("/api/leads", leadRoutes);
 app.use("/api/package", packageRoutes);
 app.use("/api/user-package", userPackageRoutes);
 app.use("/api/payment-transactions", paymentTransactionsRoutes);
+app.use("/api/stripe-transactions", stripeTransactionsRoutes);
+app.use('/api/zalo-pay', zaloPayTransactionsRoutes);
+app.use('/api/vnpay', vnPayTransactionsRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
 // Add a root route to check deployment status
 app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
+
 // Health check endpoint cho monitoring services (UptimeRobot, Cron-Job, etc.)
 app.get("/health", (req, res) => {
   res.json({ 
@@ -106,14 +117,12 @@ app.get("/health", (req, res) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await syncPromptEmbeddings();
 
     startAutoRuleScheduler();
     startAdPerformanceCron(); 
     startAdHourlyInsightsCron();
-    startPopulateDailySummaryCron();
-    startPopulateCampaignDailyCron();
-    startPopulateTrendDailyCron();
+    startAnalyticsSnapshotCron();
+    startCancelExpiredPaymentsCron();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

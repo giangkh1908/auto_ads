@@ -1,444 +1,426 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, ChevronDown, RefreshCw } from "lucide-react";
-import DateRangePicker from "../../components/common/DateRangePicker/DateRangePicker";
+import { useState, useEffect } from "react";
+import { Search, RefreshCw, Settings } from "lucide-react";
 import ChatAIWidget from "../../components/feature/ChatAI/ChatAIWidget";
 import axiosInstance from "../../utils/axios";
 import "./Analytics.css";
 import { useMyPackage } from "../../hooks/useMyPackage";
 
+/**
+ * Analytics Page - Ad Level Performance with Breakdown Panel
+ * 
+ * Features:
+ * - Breakdown Panel: User can select which breakdown columns to show
+ * - Dynamic Data Columns: Changes based on campaign objective
+ * - 6 Campaign Objectives supported
+ */
+
+// Breakdown options (always available)
+const BREAKDOWN_OPTIONS = [
+  { key: 'campaign_name', label: 'Campaign Name', default: true },
+  { key: 'adset_name', label: 'Ad Set Name', default: true },
+  { key: 'name', label: 'Ad Name', default: true },
+  { key: 'page_name', label: 'Page Name', default: true },
+  { key: 'ad_text', label: 'Ad Text', default: false },
+  { key: 'age_range', label: 'Age Range', default: false },
+  { key: 'campaign_objective', label: 'Campaign Objective', default: false },
+  { key: 'date', label: 'Date', default: false },
+];
+
+// Data columns by objective (metrics only, no breakdown columns)
+const DATA_COLUMNS_BY_OBJECTIVE = {
+  OUTCOME_AWARENESS: [
+    { key: 'reach', label: 'Reach', format: 'number' },
+    { key: 'cpm', label: 'CPM', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'frequency', label: 'Frequency', format: 'number' },
+    { key: 'impressions', label: 'Impressions', format: 'number' },
+    { key: 'cost_per_result', label: 'Cost per Result', format: 'currency' },
+  ],
+
+  OUTCOME_APP_PROMOTION: [
+    { key: 'mobile_app_install', label: 'App Installs', format: 'number' },
+    { key: 'cost_per_mobile_app_install', label: 'Cost per App Install', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'link_clicks', label: 'Link Clicks', format: 'number' },
+    { key: 'ctr', label: 'CTR', format: 'percent' },
+    { key: 'impressions', label: 'Impressions', format: 'number' },
+  ],
+
+  OUTCOME_ENGAGEMENT: [
+    { key: 'post_engagement', label: 'Post Engagement', format: 'number' },
+    { key: 'cost_per_inline_post_engagement', label: 'CPE', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'impressions', label: 'Impressions', format: 'number' },
+    { key: 'quality_ranking', label: 'Quality Ranking', format: 'text' },
+  ],
+
+  OUTCOME_TRAFFIC: [
+    { key: 'link_clicks', label: 'Link Clicks', format: 'number' },
+    { key: 'cpc', label: 'CPC', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'ctr', label: 'CTR', format: 'percent' },
+    { key: 'cpm', label: 'CPM', format: 'currency' },
+    { key: 'impressions', label: 'Impressions', format: 'number' },
+  ],
+
+  OUTCOME_LEADS: [
+    { key: 'leads', label: 'Leads', format: 'number' },
+    { key: 'conversions', label: 'Registrations', format: 'number' },
+    { key: 'cost_per_lead', label: 'CPL', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'link_clicks', label: 'Link Clicks', format: 'number' },
+    { key: 'conversion_rate', label: 'Conversion rate', format: 'percent' },
+    { key: 'quality_ranking', label: 'Quality Ranking', format: 'text' },
+  ],
+
+  OUTCOME_SALES: [
+    { key: 'website_purchases', label: 'Purchases', format: 'number' },
+    { key: 'cost_per_conversion', label: 'Cost per Purchase', format: 'currency' },
+    { key: 'website_purchase_roas', label: 'ROAS', format: 'number' },
+    { key: 'cost_per_action', label: 'CPA', format: 'currency' },
+    { key: 'spend', label: 'Amount Spent', format: 'currency' },
+    { key: 'ctr', label: 'CTR', format: 'percent' },
+  ],
+};
+
 function Analytics() {
+  // State definitions
   const [selectedAccount, setSelectedAccount] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState("");
-  const [activeTab, setActiveTab] = useState("breakdown");
   const [adAccounts, setAdAccounts] = useState([]);
-  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedObjective, setSelectedObjective] = useState("ALL");
 
-  // State cho các checkbox breakdown
-  const [breakdownColumns, setBreakdownColumns] = useState({
-    campaignName: true,
-    adSetName: true,
-    adName: true,
-    pageName: true,
-    adText: false,
-    ageRange: false,
-    campaignObjective: false,
-    date: false,
-  });
+  // Breakdown selections
+  const [selectedBreakdowns, setSelectedBreakdowns] = useState(
+    BREAKDOWN_OPTIONS.filter(opt => opt.default).map(opt => opt.key)
+  );
 
-  const [dataMetrics, setDataMetrics] = useState({
-    amountSpent: true,
-    dailyBudget: false,
-    dailySpendRate: false,
-    totalAmountSpent: false,
-    impressions: true,
-    reach: true,
-    frequency: false,
-    audienceReachPercentage: false,
-    clicks: false,
-    linkClicks: false,
-    linkCpc: false,
-    linkCtr: false,
-    cpc: false,
-    cpm: false,
-    ctr: false,
-    conversions: false,
-    conversionRate: false,
-    costPerConversion: false,
-    websitePurchases: false,
-    websitePurchaseRoas: false,
-    results: true,
-    costPerResults: false,
-    delivery: false,
-  });
+  // Settings tab state
+  const [activeSettingsTab, setActiveSettingsTab] = useState('Breakdown');
 
-  // Mock data - sau này sẽ thay bằng API call
-  const [tableData, setTableData] = useState([]);
-  const [loadingInsights, setLoadingInsights] = useState(false);
+  // Data columns selections - get all unique columns from all objectives
+  const getAllDataColumns = () => {
+    const allColumns = new Map();
+    Object.values(DATA_COLUMNS_BY_OBJECTIVE).forEach(cols => {
+      cols.forEach(col => {
+        if (!allColumns.has(col.key)) {
+          allColumns.set(col.key, col);
+        }
+      });
+    });
+    return Array.from(allColumns.values());
+  };
+
+  const ALL_DATA_COLUMNS = getAllDataColumns();
+
+  // Get default data columns based on selected objective
+  const getDefaultDataColumns = () => {
+    if (selectedObjective === "ALL") return [];
+    let objectiveKey = selectedObjective;
+
+    // Map legacy objectives
+    if (selectedObjective === "OUTCOME_TRAFFIC" || selectedObjective === "LINK_CLICKS") {
+      objectiveKey = "OUTCOME_TRAFFIC";
+    } else if (selectedObjective === "OUTCOME_AWARENESS" || selectedObjective === "BRAND_AWARENESS" || selectedObjective === "REACH") {
+      objectiveKey = "OUTCOME_AWARENESS";
+    } else if (selectedObjective === "OUTCOME_ENGAGEMENT" || selectedObjective === "POST_ENGAGEMENT" || selectedObjective === "PAGE_LIKES" || selectedObjective === "EVENT_RESPONSES") {
+      objectiveKey = "OUTCOME_ENGAGEMENT";
+    } else if (selectedObjective === "OUTCOME_LEADS" || selectedObjective === "LEAD_GENERATION" || selectedObjective === "MESSAGES") {
+      objectiveKey = "OUTCOME_LEADS";
+    } else if (selectedObjective === "OUTCOME_SALES" || selectedObjective === "CONVERSIONS" || selectedObjective === "CATALOG_SALES" || selectedObjective === "STORE_VISITS") {
+      objectiveKey = "OUTCOME_SALES";
+    } else if (selectedObjective === "OUTCOME_APP_PROMOTION" || selectedObjective === "APP_INSTALLS") {
+      objectiveKey = "OUTCOME_APP_PROMOTION";
+    }
+
+    const defaultCols = DATA_COLUMNS_BY_OBJECTIVE[objectiveKey] || [];
+    return defaultCols.map(col => col.key);
+  };
+
+  const [selectedDataColumns, setSelectedDataColumns] = useState([]);
+
+  // Update selected data columns when objective changes
+  useEffect(() => {
+    if (selectedObjective !== "ALL") {
+      const defaultCols = getDefaultDataColumns();
+      setSelectedDataColumns(defaultCols);
+    } else {
+      setSelectedDataColumns([]);
+    }
+  }, [selectedObjective]);
+
+  // Chat AI Logic
   const { hasFeature, loading: entitlementsLoading } = useMyPackage();
   const canUseAnalyticsChatAI = hasFeature("analytics_chat_ai");
 
-  // Get selected account info for Chat AI Widget
-  const selectedAccountInfo = adAccounts.find(acc => acc.id === selectedAccount);
+  // Get selected account info
+  const selectedAccountInfo = adAccounts.find(acc => acc.external_id === selectedAccount);
 
-  // Helper function để format date thành dd/MM/yyyy
-  const formatDateRange = (date) => {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  // Set date range mặc định từ đầu tháng đến ngày hiện tại
+  // Fetch ad accounts on mount
   useEffect(() => {
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const defaultDateRange = `${formatDateRange(
-      firstDayOfMonth
-    )} - ${formatDateRange(today)}`;
-    setDateRange(defaultDateRange);
-  }, []);
-
-  // Fetch ad accounts từ API
-  useEffect(() => {
-    let isMounted = true;
-    const fetchAdAccounts = async () => {
-      try {
-        const response = await axiosInstance.get("/api/ads-accounts", {
-          params: { status: "ACTIVE" }, // Chỉ lấy accounts có status ACTIVE
-        });
-        if (response.data?.items && isMounted) {
-          // Map data từ API sang format cần thiết
-          const accounts = response.data.items.map((account) => ({
-            id: account._id || account.id,
-            name: account.name || "Unnamed Account",
-            external_id: account.external_id,
-          }));
-          setAdAccounts(accounts);
-          
-          // Load selected account from localStorage if exists
-          const savedAccountId = localStorage.getItem('selected_account_id');
-          if (savedAccountId && accounts.length > 0) {
-            const savedAccount = accounts.find(
-              acc => acc.external_id === savedAccountId || acc.id === savedAccountId
-            );
-            if (savedAccount) {
-              setSelectedAccount(savedAccount.id);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching ad accounts:", error);
-        // Nếu có lỗi, vẫn giữ empty array
-        if (isMounted) {
-          setAdAccounts([]);
-        }
-      }
-    };
     fetchAdAccounts();
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
-  // Helper function để parse date từ dd/MM/yyyy sang YYYY-MM-DD
-  const parseDateToAPIFormat = (dateString) => {
-    if (!dateString) return null;
-    const parts = dateString.trim().split("/");
-    if (parts.length === 3) {
-      const day = parts[0];
-      const month = parts[1];
-      const year = parts[2];
-      return `${year}-${month}-${day}`;
+  // Fetch ads when account changes
+  useEffect(() => {
+    if (selectedAccount) {
+      fetchAds();
     }
-    return null;
+  }, [selectedAccount]);
+
+  const fetchAdAccounts = async () => {
+    try {
+      const response = await axiosInstance.get("/api/ads-accounts", {
+        params: { status: "ACTIVE" }
+      });
+      const accounts = response.data?.items || [];
+      setAdAccounts(accounts);
+
+      if (accounts.length > 0 && !selectedAccount) {
+        setSelectedAccount(accounts[0].external_id);
+      }
+    } catch (error) {
+      console.error("Error fetching ad accounts:", error);
+    }
   };
 
-  const fetchInsights = useCallback(async () => {
-    if (!selectedAccount || !dateRange) {
-      setTableData([]);
+  const fetchAds = async () => {
+    if (!selectedAccount) return;
+
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get("/api/analytics/snapshots", {
+        params: {
+          account_id: selectedAccount,
+          objective: selectedObjective !== 'ALL' ? selectedObjective : undefined,
+          search: searchQuery || undefined,
+        }
+      });
+
+      const snapshotsData = response.data?.items || [];
+
+      // Data is already in the correct format from AnalyticsSnapshot
+      const processedAds = snapshotsData.map(snapshot => ({
+        id: snapshot._id,
+        name: snapshot.ad_name,
+        status: snapshot.ad_status,
+        campaign_name: snapshot.campaign_name,
+        campaign_objective: snapshot.campaign_objective,
+        adset_name: snapshot.adset_name,
+        page_name: snapshot.page_name || 'N/A',
+        ad_text: 'N/A', // TODO: Get from creative
+        age_range: snapshot.age_range || 'N/A',
+        date: new Date(snapshot.last_synced).toLocaleDateString('vi-VN'),
+        // All metrics are already in snapshot
+        spend: snapshot.spend,
+        impressions: snapshot.impressions,
+        clicks: snapshot.clicks,
+        reach: snapshot.reach,
+        frequency: snapshot.frequency,
+        cpm: snapshot.cpm,
+        cpc: snapshot.cpc,
+        ctr: snapshot.ctr,
+        cost_per_result: snapshot.cost_per_result,
+        link_clicks: snapshot.link_clicks,
+        link_cpc: snapshot.link_cpc,
+        link_ctr: snapshot.link_ctr,
+        post_engagement: snapshot.post_engagement,
+        cost_per_inline_post_engagement: snapshot.cost_per_inline_post_engagement,
+        quality_ranking: snapshot.quality_ranking,
+        leads: snapshot.leads,
+        cost_per_lead: snapshot.cost_per_lead,
+        conversions: snapshot.conversions,
+        conversion_rate: snapshot.conversion_rate,
+        website_purchases: snapshot.website_purchases,
+        cost_per_conversion: snapshot.cost_per_conversion,
+        website_purchase_roas: snapshot.website_purchase_roas,
+        cost_per_action: snapshot.cost_per_action,
+        mobile_app_install: snapshot.mobile_app_install,
+        cost_per_mobile_app_install: snapshot.cost_per_mobile_app_install,
+      }));
+
+      setAds(processedAds);
+    } catch (error) {
+      console.error("Error fetching analytics snapshots:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync analytics snapshots from Facebook
+  const syncAnalytics = async () => {
+    if (!selectedAccount) {
+      alert("Vui lòng chọn tài khoản để sync");
       return;
     }
 
-    setLoadingInsights(true);
+    setSyncing(true);
     try {
-      const parts = dateRange.split(" - ");
-      if (parts.length !== 2) {
-        setTableData([]);
-        setLoadingInsights(false);
-        return;
-      }
-
-      const dateStart = parseDateToAPIFormat(parts[0]);
-      const dateStop = parseDateToAPIFormat(parts[1]);
-
-      if (!dateStart || !dateStop) {
-        setTableData([]);
-        setLoadingInsights(false);
-        return;
-      }
-
-      const response = await axiosInstance.get(
-        `/api/ads-accounts/${selectedAccount}/insights`,
-        {
-          params: {
-            breakdowns: "age",
-            date_start: dateStart,
-            date_stop: dateStop,
-            _t: Date.now(),
-          },
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        }
-      );
-
-      console.log("📊 Insights Response:", {
-        total: response.data?.total,
-        itemsCount: response.data?.items?.length || 0,
-        items: response.data?.items,
+      const response = await axiosInstance.post("/api/analytics/snapshots/sync", {
+        account_id: selectedAccount, // external_id
       });
 
-      if (response.data?.items) {
-        const mappedData = response.data.items.map((item) => {
-          let results = item.results || 0;
-          if (results === 0 && item.actions && Array.isArray(item.actions)) {
-            const purchaseAction = item.actions.find(
-              (action) => action.action_type === "purchase"
-            );
-            results = purchaseAction ? parseFloat(purchaseAction.value) || 0 : 0;
-          }
-
-          let purchaseRoas = null;
-          if (item.purchase_roas && Array.isArray(item.purchase_roas)) {
-            purchaseRoas = parseFloat(item.purchase_roas[0]?.value) || null;
-          } else if (item.website_purchase_roas) {
-            purchaseRoas = parseFloat(item.website_purchase_roas) || null;
-          }
-
-          let linkClicks = item.link_clicks || 0;
-          if (linkClicks === 0 && item.actions && Array.isArray(item.actions)) {
-            const linkClickAction = item.actions.find(
-              (action) => action.action_type === "link_click"
-            );
-            linkClicks = linkClickAction ? parseInt(linkClickAction.value) || 0 : 0;
-          }
-
-          const spend = parseFloat(item.spend) || 0;
-          const impressions = parseInt(item.impressions) || 0;
-          const reach = parseInt(item.reach) || 0;
-          const clicks = parseInt(item.clicks) || 0;
-
-          return {
-            campaignName: item.campaign_name || "",
-            adSetName: item.adset_name || "",
-            adName: item.ad_name || "",
-            pageName: item.page_name || "",
-            adText: item.ad_creative_body || "",
-            ageRange: item.age || "",
-            campaignObjective: item.objective || "",
-            date: item.date_start || "",
-            amountSpent: spend,
-            dailyBudget: item.daily_budget ? parseFloat(item.daily_budget) : null,
-            dailySpendRate: item.daily_spend_rate ? parseFloat(item.daily_spend_rate) : null,
-            totalAmountSpent: item.total_amount_spent ? parseFloat(item.total_amount_spent) : spend,
-            impressions: impressions,
-            reach: reach,
-            frequency: item.frequency ? parseFloat(item.frequency) : null,
-            audienceReachPercentage: item.audience_reach_percentage ? parseFloat(item.audience_reach_percentage) : null,
-            clicks: clicks,
-            linkClicks: linkClicks,
-            linkCpc: item.link_cpc ? parseFloat(item.link_cpc) : null,
-            linkCtr: item.link_ctr ? parseFloat(item.link_ctr) : null,
-            cpc: item.cpc ? parseFloat(item.cpc) : null,
-            cpm: item.cpm ? parseFloat(item.cpm) : null,
-            ctr: item.ctr ? parseFloat(item.ctr) : null,
-            conversions: item.conversions ? parseFloat(item.conversions) : 0,
-            conversionRate: item.conversion_rate ? parseFloat(item.conversion_rate) : null,
-            costPerConversion: item.cost_per_conversion ? parseFloat(item.cost_per_conversion) : null,
-            websitePurchases: item.website_purchases ? parseFloat(item.website_purchases) : 0,
-            websitePurchaseRoas: purchaseRoas,
-            results: results,
-            costPerResults: item.cost_per_result ? parseFloat(item.cost_per_result) : (results > 0 ? spend / results : null),
-            delivery: item.delivery || "",
-          };
-        });
-        
-        console.log("📊 Final Mapped Data:", {
-          total: mappedData.length,
-          sample: mappedData[0],
-        });
-        
-        setTableData(mappedData);
-      } else {
-        console.warn("⚠️ No items in response:", response.data);
-        setTableData([]);
+      if (response.data) {
+        alert(`Sync hoàn tất!\nĐã sync: ${response.data.synced} ads\nLỗi: ${response.data.errors}`);
+        // Refresh data after sync
+        await fetchAds();
       }
     } catch (error) {
-      console.error("Error fetching insights:", error);
-      setTableData([]);
+      console.error("Error syncing analytics:", error);
+      alert(`Lỗi khi sync: ${error.response?.data?.message || error.message}`);
     } finally {
-      setLoadingInsights(false);
-    }
-  }, [selectedAccount, dateRange]);
-
-  useEffect(() => {
-    fetchInsights();
-  }, [fetchInsights]);
-
-  const handleRefresh = () => {
-    if (selectedAccount && dateRange) {
-      fetchInsights();
+      setSyncing(false);
     }
   };
 
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowAccountDropdown(false);
+  // Filter ads
+  const filteredAds = ads.filter(ad => {
+    const matchesSearch = !searchQuery ||
+      ad.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ad.campaign_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ad.adset_name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Map ad objective to new format for comparison
+    let adObjective = ad.campaign_objective;
+    if (adObjective === "LINK_CLICKS") adObjective = "OUTCOME_TRAFFIC";
+    if (adObjective === "BRAND_AWARENESS" || adObjective === "REACH") adObjective = "OUTCOME_AWARENESS";
+    if (adObjective === "POST_ENGAGEMENT" || adObjective === "PAGE_LIKES" || adObjective === "EVENT_RESPONSES") adObjective = "OUTCOME_ENGAGEMENT";
+    if (adObjective === "LEAD_GENERATION" || adObjective === "MESSAGES") adObjective = "OUTCOME_LEADS";
+    if (adObjective === "CONVERSIONS" || adObjective === "CATALOG_SALES" || adObjective === "STORE_VISITS") adObjective = "OUTCOME_SALES";
+    if (adObjective === "APP_INSTALLS") adObjective = "OUTCOME_APP_PROMOTION";
+
+    const matchesObjective = selectedObjective === "ALL" ||
+      adObjective === selectedObjective;
+
+    return matchesSearch && matchesObjective;
+  });
+
+  // Calculate highlighters
+  const highlighters = (() => {
+    if (selectedObjective === "ALL") return new Set();
+
+    const groups = {}; // Key: campaign_name + adset_name
+
+    // Group ads
+    filteredAds.forEach(ad => {
+      const key = `${ad.campaign_name}|${ad.adset_name}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(ad);
+    });
+
+    const highlights = new Set();
+
+    // Determine metric to highlight based on objective
+    let metricKey = "";
+    // Map legacy objectives to current keys if needed, similar to getDefaultDataColumns
+    let objectiveKey = selectedObjective;
+    if (selectedObjective === "OUTCOME_TRAFFIC" || selectedObjective === "LINK_CLICKS") {
+      metricKey = "link_clicks";
+    } else if (selectedObjective === "OUTCOME_AWARENESS" || selectedObjective === "BRAND_AWARENESS" || selectedObjective === "REACH") {
+      metricKey = "reach";
+    } else if (selectedObjective === "OUTCOME_ENGAGEMENT" || selectedObjective === "POST_ENGAGEMENT" || selectedObjective === "PAGE_LIKES" || selectedObjective === "EVENT_RESPONSES") {
+      metricKey = "post_engagement";
+    } else if (selectedObjective === "OUTCOME_LEADS" || selectedObjective === "LEAD_GENERATION" || selectedObjective === "MESSAGES") {
+      metricKey = "leads"; // Fallback to conversions if leads is 0? Let's stick to primary for now.
+    } else if (selectedObjective === "OUTCOME_SALES" || selectedObjective === "CONVERSIONS" || selectedObjective === "CATALOG_SALES" || selectedObjective === "STORE_VISITS") {
+      metricKey = "website_purchases";
+    } else if (selectedObjective === "OUTCOME_APP_PROMOTION" || selectedObjective === "APP_INSTALLS") {
+      metricKey = "mobile_app_install";
+    }
+
+    if (!metricKey) return highlights;
+
+    // Find winner in each group
+    Object.values(groups).forEach(group => {
+      if (group.length < 1) return;
+
+      let maxVal = -1;
+      let winners = [];
+
+      group.forEach(ad => {
+        const val = Number(ad[metricKey]) || 0;
+        if (val > maxVal) {
+          maxVal = val;
+          winners = [ad.id];
+        } else if (val === maxVal && val > 0) {
+          winners.push(ad.id);
+        }
+      });
+
+      if (maxVal > 0) {
+        winners.forEach(id => highlights.add(`${id}-${metricKey}`));
       }
-    };
+    });
 
-    if (showAccountDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
+    return highlights;
+  })();
+
+  // Hardcoded 6 objectives (not from data)
+  const AVAILABLE_OBJECTIVES = [
+    { value: 'OUTCOME_AWARENESS', label: 'Awareness' },
+    { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
+    { value: 'OUTCOME_ENGAGEMENT', label: 'Engagement' },
+    { value: 'OUTCOME_LEADS', label: 'Leads' },
+    { value: 'OUTCOME_SALES', label: 'Sales' },
+    { value: 'OUTCOME_APP_PROMOTION', label: 'App Promotion' },
+  ];
+
+  // Get columns to display
+  const getColumns = () => {
+    const breakdownCols = BREAKDOWN_OPTIONS
+      .filter(opt => selectedBreakdowns.includes(opt.key))
+      .map(opt => ({ key: opt.key, label: opt.label, fixed: true }));
+
+    // Filter data columns based on user selection
+    const dataCols = ALL_DATA_COLUMNS
+      .filter(col => selectedDataColumns.includes(col.key))
+      .map(col => ({ key: col.key, label: col.label, format: col.format }));
+
+    return [...breakdownCols, ...dataCols];
+  };
+
+  const columns = getColumns();
+
+  // Toggle breakdown
+  const toggleBreakdown = (key) => {
+    setSelectedBreakdowns(prev =>
+      prev.includes(key)
+        ? prev.filter(k => k !== key)
+        : [...prev, key]
+    );
+  };
+
+  // Toggle data column
+  const toggleDataColumn = (key) => {
+    setSelectedDataColumns(prev =>
+      prev.includes(key)
+        ? prev.filter(k => k !== key)
+        : [...prev, key]
+    );
+  };
+
+  // Format value
+  const formatValue = (value, format) => {
+    if (value === null || value === undefined) return '-';
+
+    switch (format) {
+      case 'currency':
+        return new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND'
+        }).format(value);
+      case 'number':
+        return new Intl.NumberFormat('vi-VN').format(value);
+      case 'percent':
+        return `${Number(value).toFixed(2)}%`;
+      case 'text':
+      default:
+        return value;
     }
-  }, [showAccountDropdown]);
-
-  // Handle checkbox change cho breakdown
-  const handleBreakdownChange = (columnKey) => {
-    setBreakdownColumns((prev) => ({
-      ...prev,
-      [columnKey]: !prev[columnKey],
-    }));
   };
-
-  // Handle checkbox change cho data metrics
-  const handleDataChange = (metricKey) => {
-    setDataMetrics((prev) => ({
-      ...prev,
-      [metricKey]: !prev[metricKey],
-    }));
-  };
-
-  // Mapping labels tiếng Việt
-  const columnLabels = {
-    // Breakdown columns
-    campaignName: "Tên chiến dịch",
-    adSetName: "Tên nhóm quảng cáo",
-    adName: "Tên quảng cáo",
-    pageName: "Tên trang",
-    adText: "Nội dung quảng cáo",
-    ageRange: "Độ tuổi",
-    campaignObjective: "Mục tiêu chiến dịch",
-    date: "Ngày",
-    
-    // Data metrics
-    amountSpent: "Số tiền đã chi",
-    dailyBudget: "Ngân sách hàng ngày",
-    dailySpendRate: "Tỷ lệ chi tiêu hàng ngày (%)",
-    totalAmountSpent: "Tổng số tiền đã chi",
-    impressions: "Số lần hiển thị",
-    reach: "Lượt tiếp cận",
-    frequency: "Tần suất",
-    audienceReachPercentage: "Tỷ lệ tiếp cận đối tượng (%)",
-    clicks: "Số lượt nhấp",
-    linkClicks: "Số lượt nhấp liên kết",
-    linkCpc: "Link CPC",
-    linkCtr: "Link CTR",
-    cpc: "CPC",
-    cpm: "CPM",
-    ctr: "CTR",
-    conversions: "Số chuyển đổi",
-    conversionRate: "Tỷ lệ chuyển đổi (%)",
-    costPerConversion: "Chi phí mỗi chuyển đổi",
-    websitePurchases: "Lượt mua trên website",
-    websitePurchaseRoas: "Website Purchase ROAS",
-    results: "Kết quả",
-    costPerResults: "Chi phí mỗi kết quả (CPA)",
-    delivery: "Trạng thái phân phối",
-  };
-
-  // Tooltips cho các metrics
-  const columnTooltips = {
-    cpc: "Cost Per Click - Chi phí trung bình cho mỗi lượt nhấp",
-    cpm: "Cost Per Mille - Chi phí cho 1,000 lần hiển thị",
-    ctr: "Click-Through Rate - Tỷ lệ nhấp (số lượt nhấp / số lần hiển thị × 100%)",
-    linkCpc: "Link Cost Per Click - Chi phí trung bình cho mỗi lượt nhấp vào liên kết",
-    linkCtr: "Link Click-Through Rate - Tỷ lệ nhấp vào liên kết",
-    conversions: "Số lượng hành động chuyển đổi (mua hàng, đăng ký, v.v.)",
-    conversionRate: "Tỷ lệ chuyển đổi (số chuyển đổi / số lượt nhấp × 100%)",
-    costPerConversion: "Chi phí trung bình để có được một chuyển đổi",
-    websitePurchaseRoas: "Return On Ad Spend - Tỷ suất hoàn vốn từ quảng cáo cho lượt mua trên website",
-    costPerResults: "Cost Per Action - Chi phí cho mỗi kết quả (hành động mục tiêu)",
-    frequency: "Số lần trung bình một người xem quảng cáo của bạn",
-    audienceReachPercentage: "Tỷ lệ phần trăm đối tượng mục tiêu đã tiếp cận được",
-    dailySpendRate: "Tỷ lệ phần trăm ngân sách hàng ngày đã sử dụng",
-  };
-
-  // Tính toán các cột breakdown (cố định)
-  const getBreakdownColumns = () => {
-    const columns = [];
-
-    if (breakdownColumns.campaignName)
-      columns.push({ key: "campaignName", label: columnLabels.campaignName });
-    if (breakdownColumns.adSetName)
-      columns.push({ key: "adSetName", label: columnLabels.adSetName });
-    if (breakdownColumns.adName)
-      columns.push({ key: "adName", label: columnLabels.adName });
-    if (breakdownColumns.pageName)
-      columns.push({ key: "pageName", label: columnLabels.pageName });
-    if (breakdownColumns.adText)
-      columns.push({ key: "adText", label: columnLabels.adText });
-    if (breakdownColumns.ageRange)
-      columns.push({ key: "ageRange", label: columnLabels.ageRange });
-    if (breakdownColumns.campaignObjective)
-      columns.push({ key: "campaignObjective", label: columnLabels.campaignObjective });
-    if (breakdownColumns.date) 
-      columns.push({ key: "date", label: columnLabels.date });
-    return columns;
-  };
-
-  const getDataMetricsColumns = () => {
-    const columns = [];
-
-    if (dataMetrics.amountSpent)
-      columns.push({ key: "amountSpent", label: columnLabels.amountSpent });
-    if (dataMetrics.dailyBudget)
-      columns.push({ key: "dailyBudget", label: columnLabels.dailyBudget });
-    if (dataMetrics.dailySpendRate)
-      columns.push({ key: "dailySpendRate", label: columnLabels.dailySpendRate, tooltip: columnTooltips.dailySpendRate });
-    if (dataMetrics.totalAmountSpent)
-      columns.push({ key: "totalAmountSpent", label: columnLabels.totalAmountSpent });
-    if (dataMetrics.impressions)
-      columns.push({ key: "impressions", label: columnLabels.impressions });
-    if (dataMetrics.reach) 
-      columns.push({ key: "reach", label: columnLabels.reach });
-    if (dataMetrics.frequency)
-      columns.push({ key: "frequency", label: columnLabels.frequency, tooltip: columnTooltips.frequency });
-    if (dataMetrics.audienceReachPercentage)
-      columns.push({ key: "audienceReachPercentage", label: columnLabels.audienceReachPercentage, tooltip: columnTooltips.audienceReachPercentage });
-    if (dataMetrics.clicks)
-      columns.push({ key: "clicks", label: columnLabels.clicks });
-    if (dataMetrics.linkClicks)
-      columns.push({ key: "linkClicks", label: columnLabels.linkClicks });
-    if (dataMetrics.linkCpc)
-      columns.push({ key: "linkCpc", label: columnLabels.linkCpc, tooltip: columnTooltips.linkCpc });
-    if (dataMetrics.linkCtr)
-      columns.push({ key: "linkCtr", label: columnLabels.linkCtr, tooltip: columnTooltips.linkCtr });
-    if (dataMetrics.cpc) 
-      columns.push({ key: "cpc", label: columnLabels.cpc, tooltip: columnTooltips.cpc });
-    if (dataMetrics.cpm) 
-      columns.push({ key: "cpm", label: columnLabels.cpm, tooltip: columnTooltips.cpm });
-    if (dataMetrics.ctr) 
-      columns.push({ key: "ctr", label: columnLabels.ctr, tooltip: columnTooltips.ctr });
-    if (dataMetrics.conversions)
-      columns.push({ key: "conversions", label: columnLabels.conversions, tooltip: columnTooltips.conversions });
-    if (dataMetrics.conversionRate)
-      columns.push({ key: "conversionRate", label: columnLabels.conversionRate, tooltip: columnTooltips.conversionRate });
-    if (dataMetrics.costPerConversion)
-      columns.push({ key: "costPerConversion", label: columnLabels.costPerConversion, tooltip: columnTooltips.costPerConversion });
-    if (dataMetrics.websitePurchases)
-      columns.push({ key: "websitePurchases", label: columnLabels.websitePurchases });
-    if (dataMetrics.websitePurchaseRoas)
-      columns.push({ key: "websitePurchaseRoas", label: columnLabels.websitePurchaseRoas, tooltip: columnTooltips.websitePurchaseRoas });
-    if (dataMetrics.results) 
-      columns.push({ key: "results", label: columnLabels.results });
-    if (dataMetrics.costPerResults)
-      columns.push({ key: "costPerResults", label: columnLabels.costPerResults, tooltip: columnTooltips.costPerResults });
-    if (dataMetrics.delivery)
-      columns.push({ key: "delivery", label: columnLabels.delivery });
-
-    return columns;
-  };
-
-  const breakdownCols = getBreakdownColumns();
-  const dataMetricsCols = getDataMetricsColumns();
-  const allColumns = [...breakdownCols, ...dataMetricsCols];
 
   return (
     <div className="analytics-container">
@@ -448,269 +430,193 @@ function Analytics() {
           Chatbot AI+ để sử dụng trợ lý phân tích trong trang này.
         </div>
       )}
-      {/* Header Section */}
+
       <div className="analytics-header">
-        <h1 className="analytics-title">Phân tích quảng cáo</h1>
-        <div className="analytics-header-controls">
-          <div className="analytics-account-selector-wrapper" ref={dropdownRef}>
-            <button
-              className="analytics-account-selector"
-              onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-            >
-              <span>
-                {selectedAccount
-                  ? adAccounts.find((acc) => acc.id === selectedAccount)
-                      ?.name || "Chọn tài khoản quảng cáo"
-                  : "Chọn tài khoản quảng cáo"}
-              </span>
-              <ChevronDown size={16} />
-            </button>
-            {showAccountDropdown && (
-              <div className="analytics-account-dropdown">
-                {adAccounts.length === 0 ? (
-                  <div className="analytics-dropdown-empty">
-                    No accounts available
-                  </div>
-                ) : (
-                  adAccounts.map((account) => (
-                    <div
-                      key={account.id}
-                      className={`analytics-dropdown-item ${
-                        selectedAccount === account.id ? "analytics-active" : ""
-                      }`}
-                      onClick={() => {
-                        setSelectedAccount(account.id);
-                        setShowAccountDropdown(false);
-                        // Save to localStorage for Chat AI Widget
-                        localStorage.setItem('selected_account_id', account.external_id || account.id);
-                        localStorage.setItem('selected_account_name', account.name);
-                      }}
-                    >
-                      {account.name}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+        <h1 className="analytics-title">Intelligent Analytics</h1>
+
+        <div className="analytics-controls">
+          {/* Account Selector */}
+          <select
+            className="analytics-select"
+            value={selectedAccount}
+            onChange={(e) => setSelectedAccount(e.target.value)}
+          >
+            <option value="">Select Ads Account</option>
+            {adAccounts.map(account => (
+              <option key={account._id || account.id} value={account.external_id}>
+                {account.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Objective Filter */}
+          <select
+            className="analytics-select"
+            value={selectedObjective}
+            onChange={(e) => setSelectedObjective(e.target.value)}
+          >
+            <option value="ALL">Select Objective</option>
+            {AVAILABLE_OBJECTIVES.map(obj => (
+              <option key={obj.value} value={obj.value}>
+                {obj.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Search */}
+          <div className="analytics-search">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search by name, ID, date"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <div className="analytics-header-right-controls">
-            <button
-              className="analytics-refresh-button"
-              onClick={handleRefresh}
-              disabled={!selectedAccount || !dateRange || loadingInsights}
-              aria-label="Refresh data"
-              title="Làm mới dữ liệu"
-            >
-              <RefreshCw 
-                size={18} 
-                className={loadingInsights ? "analytics-refresh-icon-spinning" : ""}
-              />
-            </button>
-            <div className="analytics-search-box">
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button className="analytics-search-button" aria-label="Search">
-                <Search size={16} />
-              </button>
-            </div>
-            <div className="analytics-date-range-wrapper">
-              <DateRangePicker
-                value={dateRange}
-                onChange={(value) => setDateRange(value)}
-                placeholder="dd/mm/yyyy - dd/mm/yyyy"
-              />
-            </div>
-          </div>
+
+          {/* Date Range Placeholder */}
+          <input
+            type="text"
+            className="analytics-date-input"
+            placeholder="dd/mm/yyyy - dd/mm/yyyy"
+            readOnly
+          />
+
+          {/* Sync Button */}
+          <button
+            className="analytics-refresh-btn"
+            onClick={syncAnalytics}
+            disabled={syncing || !selectedAccount}
+            title="Sync dữ liệu từ Facebook"
+          >
+            <RefreshCw size={16} className={syncing ? "spinning" : ""} />
+            {syncing ? " Đang sync..." : " Sync"}
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="analytics-main">
-        {/* Table Section */}
         <div className="analytics-table-section">
-          <div className="analytics-table-wrapper">
-            <table className="analytics-table">
-              <thead>
-                <tr>
-                  {/* Breakdown columns - cố định */}
-                  {breakdownCols.map((column, index) => (
-                    <th
-                      key={column.key}
-                      className={`analytics-breakdown-column ${
-                        index === breakdownCols.length - 1
-                          ? "analytics-breakdown-column-last"
-                          : ""
-                      }`}
-                      style={{
-                        left: `${index * 150}px`, // Ước tính width mỗi cột là 150px
-                      }}
-                    >
-                      {column.label}
-                    </th>
-                  ))}
-                  {/* Data metrics columns - có thể scroll */}
-                  {dataMetricsCols.map((column) => (
-                    <th
-                      key={column.key}
-                      className="analytics-data-metric-column"
-                      title={column.tooltip || ""}
-                      style={{ cursor: column.tooltip ? "help" : "default" }}
-                    >
-                      {column.label}
-                      {column.tooltip && <span className="analytics-tooltip-icon" title={column.tooltip}>ℹ️</span>}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loadingInsights ? (
+          {loading ? (
+            <div className="analytics-loading">
+              <RefreshCw size={32} className="spinning" />
+              <p>Đang tải dữ liệu...</p>
+            </div>
+          ) : !selectedAccount ? (
+            <div className="analytics-empty-state">
+              <p>Vui lòng chọn tài khoản để xem phân tích.</p>
+            </div>
+          ) : selectedObjective === "ALL" ? (
+            <div className="analytics-empty-state">
+              <p>Vui lòng chọn Objective để xem dữ liệu.</p>
+            </div>
+          ) : (
+            <div className="analytics-table-container">
+              <table className="analytics-table">
+                <thead>
                   <tr>
-                    <td
-                      colSpan={allColumns.length}
-                      className="analytics-empty-table"
-                    >
-                      Đang tải dữ liệu...
-                    </td>
+                    {columns.map(col => (
+                      <th key={col.key} className={col.fixed ? 'analytics-breakdown-column' : ''}>
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
-                ) : tableData.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={allColumns.length}
-                      className="analytics-empty-table"
-                    >
-                      {selectedAccount && dateRange
-                        ? "Không có dữ liệu"
-                        : "Vui lòng chọn tài khoản và khoảng thời gian"}
-                    </td>
-                  </tr>
-                ) : (
-                  tableData.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {/* Breakdown columns - cố định */}
-                      {breakdownCols.map((column, colIndex) => (
-                        <td
-                          key={column.key}
-                          className={`analytics-breakdown-column ${
-                            colIndex === breakdownCols.length - 1
-                              ? "analytics-breakdown-column-last"
-                              : ""
-                          }`}
-                          style={{
-                            left: `${colIndex * 150}px`, // Ước tính width mỗi cột là 150px
-                          }}
-                        >
-                          {row[column.key] || "-"}
-                        </td>
-                      ))}
-                      {dataMetricsCols.map((column) => {
-                        let displayValue = row[column.key];
-                        
-                        if (displayValue === null || displayValue === undefined || displayValue === "") {
-                          displayValue = "-";
-                        } else if (typeof displayValue === "number") {
-                          if (column.key.includes("Rate") || column.key.includes("Percentage") || column.key.includes("CTR") || column.key.includes("ROAS")) {
-                            displayValue = displayValue.toFixed(2) + (column.key.includes("ROAS") ? "" : "%");
-                          } else if (column.key.includes("Spent") || column.key.includes("Budget") || column.key.includes("CPC") || column.key.includes("CPM") || column.key.includes("CPA") || column.key.includes("Conversion")) {
-                            displayValue = displayValue.toFixed(2);
-                          } else {
-                            displayValue = displayValue.toLocaleString();
-                          }
-                        }
-                        
-                        return (
-                          <td
-                            key={column.key}
-                            className="analytics-data-metric-column"
-                          >
-                            {displayValue}
-                          </td>
-                        );
-                      })}
+                </thead>
+                <tbody>
+                  {filteredAds.length === 0 ? (
+                    <tr>
+                      <td colSpan={columns.length} className="analytics-empty-table">
+                        Không có dữ liệu
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredAds.map(ad => (
+                      <tr key={ad.id}>
+                        {columns.map(col => {
+                          const isHighlighted = highlighters.has(`${ad.id}-${col.key}`);
+                          return (
+                            <td key={col.key} className={`${col.fixed ? 'analytics-breakdown-column' : ''} ${isHighlighted ? 'analytics-highlight-cell' : ''}`}>
+                              {isHighlighted && <span> </span>}
+                              {formatValue(ad[col.key], col.format)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Settings Panel */}
         <div className="analytics-settings">
-          <h2 className="analytics-settings-title">Setting</h2>
+          <div className="analytics-settings-header">
+            <Settings size={18} />
+            <span>Setting</span>
+          </div>
 
-          {/* Tabs */}
           <div className="analytics-settings-tabs">
             <button
-              className={`analytics-settings-tab ${
-                activeTab === "breakdown" ? "analytics-active" : ""
-              }`}
-              onClick={() => setActiveTab("breakdown")}
+              className={`analytics-settings-tab ${activeSettingsTab === 'Breakdown' ? 'analytics-active' : ''}`}
+              onClick={() => setActiveSettingsTab('Breakdown')}
             >
               Breakdown
             </button>
             <button
-              className={`analytics-settings-tab ${
-                activeTab === "data" ? "analytics-active" : ""
-              }`}
-              onClick={() => setActiveTab("data")}
+              className={`analytics-settings-tab ${activeSettingsTab === 'Data' ? 'analytics-active' : ''}`}
+              onClick={() => setActiveSettingsTab('Data')}
             >
               Data
             </button>
           </div>
 
-          {/* Tab Content */}
           <div className="analytics-settings-content">
-            {activeTab === "breakdown" && (
+            {activeSettingsTab === 'Breakdown' && (
               <div className="analytics-breakdown-options">
-                {Object.entries(breakdownColumns).map(([key, checked]) => (
-                  <label key={key} className="analytics-checkbox-label">
+                {BREAKDOWN_OPTIONS.map(option => (
+                  <label key={option.key} className="analytics-checkbox-label">
                     <input
                       type="checkbox"
-                      checked={checked}
-                      onChange={() => handleBreakdownChange(key)}
                       className="analytics-checkbox-input"
+                      checked={selectedBreakdowns.includes(option.key)}
+                      onChange={() => toggleBreakdown(option.key)}
                     />
-                    <span className="analytics-checkbox-text">
-                      {columnLabels[key]}
-                    </span>
+                    <span className="analytics-checkbox-text">{option.label}</span>
                   </label>
                 ))}
               </div>
             )}
 
-            {activeTab === "data" && (
-              <div className="analytics-data-options">
-                {Object.entries(dataMetrics).map(([key, checked]) => (
-                  <label 
-                    key={key} 
-                    className="analytics-checkbox-label"
-                    title={columnTooltips[key] || ""}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleDataChange(key)}
-                      className="analytics-checkbox-input"
-                    />
-                    <span className="analytics-checkbox-text">
-                      {columnLabels[key]}
-                    </span>
-                  </label>
-                ))}
+            {activeSettingsTab === 'Data' && (
+              <div className="analytics-breakdown-options">
+                {selectedObjective === "ALL" ? (
+                  <div className="analytics-empty-state" style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
+                    Vui lòng chọn Objective để xem các cột dữ liệu
+                  </div>
+                ) : (
+                  ALL_DATA_COLUMNS.map(column => (
+                    <label key={column.key} className="analytics-checkbox-label">
+                      <input
+                        type="checkbox"
+                        className="analytics-checkbox-input"
+                        checked={selectedDataColumns.includes(column.key)}
+                        onChange={() => toggleDataColumn(column.key)}
+                      />
+                      <span className="analytics-checkbox-text">{column.label}</span>
+                    </label>
+                  ))
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Chat AI Widget - Fixed at bottom right */}
+      {/* Chat AI Widget */}
       {canUseAnalyticsChatAI && (
-        <ChatAIWidget 
+        <ChatAIWidget
           accountId={selectedAccount}
           accountName={selectedAccountInfo?.name}
         />

@@ -57,7 +57,19 @@
        "reset_token_expired": "The password reset link has expired. Please request a new password reset.",
        "reset_token_used": "The password reset link has already been used. Please request a new password reset if needed.",
        "reset_token_invalid": "The password reset link is invalid.",
-       "enter_new_password": "Enter a new password for your account"
+       "enter_new_password": "Enter a new password for your account",
+       "account_inactive_message": "Your account has been deactivated",
+       "account_banned_message": "Your account has been banned",
+       "contact_admin_if_error": "Please contact admin if you believe this is an error",
+       "contact_admin_button": "Contact Admin",
+       "contact_admin_title": "Contact Admin",
+       "contact_admin_email_label": "Your Email",
+       "contact_admin_subject_label": "Subject",
+       "contact_admin_message_label": "Message",
+       "contact_admin_submit_button": "Send",
+       "contact_admin_cancel_button": "Cancel",
+       "contact_admin_success": "Support request sent successfully!",
+       "contact_admin_error": "An error occurred while sending the request. Please try again."
      },
      "validation": {
        "email_required": "Email is required",
@@ -151,9 +163,13 @@
       "rename_page": "Rename Page",
       "all": "All",
       "active": "Active",
+      "pause": "PAUSE",
       "inactive": "Inactive",
       "connect_new_page": "Connect New Page",
-      "search_placeholder": "Search..."
+      "search_placeholder": "Search...",
+      "resume_page": "Resume Page",
+      "refresh_success": "List refreshed successfully",
+      "refresh_error": "Failed to refresh data"
     },
      "account_management": {
        "title": "Ad Accounts",
@@ -197,7 +213,9 @@
        "activate": "Activate",
        "deactivate": "Deactivate",
        "archive": "Archive",
-       "disconnect": "Disconnect"
+       "disconnect": "Disconnect",
+       "sync_success": "Data synced successfully!",
+       "sync_error": "Error syncing data"
      },
     "ads_management": {
       "select_account": "Select ad account",
@@ -404,9 +422,36 @@
        "food": "Food",
        "tech": "Tech",
        "beauty": "Beauty",
-       "history_content": "History tab content is under development..."
-     },
-     "footer": {
+      "history_content": "History tab content is under development..."
+    },
+    "servicePackage": {
+      "title": "AAMS SOFTWARE PRICING",
+      "subtitle": "AAMS 0 Free Forever! Pay and see the results!",
+      "tabs": {
+        "3months": "3 Months",
+        "12months": "1 Year"
+      },
+      "price": {
+        "perMonth": "/ Month",
+        "perYear": "/ Year"
+      },
+      "stats": {
+        "pages": "Pages",
+        "employees": "Employees",
+        "shops": "Shops"
+      },
+      "buttons": {
+        "buyNow": "Buy Now",
+        "inUse": "In Use"
+      },
+      "messages": {
+        "loadError": "Cannot load package list",
+        "loadErrorGeneric": "Error loading packages",
+        "loginRequired": "Please login to purchase service package",
+        "alreadyUsing": "You are currently using this package"
+      }
+    },
+    "footer": {
        "brand": "fchat",
        "address": "2nd Floor, No. 247, Cau Giay Ward, Hanoi",
        "support": "Support: 089 898 6008",
@@ -431,7 +476,117 @@
        "google_play": "Google Play",
        "app_store": "App Store",
        "connect_fchat": "Connect Fchat",
-       "announced": "ANNOUNCED",
-       "meta_partner": "Meta Business Partner"
-     }
+      "announced": "ANNOUNCED",
+      "meta_partner": "Meta Business Partner"
+    },
+    "order": {
+      "currentPackage": "Currently using",
+      "customers": "Customers",
+      "pages": "pages",
+      "duration": "Duration",
+      "title": "YOUR ORDER",
+      "labels": {
+        "packageType": "Service Package",
+        "unitPrice": "Unit Price",
+        "packageDuration": "Package Duration",
+        "total": "TOTAL",
+        "employees": "Employees"
+      },
+      "packageTypes": {
+        "chatbot": "CHATBOT",
+        "chatbotAi": "CHATBOT AI"
+      },
+      "durations": {
+        "3months": "3 months",
+        "6months": "6 months",
+        "12months": "1 year"
+      },
+      "price": {
+        "perMonth": "/ month"
+      },
+      "discount": {
+        "placeholder": "Discount code",
+        "apply": "Apply"
+      },
+      "vat": {
+        "label": "Issue VAT invoice",
+        "taxCode": "Tax code",
+        "taxCodePlaceholder": "Enter tax code",
+        "companyName": "Company name",
+        "companyNamePlaceholder": "Enter company name"
+      },
+      "buttons": {
+        "upgrade": "UPGRADE NOW"
+      },
+      "messages": {
+        "loadError": "Cannot load package list",
+        "createError": "Cannot create order!",
+        "createErrorGeneric": "Error creating order"
+      }
+    },
+    "checkout": {
+      "title": "ORDER INFORMATION",
+      "orderId": "Order ID:",
+      "total": "Total:",
+      "paymentTitle": "Payment Method",
+      "methods": {
+        "bank": {
+          "name": "BANK TRANSFER",
+          "description": "Please transfer with correct content format to automatically activate your order"
+        },
+        "card": {
+          "name": "Visa / Master Card Vietnam",
+          "description": "Supports Visa cards issued in Vietnam"
+        },
+        "momo": {
+          "name": "MOMO E-WALLET",
+          "description": "You need to have Momo app"
+        },
+        "paypal": {
+          "name": "PAY WITH PAYPAL",
+          "description": "You need to have PayPal e-wallet account"
+        },
+        "service": {
+          "name": "SERVICE WALLET",
+          "description": "PAY WITH SERVICE WALLET"
+        }
+      },
+      "buttons": {
+        "pay": "PAY"
+      },
+      "messages": {
+        "methodInDevelopment": "This payment method is under development!",
+        "paymentError": "An error occurred while processing payment!"
+      }
+    },
+    "bank": {
+      "title": "Order successful",
+      "timer": "Time remaining:",
+      "timerUnit": "minutes",
+      "instruction": "Please transfer according to the following information:",
+      "labels": {
+        "bankName": "Bank",
+        "accountNumber": "Account number",
+        "accountName": "Account name",
+        "content": "Content",
+        "amount": "Amount"
+      },
+      "buttons": {
+        "copy": "Copy",
+        "confirm": "I HAVE TRANSFERRED"
+      },
+      "qr": {
+        "title": "Or scan QR code to pay"
+      },
+      "confirm": {
+        "text": "After successful transfer,<br />click the button below"
+      },
+      "messages": {
+        "success": "Please wait a moment, your request has been sent. We will confirm payment in a few minutes.",
+        "transactionNotFound": "Transaction not found. Please try again.",
+        "sessionExpired": "Session expired. Please login again.",
+        "error": "An error occurred. Please try again later.",
+        "timeout": "Order has been canceled due to timeout!"
+      }
+    }
   }

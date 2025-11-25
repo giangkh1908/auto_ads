@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "./CustomerLog.css";
 import { Search } from "lucide-react";
 import axiosInstance from "../../../../../utils/axios";
@@ -76,10 +77,56 @@ const MOCK_CUSTOMER_LOGS = [
 ];
 
 export default function CustomerLog() {
+  const { t, i18n } = useTranslation("admin");
+  const [rawLogs, setRawLogs] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState(""); // format: "dd/mm/yyyy - dd/mm/yyyy"
+
+  // Helper function để map log data với translation
+  const mapLogData = useCallback((log) => {
+    // Map role với translation
+    const roleMap = {
+      "Marketer": t("customerLog.roles.marketer"),
+      "Marketing Admin": t("customerLog.roles.marketingAdmin"),
+      "Marketing admin": t("customerLog.roles.marketingAdmin"),
+      "Shop Owner": t("customerLog.roles.shopOwner"),
+      "N/A": t("customerLog.roles.nA"),
+    };
+
+    // Map userStatus với translation
+    const statusMap = {
+      "Active": t("customerLog.statuses.active"),
+      "Inactive": t("customerLog.statuses.inactive"),
+      "Banned": t("customerLog.statuses.banned"),
+    };
+
+    return {
+      id: log._id || log.id,
+      user: log.user || "N/A",
+      userId: log.userId || "N/A",
+      shopName: log.shopName || "N/A",
+      shopId: log.shopId || "N/A",
+      time: log.time
+        ? new Date(log.time)
+            .toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+            .replace(",", "")
+        : "-",
+      timeRaw: log.time ? new Date(log.time).getTime() : 0,
+      role: roleMap[log.role] || log.role || t("customerLog.roles.nA"),
+      userStatus: statusMap[log.userStatus] || log.userStatus || t("customerLog.statuses.active"),
+      userStatusKey: (log.userStatus || "Active").toLowerCase(), // Lưu status gốc để dùng cho CSS class
+      event: log.event || log.description || log.action || "-",
+    };
+  }, [t]);
 
   // Fetch customer logs từ API
   useEffect(() => {
@@ -90,31 +137,10 @@ export default function CustomerLog() {
 
         if (response.data.success) {
           const customerLogs = response.data.data;
+          setRawLogs(customerLogs);
 
           // Format data để hiển thị trong table
-          const formattedLogs = customerLogs.map((log) => ({
-            id: log._id || log.id,
-            user: log.user || "N/A",
-            userId: log.userId || "N/A",
-            shopName: log.shopName || "N/A",
-            shopId: log.shopId || "N/A",
-            time: log.time
-              ? new Date(log.time)
-                  .toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
-                  .replace(",", "")
-              : "-",
-            timeRaw: log.time ? new Date(log.time).getTime() : 0, // Lưu timestamp để sort
-            role: log.role || "N/A",
-            userStatus: log.userStatus || "Active",
-            event: log.event || log.description || log.action || "-",
-          }));
+          const formattedLogs = customerLogs.map((log) => mapLogData(log));
 
           // Sort từ mới đến cũ (theo timeRaw)
           formattedLogs.sort((a, b) => b.timeRaw - a.timeRaw);
@@ -123,15 +149,28 @@ export default function CustomerLog() {
         }
       } catch (error) {
         console.error("Error fetching customer logs:", error);
-        // Fallback về mock data nếu có lỗi
-        setLogs(MOCK_CUSTOMER_LOGS);
+        // Fallback về mock data nếu có lỗi - map với translation
+        const mappedMockLogs = MOCK_CUSTOMER_LOGS.map((log) => mapLogData(log));
+        mappedMockLogs.sort((a, b) => b.timeRaw - a.timeRaw);
+        setLogs(mappedMockLogs);
+        setRawLogs(MOCK_CUSTOMER_LOGS);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCustomerLogs();
-  }, []);
+  }, [mapLogData]);
+
+  // Re-map data khi ngôn ngữ thay đổi
+  useEffect(() => {
+    if (rawLogs.length > 0) {
+      const formattedLogs = rawLogs.map((log) => mapLogData(log));
+      // Sort từ mới đến cũ (theo timeRaw)
+      formattedLogs.sort((a, b) => b.timeRaw - a.timeRaw);
+      setLogs(formattedLogs);
+    }
+  }, [i18n.language, rawLogs, mapLogData]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -178,11 +217,11 @@ export default function CustomerLog() {
       <div className="customer-log-toolbar">
         <div className="customer-log-toolbar-left">
           <div className="customer-log-filter-group">
-            <label className="customer-log-filter-label">Search</label>
+            <label className="customer-log-filter-label">{t("customerLog.search")}</label>
             <div className="customer-log-search">
               <input
                 className="customer-log-search-input"
-                placeholder="User, UserID, Shop name, ShopID"
+                placeholder={t("customerLog.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -193,12 +232,12 @@ export default function CustomerLog() {
           </div>
         </div>
         <div className="customer-log-filter-group">
-          <label className="customer-log-filter-label">Date Range</label>
+          <label className="customer-log-filter-label">{t("customerLog.dateRange")}</label>
           <div className="customer-log-toolbar-right">
             <DateRangePicker
               value={dateRange}
               onChange={(value) => setDateRange(value)}
-              placeholder="dd/mm/yyyy - dd/mm/yyyy"
+              placeholder={t("customerLog.dateRangePlaceholder")}
             />
           </div>
         </div>
@@ -206,27 +245,27 @@ export default function CustomerLog() {
 
       <div className="customer-log-table">
         <div className="customer-log-row customer-log-header">
-          <div className="customer-log-col customer-log-col-user">User</div>
-          <div className="customer-log-col customer-log-col-userid">UserID</div>
+          <div className="customer-log-col customer-log-col-user">{t("customerLog.columns.user")}</div>
+          <div className="customer-log-col customer-log-col-userid">{t("customerLog.columns.userId")}</div>
           <div className="customer-log-col customer-log-col-shopname">
-            Shop name
+            {t("customerLog.columns.shopName")}
           </div>
-          <div className="customer-log-col customer-log-col-shopid">ShopID</div>
-          <div className="customer-log-col customer-log-col-time">Time</div>
-          <div className="customer-log-col customer-log-col-role">Role</div>
+          <div className="customer-log-col customer-log-col-shopid">{t("customerLog.columns.shopId")}</div>
+          <div className="customer-log-col customer-log-col-time">{t("customerLog.columns.time")}</div>
+          <div className="customer-log-col customer-log-col-role">{t("customerLog.columns.role")}</div>
           <div className="customer-log-col customer-log-col-status">
-            User Status
+            {t("customerLog.columns.userStatus")}
           </div>
-          <div className="customer-log-col customer-log-col-event">Event</div>
+          <div className="customer-log-col customer-log-col-event">{t("customerLog.columns.event")}</div>
         </div>
 
         {loading ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
-            Đang tải dữ liệu...
+            {t("customerLog.messages.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
-            Không có dữ liệu
+            {t("customerLog.messages.noData")}
           </div>
         ) : (
           filtered.map((log) => (
@@ -251,7 +290,7 @@ export default function CustomerLog() {
               </div>
               <div className="customer-log-col customer-log-col-status">
                 <span
-                  className={`customer-log-badge customer-log-badge-${log.userStatus.toLowerCase()}`}
+                  className={`customer-log-badge customer-log-badge-${log.userStatusKey || "active"}`}
                 >
                   {log.userStatus}
                 </span>

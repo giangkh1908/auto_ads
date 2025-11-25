@@ -181,6 +181,9 @@ export function buildPayload({
       ...(adset.traffic_destination && {
         traffic_destination: adset.traffic_destination,
       }),
+      ...(adset.engagement_destination && {
+        engagement_destination: adset.engagement_destination,
+      }),
       ...(adset.destination_type && {
         destination_type: adset.destination_type,
       }),

@@ -46,6 +46,10 @@ const adsSetSchema = new mongoose.Schema(
 
     // Vị trí chuyển đổi/Lưu lượng (WEBSITE/APP/MESSAGING/CALLS/ON_POST/ON_PAGE/ON_EVENT...)
     traffic_destination: { type: String, trim: true, default: null },
+    // Vị trí chuyển đổi cho Engagement (MESSENGER/ON_POST/CALL/WEBSITE/APP/ON_PAGE)
+    engagement_destination: { type: String, trim: true, default: null },
+    // destination_type được gửi lên Facebook API (từ traffic_destination hoặc engagement_destination)
+    destination_type: { type: String, trim: true, default: null },
 
     // 💰 Ngân sách & thời gian
     daily_budget: { type: Number },

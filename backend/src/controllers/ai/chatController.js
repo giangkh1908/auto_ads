@@ -4,80 +4,11 @@ import { analyticsTools } from "../../services/chat/analyticsTools.js";
 import ChatConversation from "../../models/ai/chatConversation.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
+import AdsSet from "../../models/ads/adsSet.model.js";
+import Ads from "../../models/ads/ads.model.js";
 import { v4 as uuidv4 } from "uuid";
-import SimpleRouter from "../../services/chat/simpleRouter.js";
 
-// ============================================
-// INTENT CLASSIFIER
-// ============================================
-
-const ANALYTICS_KEYWORDS = [
-  "chi phí",
-  "spend",
-  "ctr",
-  "cpc",
-  "cpm",
-  "campaign",
-  "chiến dịch",
-  "quảng cáo",
-  "hiệu suất",
-  "so sánh",
-  "compare",
-  "top",
-  "bottom",
-  "ranking",
-  "tốt nhất",
-  "tệ nhất",
-  "xu hướng",
-  "trend",
-  "tăng",
-  "giảm",
-  "thay đổi",
-  "ngày",
-  "tuần",
-  "tháng",
-  "hôm nay",
-  "hôm qua",
-  "impressions",
-  "clicks",
-  "results",
-  "chuyển đổi",
-  "conversion",
-  "reach",
-];
-
-function classifyIntent(message) {
-  const lowerMsg = message.toLowerCase();
-
-  // Check for analytics keywords
-  const hasAnalyticsKeyword = ANALYTICS_KEYWORDS.some((kw) =>
-    lowerMsg.includes(kw)
-  );
-
-  // Check for greetings
-  const greetings = ["xin chào", "hello", "hi", "chào", "hey"];
-  const isGreeting = greetings.some((g) => lowerMsg.startsWith(g));
-
-  // Check for general questions
-  const generalPatterns = [
-    /mấy giờ/,
-    /thời gian/,
-    /ngày.*tháng/,
-    /là gì/,
-    /giúp.*gì/,
-    /làm.*gì/,
-  ];
-  const isGeneral = generalPatterns.some((p) => p.test(lowerMsg));
-
-  if (hasAnalyticsKeyword) {
-    return "ANALYTICS_QUERY";
-  } else if (isGreeting || isGeneral) {
-    return "GENERAL_CHAT";
-  }
-
-  // Fallback: use LLM for complex classification
-  return "UNKNOWN";
-}
+import { userHasFeature, FEATURE_KEYS } from "../../services/entitlementService.js";
 
 // ============================================
 // HELPERS: DATE PARSER, NORMALIZERS, ENTITY RESOLUTION, LOGGING
@@ -181,34 +112,78 @@ async function getAccountObjectId(account_id) {
   return account._id;
 }
 
-async function resolveCampaignNames(account_id, names = []) {
+
+
+async function resolveEntitiesV2(account_id, entitiesFromRouter = []) {
+  if (!entitiesFromRouter || entitiesFromRouter.length === 0) {
+    return { resolved: [], suggestions: [], unresolved: [] };
+  }
+
   const accountObjId = await getAccountObjectId(account_id);
   const norm = (s) => removeDiacritics(String(s || "").toLowerCase());
-  const tokens = (s) => norm(s).split(/\s+/).filter(Boolean);
+  const tokens = (s) => norm(s).split(/[\s_\-]+/).filter(Boolean);
 
-  const campaigns = await AdsCampaign.find({ account_id: accountObjId })
-    .select("name external_id")
-    .lean();
+  // 1. Fetch all available entities for the account in parallel
+  const [allCampaigns, allAdsets, allAds] = await Promise.all([
+    AdsCampaign.find({ account_id: accountObjId }).select("name external_id").lean(),
+    AdsSet.find({ account_id: accountObjId }).select("name external_id").lean(),
+    Ads.find({ account_id: accountObjId }).select("name external_id").lean(),
+  ]);
 
-  const results = [];
-  for (const q of names) {
-    const qt = tokens(q);
-    const scored = campaigns
-      .map((c) => {
-        const nt = tokens(c.name);
+  const entityMap = {
+    campaign: allCampaigns,
+    adset: allAdsets,
+    ad: allAds,
+  };
+
+  const resolved = [];
+  const suggestions = [];
+  const unresolved = [];
+
+  for (const entity of entitiesFromRouter) {
+    const { type, name } = entity;
+    const availableEntities = entityMap[type] || [];
+    
+    if (availableEntities.length === 0) {
+      unresolved.push(entity);
+      continue;
+    }
+
+    const queryTokens = tokens(name);
+    
+    const scored = availableEntities
+      .map((e) => {
+        const nameTokens = tokens(e.name);
         let hit = 0;
-        qt.forEach((t) => {
-          if (nt.some((n) => n.includes(t))) hit++;
-        });
-        const s = hit / Math.max(qt.length, 1);
-        return { id: c.external_id || null, name: c.name, score: +s.toFixed(2) };
+        let matchScore = 0;
+
+        // Exact match bonus
+        if (norm(e.name) === norm(name)) {
+            matchScore = 1;
+        } else {
+            queryTokens.forEach(qToken => {
+              if (nameTokens.some(nToken => nToken.includes(qToken))) {
+                hit++;
+              }
+            });
+            matchScore = hit / Math.max(queryTokens.length, 1);
+        }
+
+        return { id: e.external_id, name: e.name, score: +matchScore.toFixed(2) };
       })
-      .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
-    results.push({ query: q, matches: scored });
+      .filter((x) => x.score > 0.5) // Minimum threshold
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) {
+      unresolved.push(entity);
+    } else if (scored[0].score >= 0.9) { // High confidence match
+      resolved.push({ type, id: scored[0].id, name: scored[0].name });
+    } else { // Low confidence, needs clarification
+      suggestions.push({ type, query: name, matches: scored.slice(0, 5) });
+    }
   }
-  return results;
+
+  return { resolved, suggestions, unresolved };
 }
 
 function logDebug(step, payload) {
@@ -225,225 +200,41 @@ function logDebug(step, payload) {
 // CLARIFY HELPERS
 // ============================================
 
-async function extractCampaignFromClarifyResponse(message, account_id) {
-  // Try to extract campaign name from user's clarify response
-  // e.g., "Chiến dịch mới", "chọn campaign ABC", etc.
-  const lowerMsg = message.toLowerCase();
-  
-  // Remove common prefixes
-  let cleanMsg = message
-    .replace(/^(chọn|select|campaign|chiến dịch|phân tích chiến dịch):/i, "")
-    .trim();
-  
-  if (!cleanMsg) return null;
+// ============================================
+// CHAT CONTROLLER
+// ============================================
 
-  // Try to resolve the campaign name
-  const resolution = await resolveCampaignNames(account_id, [cleanMsg]);
-  if (resolution.length > 0 && resolution[0].matches.length > 0) {
-    const bestMatch = resolution[0].matches[0];
-    if (bestMatch.score >= 0.5) {
-      return { id: bestMatch.id, name: bestMatch.name };
-    }
-  }
-
-  return null;
-}
-
-async function executeToolWithIntent(originalIntent, params, conversation, conversationId, res) {
-  const { account_id, date_from, date_to, metrics, entityNames } = params;
-
-  // Resolve campaign IDs if needed
-  let resolvedCampaignIds = [];
-  if (entityNames && entityNames.length > 0) {
-    const resolution = await resolveCampaignNames(account_id, entityNames);
-    for (const r of resolution) {
-      if (r.matches.length > 0 && r.matches[0].id) {
-        resolvedCampaignIds.push(r.matches[0].id);
-      }
-    }
-  }
-
-    // Use tool from router if available, otherwise map from intent
-    let toolName = null;
-    if (params.tool) {
-      toolName = params.tool;
-    } else {
-      const intentToolMap = {
-        OVERVIEW: "get_overview",
-        TOTAL_METRICS: "get_total_metrics",
-        COMPARE: "compare_campaigns",
-        TREND: "get_trend",
-        RANKING: "get_ranking",
-        LIST_CAMPAIGNS: "list_campaigns",
-      };
-      toolName = intentToolMap[originalIntent] || null;
-    }
-
-    if (!toolName) {
-    const errorMsg = "⚠️ Không thể tiếp tục yêu cầu này.";
-    conversation.messages.push({
-      message_id: uuidv4(),
-      role: "assistant",
-      content: errorMsg,
-      timestamp: new Date(),
-    });
-    await conversation.save();
-    return res.json({
-      success: true,
-      conversation_id: conversationId,
-      response: errorMsg,
-      intent: originalIntent,
-    });
-  }
-
-  const tool = analyticsTools.find((t) => t.name === toolName);
-  if (!tool) {
-    const errorMsg = "⚠️ Không tìm thấy công cụ phù hợp.";
-    conversation.messages.push({
-      message_id: uuidv4(),
-      role: "assistant",
-      content: errorMsg,
-      timestamp: new Date(),
-    });
-    await conversation.save();
-    return res.json({
-      success: true,
-      conversation_id: conversationId,
-      response: errorMsg,
-      intent: originalIntent,
-    });
-  }
-
-  // Build tool params
-  const baseParams = { account_id, date_from, date_to };
-  let toolParams = { ...baseParams };
-
-  if (toolName === "compare_campaigns" && resolvedCampaignIds.length > 0) {
-    toolParams.campaign_ids = resolvedCampaignIds;
-  }
-  if (toolName === "get_trend") {
-    const trendMetric = (metrics && metrics[0]) || "spend";
-    toolParams.metric = trendMetric.toLowerCase();
-    toolParams.granularity = "day";
-    if (resolvedCampaignIds[0]) toolParams.campaign_id = resolvedCampaignIds[0];
-  }
-  if (toolName === "get_ranking") {
-    const rankMetric = (metrics && metrics[0]) || "spend";
-    toolParams.metric = rankMetric.toLowerCase();
-    toolParams.entity_type = "campaign";
-    toolParams.order = "top";
-    toolParams.limit = 5;
-  }
-
-  logDebug("tool_input_clarify_resume", { conversation_id: conversationId, tool: toolName, tool_params: toolParams });
-
-  let assistantResponse;
-  let rawData = null;
-  let meta = {};
-
+export const startConversationSession = async (req, res) => {
   try {
-    const toolResult = await tool.invoke(toolParams);
-    try {
-      rawData = JSON.parse(toolResult);
-    } catch (e) {
-      rawData = { raw: toolResult };
+    const { account_id } = req.body;
+    const user_id = req.user?._id;
+
+    if (!user_id || !account_id) {
+      return res.status(400).json({
+        success: false,
+        message: "account_id is required to start a conversation",
+      });
     }
 
-    const noData = detectNoData(toolName, rawData);
-    if (noData) {
-      meta.errorCode = "no_data";
-      assistantResponse = "Không có dữ liệu cho bộ lọc hiện tại. Hãy thử đổi khoảng thời gian hoặc chọn chiến dịch khác. 📉";
-    } else {
-      logDebug("tool_output_clarify_resume", { conversation_id: conversationId, tool: toolName, no_data: !!noData });
+    const conversationId = uuidv4();
 
-      // Format response with LLM
-      const useOpenAI = process.env.OPENAI_API_KEY ? true : false;
-      const llm = useOpenAI
-        ? new ChatOpenAI({ modelName: "gpt-4o-mini", temperature: 0.3 })
-        : new ChatGoogleGenerativeAI({ modelName: "gemini-2.0-flash-exp", temperature: 0.3 });
-
-      const formatPrompt = `Dựa vào dữ liệu sau, hãy trả lời ngắn gọn, dễ hiểu, tiếng Việt, dùng emoji vừa phải, không markdown ** hay ##.
-DỮ LIỆU:
-${JSON.stringify(rawData)}
-`;
-      const formattedResponse = await llm.invoke([{ role: "user", content: formatPrompt }]);
-      assistantResponse = (formattedResponse.content || "").replace(/\*\*|\_\_|\#\#/g, "");
-    }
-  } catch (toolError) {
-    console.error("❌ Tool execution error:", toolError);
-    assistantResponse = "⚠️ Xin lỗi, đã xảy ra lỗi khi truy vấn dữ liệu. Vui lòng thử lại.";
-    meta.errorCode = "internal";
+    return res.json({
+      success: true,
+      conversation_id: conversationId,
+    });
+  } catch (error) {
+    console.error("Error in startConversationSession:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Không thể tạo cuộc trò chuyện mới",
+      error: error.message,
+    });
   }
+};
 
-  // Save assistant response
-  conversation.messages.push({
-    message_id: uuidv4(),
-    role: "assistant",
-    content: assistantResponse,
-    timestamp: new Date(),
-    tool_used: toolName,
-    data: rawData,
-    needs_clarification: false,
-  });
+import { agentExecutor } from "../../services/chat/agentExecutor.js";
 
-  // Clear context_summary after successful execution
-  conversation.context_summary = {
-    current_intent: originalIntent,
-    original_intent: null,
-    last_date_range: { date_from, date_to },
-    updated_at: new Date(),
-  };
-
-  conversation.last_activity_at = new Date();
-
-  if (conversation.messages.length > 20) {
-    conversation.messages = conversation.messages.slice(-20);
-  }
-
-  await conversation.save();
-
-  return res.json({
-    success: true,
-    conversation_id: conversationId,
-    response: assistantResponse,
-    intent: originalIntent,
-    date_range: { date_from, date_to },
-    meta,
-    raw_data: rawData,
-  });
-}
-
-function detectNoData(toolName, data) {
-  if (!data) return true;
-  switch (toolName) {
-    case "compare_campaigns":
-      return !Array.isArray(data.campaigns) || data.campaigns.length === 0;
-    case "get_trend":
-      return !Array.isArray(data.data_points) || data.data_points.length === 0;
-    case "get_ranking":
-      return !Array.isArray(data.ranking) || data.ranking.length === 0;
-    case "get_overview":
-      return (
-        data.total_campaigns === 0 &&
-        data.total_adsets === 0 &&
-        data.total_ads === 0
-      );
-    case "get_total_metrics":
-      return !data.metrics || data.total_days === 0;
-    case "list_campaigns":
-      return !Array.isArray(data.campaigns) || data.campaigns.length === 0;
-    default:
-      return false;
-  }
-}
-
-// ============================================
-// CHAT CONTROLLER
-// ============================================
-
-// ============================================
-// CHAT CONTROLLER
-// ============================================
+// ... (Keep imports and other functions if needed, but replace chatAnalyze)
 
 export const chatAnalyze = async (req, res) => {
   try {
@@ -487,364 +278,65 @@ export const chatAnalyze = async (req, res) => {
       timestamp: new Date(),
     });
 
-    // Step 2.5: Check if we're in CLARIFY mode (continuing a previous intent)
-    const contextSummary = conversation.context_summary || {};
-    const isInClarifyMode = contextSummary.current_intent === "CLARIFY" && contextSummary.original_intent;
-
-    if (isInClarifyMode) {
-      // User is responding to a clarify question - skip router, resume original intent
-      const originalIntent = contextSummary.original_intent;
-      const partialParams = contextSummary.partial_params || {};
-      let { metrics = [], entityNames = [] } = partialParams;
-      let date_from = contextSummary.date_range?.from;
-      let date_to = contextSummary.date_range?.to;
-
-      // Try to extract campaign selection from user's response
-      const selectedCampaign = await extractCampaignFromClarifyResponse(message, account_id);
-      if (selectedCampaign) {
-        entityNames.push(selectedCampaign.name);
-      }
-
-      // Try to extract date from user's response
-      const dateFromMessage = parseViDateRange(message);
-      if (dateFromMessage) {
-        date_from = dateFromMessage.date_from;
-        date_to = dateFromMessage.date_to;
-      }
-
-      // Now resume original intent with updated params
-      logDebug("clarify_resume", { 
-        conversation_id: conversationId, 
-        original_intent: originalIntent, 
-        selected_campaign: selectedCampaign?.name,
-        date_range: { date_from, date_to }
-      });
-
-      // Continue to tool execution with originalIntent
-      return await executeToolWithIntent(
-        originalIntent, 
-        { account_id, date_from, date_to, metrics, entityNames }, 
-        conversation, 
-        conversationId, 
-        res
-      );
-    }
-
-    // Step 3: Get conversation history for router
-    const chatHistory = conversation.messages
-      .slice(-10)
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-    // Step 4: Use Simple Router with RAG
-    const router = new SimpleRouter();
-    const routingResult = await router.route(message, chatHistory);
-
-    logDebug("router_output", {
-      conversation_id: conversationId,
-      user_query: message,
-      router_result: routingResult,
-    });
-
-    // Handle GENERAL_CHAT
-    if (routingResult.intent === "GENERAL_CHAT") {
-      const generalResponse =
-        "Xin chào! Tôi là trợ lý phân tích quảng cáo Facebook. Tôi có thể giúp bạn:\n\n" +
-        "📊 Xem tổng quan hiệu suất quảng cáo\n" +
-        "📈 So sánh các chiến dịch\n" +
-        "🔍 Phân tích xu hướng theo thời gian\n" +
-        "🏆 Xếp hạng campaigns/adsets/ads\n\n" +
-        "Bạn muốn xem dữ liệu gì?";
-
-      conversation.messages.push({
-        message_id: uuidv4(),
-        role: "assistant",
-        content: generalResponse,
-        timestamp: new Date(),
-      });
-
-      await conversation.save();
-
-      return res.json({
-        success: true,
-        conversation_id: conversationId,
-        response: generalResponse,
+    // Step 3: Process with Agent Executor
+    // We pass the last few messages as history
+    const history = conversation.messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+    
+    let result;
+    try {
+      result = await agentExecutor.processMessage(user_id, account_id, message, history);
+    } catch (agentError) {
+      console.error("[chatController] AgentExecutor error:", agentError);
+      
+      // Fallback response
+      result = {
+        response: "⚠️ Xin lỗi, tôi đang gặp sự cố kỹ thuật. Bạn có thể thử lại câu hỏi hoặc hỏi một câu khác không?",
         intent: "GENERAL_CHAT",
-      });
-    }
-
-    // Step 5: Parse date range
-    const dateText = routingResult.date_text || message;
-    const dateParsed = parseViDateRange(dateText);
-    let date_from = dateParsed?.date_from;
-    let date_to = dateParsed?.date_to;
-
-    // Normalize metrics
-    const metrics = normalizeMetrics(routingResult.metrics || []);
-    const finalIntent = routingResult.intent;
-
-    // Step 6: Determine missing slots
-    const missingSet = new Set();
-
-    // If LLM explicitly asks to clarify, trust its list of missing items.
-    if (finalIntent === "CLARIFY") {
-      (routingResult.missing || ["entities"]).forEach((item) =>
-        missingSet.add(item)
-      );
-    }
-
-    // Server-side validation for required params based on intent
-    const needsDate = ["TOTAL_METRICS", "COMPARE", "TREND", "RANKING"].includes(
-      finalIntent
-    );
-    if (needsDate && (!date_from || !date_to)) {
-      missingSet.add("date_range");
-    }
-
-    // Extract and resolve entities
-    const entityNames = Array.isArray(routingResult.entities)
-      ? routingResult.entities
-          .filter((e) => e && e.type === "campaign" && e.name)
-          .map((e) => e.name)
-      : [];
-
-    let resolvedCampaignIds = [];
-    let campaignSuggestions = [];
-    const needsEntities = ["COMPARE"].includes(finalIntent);
-
-    if (needsEntities && entityNames.length === 0) {
-      missingSet.add("entities");
-    } else if (entityNames.length > 0) {
-      const resolution = await resolveCampaignNames(account_id, entityNames);
-      for (const r of resolution) {
-        if (r.matches.length === 0) {
-          missingSet.add("entities");
-        } else if (r.matches.length === 1 || r.matches[0].score >= 0.8) {
-          if (r.matches[0].id) resolvedCampaignIds.push(r.matches[0].id);
-        } else {
-          campaignSuggestions.push(...r.matches);
-          missingSet.add("entities");
-        }
-      }
-      campaignSuggestions = Object.values(
-        campaignSuggestions.reduce((acc, c) => {
-          const key = `${c.id || ""}|${c.name}`;
-          if (!acc[key]) acc[key] = c;
-          return acc;
-        }, {})
-      ).slice(0, 8);
-    }
-
-    const missing = Array.from(missingSet);
-
-    // If clarify needed
-    if (missing.length > 0) {
-      const clarifyMessage = buildClarifyMessage(missing, campaignSuggestions);
-
-      conversation.messages.push({
-        message_id: uuidv4(),
-        role: "assistant",
-        content: clarifyMessage,
-        timestamp: new Date(),
-        type: "ANALYTICS_QUERY",
-        needs_clarification: true,
-        suggestions: campaignSuggestions.map((c) => c.name),
+        tool_used: null,
         data: null,
-      });
-
-      conversation.context_summary = {
-        current_intent: "CLARIFY",
-        original_intent: finalIntent, // Save the ORIGINAL intent to resume later
-        original_query: message,
-        partial_params: { metrics, entityNames },
-        date_range: date_from && date_to ? { from: new Date(date_from), to: new Date(date_to) } : undefined,
-        last_updated: new Date(),
+        suggestions: ["Kiểm tra trạng thái tài khoản", "Xem tổng quan chiến dịch", "Hỗ trợ kỹ thuật"]
       };
-      conversation.last_activity_at = new Date();
-      await conversation.save();
-
-      return res.json({
-        success: true,
-        conversation_id: conversationId,
-        response: clarifyMessage,
-        intent: "CLARIFY",
-        date_range: date_from && date_to ? { date_from, date_to } : null,
-        meta: {
-          clarify: { missing: Array.from(new Set(missing)) },
-          suggestions: { campaigns: campaignSuggestions },
-        },
-      });
     }
 
-    // Use tool from router if available, otherwise map from intent
-    let toolName = routingResult.tool || null;
-    if (!toolName) {
-      const intentToolMap = {
-        OVERVIEW: "get_overview",
-        TOTAL_METRICS: "get_total_metrics",
-        COMPARE: "compare_campaigns",
-        TREND: "get_trend",
-        RANKING: "get_ranking",
-        LIST_CAMPAIGNS: "list_campaigns",
-      };
-      toolName = intentToolMap[finalIntent] || null;
-    }
-
-    // Setup LLM for response formatting
-    const useOpenAI = process.env.OPENAI_API_KEY ? true : false;
-    const llm = useOpenAI
-      ? new ChatOpenAI({
-          modelName: "gpt-4o-mini",
-          temperature: 0.3,
-        })
-      : new ChatGoogleGenerativeAI({
-          modelName: "gemini-2.0-flash-exp",
-          temperature: 0.3,
-        });
-
-    let assistantResponse;
-    let toolUsed = null;
-    let rawData = null;
-    let meta = {};
-
-    if (!toolName) {
-      // Fallback: direct chat
-      assistantResponse = "Mình có thể giúp bạn phân tích quảng cáo. Bạn muốn xem gì?";
-    } else {
-      const tool = analyticsTools.find((t) => t.name === toolName);
-      if (!tool) {
-        assistantResponse = "⚠️ Không tìm thấy công cụ phù hợp để xử lý yêu cầu này.";
-      } else {
-        toolUsed = tool.name;
-        // Build tool params per tool
-        const baseParams = { account_id, date_from, date_to };
-        let toolParams = { ...baseParams };
-        if (toolName === "compare_campaigns") {
-          if (resolvedCampaignIds.length > 0) toolParams.campaign_ids = resolvedCampaignIds;
-        }
-        if (toolName === "get_trend") {
-          // Pick one metric, default spend
-          const trendMetric = (metrics[0] || "SPEND").toLowerCase();
-          toolParams.metric = trendMetric.toLowerCase();
-          toolParams.granularity = "day";
-          if (resolvedCampaignIds[0]) toolParams.campaign_id = resolvedCampaignIds[0];
-        }
-        if (toolName === "get_ranking") {
-          const rankMetric = (metrics[0] || "SPEND").toLowerCase();
-          toolParams.metric = rankMetric;
-          toolParams.entity_type = "campaign";
-          toolParams.order = "top";
-          toolParams.limit = 5;
-        }
-
-        logDebug("tool_input", { conversation_id: conversationId, tool: toolName, tool_params: toolParams });
-
-        try {
-          const toolResult = await tool.invoke(toolParams);
-          // toolResult is stringified JSON
-          try {
-            rawData = JSON.parse(toolResult);
-          } catch (e) {
-            rawData = { raw: toolResult };
-          }
-
-          // Determine no_data
-          const noData = detectNoData(toolName, rawData);
-          if (noData) {
-            meta.errorCode = "no_data";
-            assistantResponse = "Không có dữ liệu cho bộ lọc hiện tại. Hãy thử đổi khoảng thời gian hoặc chọn chiến dịch khác. 📉";
-          } else {
-            logDebug("tool_output", { conversation_id: conversationId, tool: toolName, no_data: !!noData, sample: JSON.stringify(rawData).substring(0, 300) });
-
-            // Ask LLM to format brief answer
-            const formatPrompt = `Dựa vào dữ liệu sau, hãy trả lời ngắn gọn, dễ hiểu, tiếng Việt, dùng emoji vừa phải, không markdown ** hay ##.
-CÂU HỎI: ${message}
-DỮ LIỆU:
-${JSON.stringify(rawData)}
-`;
-            const formattedResponse = await llm.invoke([{ role: "user", content: formatPrompt }]);
-            assistantResponse = (formattedResponse.content || "").replace(/\*\*|\_\_|\#\#/g, "");
-          }
-        } catch (toolError) {
-          console.error("❌ Tool execution error:", toolError);
-          assistantResponse = "⚠️ Xin lỗi, đã xảy ra lỗi khi truy vấn dữ liệu. Vui lòng thử lại.";
-          meta.errorCode = "internal";
-        }
-      }
-    }
-
-    // Step 10: Save assistant response
+    // Step 4: Save Assistant Response
     conversation.messages.push({
       message_id: uuidv4(),
       role: "assistant",
-      content: assistantResponse,
+      content: result.response,
       timestamp: new Date(),
-      tool_used: toolUsed,
-      data: rawData,
-      needs_clarification: false,
+      tool_used: result.tool_used,
+      data: result.data,
+      // Map intent to type if needed
+      type: result.intent === "GENERAL_CHAT" ? "GENERAL_CHAT" : "ANALYTICS_QUERY",
     });
 
-    // Step 9: Update context summary, clearing original_query after successful execution
-    conversation.context_summary = {
-      current_intent: finalIntent,
-      original_query: null, // Clear after successful action
-      last_date_range: { date_from, date_to },
-      updated_at: new Date(),
-    };
-
     conversation.last_activity_at = new Date();
-
-    // Keep only last 20 messages (sliding window)
-    if (conversation.messages.length > 20) {
-      conversation.messages = conversation.messages.slice(-20);
+    
+    // Prune old messages
+    if (conversation.messages.length > 50) {
+      conversation.messages = conversation.messages.slice(-50);
     }
 
     await conversation.save();
 
-    // Step 11: Return response
     return res.json({
       success: true,
       conversation_id: conversationId,
-      response: assistantResponse,
-      intent: finalIntent || "ANALYTICS_QUERY",
-      date_range: { date_from, date_to },
-      meta,
-      raw_data: rawData,
+      response: result.response,
+      intent: result.intent,
+      data: result.data,
+      suggestions: result.suggestions
     });
+
   } catch (error) {
     console.error("Error in chatAnalyze:", error);
     return res.status(500).json({
       success: false,
-      message: "Đã xảy ra lỗi khi xử lý yêu cầu",
+      message: "Internal Server Error",
       error: error.message,
     });
   }
 };
 
-function buildClarifyMessage(missing, campaignSuggestions) {
-  const miss = Array.from(new Set(missing || []));
-  const parts = [];
-  if (miss.includes("date_range")) {
-    parts.push("Bạn muốn xem trong khoảng thời gian nào? Ví dụ: 'Hôm nay', '7 ngày gần đây', 'Tháng này'.");
-  }
-  if (miss.includes("entities")) {
-    if (campaignSuggestions && campaignSuggestions.length > 0) {
-      parts.push(
-        `Mình tìm thấy vài chiến dịch gần giống tên bạn nói. Bạn chọn một nhé: ${campaignSuggestions
-          .slice(0, 6)
-          .map((c) => c.name)
-          .join(", ")}.`
-      );
-    } else {
-      parts.push("Bạn có thể nói rõ tên chiến dịch cần xem hoặc so sánh?");
-    }
-  }
-  if (miss.includes("metrics")) {
-    parts.push("Bạn muốn xem chỉ số nào? Ví dụ: CPC, CTR, CPM, Chi tiêu.");
-  }
-  return parts.join(" \n");
-}
 
 

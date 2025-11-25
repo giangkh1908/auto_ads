@@ -42,6 +42,11 @@ const shopSchema = new mongoose.Schema(
           enum: ["connected", "disconnected", "error"],
           default: "connected",
         },
+        page_status: {
+          type: String,
+          enum: ["active", "pause"],
+          default: "active",
+        },
         connected_at: { type: Date, default: Date.now },
         last_synced_at: { type: Date, default: null },
       },

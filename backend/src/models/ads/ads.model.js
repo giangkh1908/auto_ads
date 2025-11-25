@@ -29,6 +29,7 @@ const adsSchema = new mongoose.Schema(
     // Phân phối & audit
     delivery_info: { type: mongoose.Schema.Types.Mixed, default: {} },
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
+    
     deleted_at: { type: Date, default: null },
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     updated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

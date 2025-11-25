@@ -1,8 +1,11 @@
-import { Search, Settings, Plus } from "lucide-react";
+import { Search, Settings, Plus, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../../constants/app.constants";
 import DateRangePicker from "../../../components/common/DateRangePicker/DateRangePicker";
 import { useTranslation } from "react-i18next";
+import { useShopPackage } from "../../../hooks/useShopPackage";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 /**
  * Toolbar component for Ads Management
@@ -14,7 +17,6 @@ export default function AdsToolbar({
   loadingAccounts,
   onAccountChange,
   onCreateCampaign,
-  onCreateRule,
   searchTerm,
   onSearchChange,
   dateRange,
@@ -22,6 +24,15 @@ export default function AdsToolbar({
 }) {
   const { t } = useTranslation(['ads']);
   const navigate = useNavigate();
+  const { hasFeature, shopPkg, loading: pkgLoading } = useShopPackage();
+  const hasAdsAutoRun = hasFeature("ads_auto_run");
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("AdsToolbar - shopPkg:", shopPkg);
+    console.log("AdsToolbar - hasAdsAutoRun:", hasAdsAutoRun);
+    console.log("AdsToolbar - pkgLoading:", pkgLoading);
+  }, [shopPkg, hasAdsAutoRun, pkgLoading]);
 
   return (
     <div className="ads-toolbar">
@@ -53,14 +64,25 @@ export default function AdsToolbar({
           <Plus size={13} /> {t('management.create_campaign')}
         </button>
         <button
-          className={`btn-create-rule ${!selectedAccountId ? 'disabled' : ''}`}
+          className={`btn-create-rule ${!selectedAccountId ? 'disabled' : ''} ${!hasAdsAutoRun ? 'premium-feature' : ''}`}
           onClick={() => {
-            if (!selectedAccountId) return;
+            if (!selectedAccountId) {
+              return;
+            }
+            if (!hasAdsAutoRun) {
+              toast.error("Tính năng này yêu cầu shop owner có gói ChatBot AI");
+              return;
+            }
             navigate(ROUTES.AUTOMATION_RULE);
           }}
           disabled={!selectedAccountId}
         >
           <Settings size={13} /> {t('management.create_rule')}
+          {!hasAdsAutoRun && (
+            <span className="premium-badge">
+              <Crown size={12} />
+            </span>
+          )}
         </button>
       </div>
 
@@ -78,7 +100,7 @@ export default function AdsToolbar({
         <DateRangePicker
           value={dateRange}
           onChange={onDateRangeChange}
-          placeholder="Lọc theo thời gian"
+          placeholder={t('management.dateRangePlaceholder')}
         />
       </div>
     </div>

@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "./InternalPage.css";
 import { Play, Pause, Plus, ChevronDown, Search } from "lucide-react";
 import ConfirmationPopup from "../../../../../components/common/ConfirmationPopup/ConfirmationPopup";
@@ -14,85 +15,14 @@ import {
   getEntityId,
 } from "../../../../../utils/noteUtils";
 
-const STATUSES = ["All", "Active", "Inactive"];
-const ROLES = ["All", "System Admin", "CS Staff", "Accountant"];
-
-// Mock data demo UI – có thể thay bằng dữ liệu API sau
-const MOCK_INTERNAL_USERS = [
-  {
-    id: "i1",
-    name: "Vũ Quỳnh Lan",
-    phone: "0123456789",
-    email: "quynhlan@gmail.com",
-    role: "System Admin",
-    createdAt: "01/08/2024 10:30:45",
-    lastLogin: "02/08/2024 14:20:30",
-    status: "Active",
-    note: "",
-  },
-  {
-    id: "i2",
-    name: "Kim Hồng Giang",
-    phone: "0123456789",
-    email: "kimgiang@gmail.com",
-    role: "System Admin",
-    createdAt: "22/07/2023 09:15:20",
-    lastLogin: "15/03/2022 11:45:10",
-    status: "Inactive",
-    note: "Đã nghỉ việc.",
-  },
-  {
-    id: "i3",
-    name: "Nguyễn Thành Long",
-    phone: "0123456789",
-    email: "longnthe171630@fpt.edu.vn",
-    role: "CS Staff",
-    createdAt: "11/10/2024 08:20:15",
-    lastLogin: "23/10/2024 16:30:45",
-    status: "Inactive",
-    note: "Đang điều tra vi phạm.",
-  },
-  {
-    id: "i4",
-    name: "Hà Anh Tuấn",
-    phone: "0123456789",
-    email: "anhtuan@gmail.com",
-    role: "CS Staff",
-    createdAt: "04/09/2024 13:45:30",
-    lastLogin: "05/09/2024 10:15:20",
-    status: "Active",
-    note: "",
-  },
-  {
-    id: "i5",
-    name: "Nguyễn Trọng Hưng",
-    phone: "0123456789",
-    email: "tronghung@gmail.com",
-    role: "Accountant",
-    createdAt: "19/06/2024 11:20:10",
-    lastLogin: "19/09/2024 09:30:25",
-    status: "Active",
-    note: "",
-  },
-  {
-    id: "i6",
-    name: "Nguyễn Trung Kiên",
-    phone: "0123456789",
-    email: "trungkien@gmail.com",
-    role: "Accountant",
-    createdAt: "07/05/2024 14:10:50",
-    lastLogin: "08/05/2024 15:25:40",
-    status: "Active",
-    note: "",
-  },
-];
-
 export default function InternalPage() {
+  const { t, i18n } = useTranslation("admin");
+  const [rawStaff, setRawStaff] = useState([]);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All");
-  const [role, setRole] = useState("All");
+  const [status, setStatus] = useState(t("common.all"));
+  const [role, setRole] = useState(t("common.all"));
   const [dateRange, setDateRange] = useState("");
   const [confirmationPopup, setConfirmationPopup] = useState({
     isOpen: false,
@@ -104,6 +34,66 @@ export default function InternalPage() {
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const STATUSES = useMemo(() => [t("common.all"), t("common.active"), t("common.inactive")], [t]);
+  const ROLES = useMemo(() => [
+    t("common.all"),
+    t("internalPage.roles.systemAdmin"),
+    t("internalPage.roles.csStaff"),
+    t("internalPage.roles.accountant")
+  ], [t]);
+
+  // Reset filters khi đổi ngôn ngữ
+  useEffect(() => {
+    setStatus(t("common.all"));
+    setRole(t("common.all"));
+  }, [i18n.language, t]);
+
+  // Helper function để map staff data với translation
+  const mapStaffData = useCallback((user) => {
+    // Map role với translation
+    const roleMap = {
+      "System Admin": t("internalPage.roles.systemAdmin"),
+      "CS Staff": t("internalPage.roles.csStaff"),
+      "Accountant": t("internalPage.roles.accountant"),
+    };
+
+    return {
+      id: getEntityId(user),
+      name: user.full_name || "N/A",
+      phone: user.phone || "-",
+      email: user.email || "-",
+      role: roleMap[user.internal_role] || user.internal_role || "N/A",
+      createdAt: user.created_at
+        ? new Date(user.created_at)
+            .toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+            .replace(",", "")
+        : "-",
+      lastLogin: user.last_login_at
+        ? new Date(user.last_login_at)
+            .toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+            .replace(",", "")
+        : "-",
+      status: user.status === "active" ? t("common.active") : t("common.inactive"),
+      statusKey: user.status || "inactive", // Lưu status gốc để dùng cho CSS class
+      note: "",
+      noteId: null,
+    };
+  }, [t]);
+
   // Fetch internal staff từ API
   useEffect(() => {
     const fetchInternalStaff = async () => {
@@ -113,42 +103,10 @@ export default function InternalPage() {
 
         if (response.data.success) {
           const staff = response.data.data;
+          setRawStaff(staff);
 
           // Format data để hiển thị trong table
-          const formattedStaff = staff.map((user) => ({
-            id: getEntityId(user),
-            name: user.full_name || "N/A",
-            phone: user.phone || "-",
-            email: user.email || "-",
-            role: user.internal_role || "N/A",
-            createdAt: user.created_at
-              ? new Date(user.created_at)
-                  .toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
-                  .replace(",", "")
-              : "-",
-            lastLogin: user.last_login_at
-              ? new Date(user.last_login_at)
-                  .toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
-                  .replace(",", "")
-              : "-",
-            status: user.status === "active" ? "Active" : "Inactive",
-            note: "",
-            noteId: null,
-          }));
+          const formattedStaff = staff.map((user) => mapStaffData(user));
 
           // Chuẩn bị items để query notes
           const noteItems = prepareNoteItems(staff, "User");
@@ -176,14 +134,51 @@ export default function InternalPage() {
       } catch (error) {
         console.error("Error fetching internal staff:", error);
         // Fallback về mock data nếu có lỗi
-        setRows(MOCK_INTERNAL_USERS);
+        setRows([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchInternalStaff();
-  }, []);
+  }, [mapStaffData]);
+
+  // Re-map data khi ngôn ngữ thay đổi
+  useEffect(() => {
+    if (rawStaff.length > 0) {
+      const formattedStaff = rawStaff.map((user) => mapStaffData(user));
+
+      // Chuẩn bị items để query notes
+      const noteItems = prepareNoteItems(rawStaff, "User");
+
+      // Fetch notes batch nếu có staff
+      if (noteItems.length > 0) {
+        axiosInstance
+          .post(API_ENDPOINTS.NOTES.BATCH, { items: noteItems })
+          .then((notesResponse) => {
+            // Tạo Map để lookup notes
+            const notesMap = createNotesMap(notesResponse);
+
+            // Merge notes vào staff
+            const staffWithNotes = formattedStaff.map((staffMember) =>
+              mergeNoteToEntity(staffMember, "User", notesMap)
+            );
+
+            setRows(staffWithNotes);
+          })
+          .catch((error) => {
+            console.error("Error fetching notes:", error);
+            setRows(formattedStaff);
+          });
+      } else {
+        setRows(formattedStaff);
+      }
+
+      // Reset filters về "All" khi đổi ngôn ngữ
+      setStatus(t("common.all"));
+      setRole(t("common.all"));
+    }
+  }, [i18n.language, rawStaff, mapStaffData, t]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -195,9 +190,10 @@ export default function InternalPage() {
         (c.phone || "").toLowerCase().includes(s) ||
         (c.email || "").toLowerCase().includes(s);
       // Lọc theo status
-      const matchStatus = status === "All" ? true : c.status === status;
+      const allValue = t("common.all");
+      const matchStatus = status === "All" || status === allValue ? true : c.status === status;
       // Lọc theo role
-      const matchRole = role === "All" ? true : c.role === role;
+      const matchRole = role === "All" || role === allValue ? true : c.role === role;
       // Lọc theo khoảng ngày đơn giản (demo – cần thay bằng parser thật khi tích hợp)
       let matchDate = true;
       if (dateRange.includes("-")) {
@@ -222,14 +218,14 @@ export default function InternalPage() {
       }
       return matchSearch && matchStatus && matchRole && matchDate;
     });
-  }, [search, status, role, dateRange, rows]);
+  }, [search, status, role, dateRange, rows, t]);
 
   const counters = useMemo(() => {
     const total = filtered.length;
-    const active = filtered.filter((c) => c.status === "Active").length;
-    const inactive = filtered.filter((c) => c.status === "Inactive").length;
+    const active = filtered.filter((c) => c.status === t("common.active")).length;
+    const inactive = filtered.filter((c) => c.status === t("common.inactive")).length;
     return { total, active, inactive };
-  }, [filtered]);
+  }, [filtered, t]);
 
   const handleAction = async (row, type) => {
     // Set loading state
@@ -239,10 +235,10 @@ export default function InternalPage() {
       // Map action type sang status tương ứng
       let newStatus;
       switch (type) {
-        case "Activate":
+        case t("internalPage.actions.activate"):
           newStatus = "active";
           break;
-        case "Deactivate":
+        case t("internalPage.actions.deactivate"):
           newStatus = "inactive";
           break;
         default:
@@ -258,16 +254,29 @@ export default function InternalPage() {
       );
 
       if (response.data.success) {
-        // Đồng bộ status trong UI
+        // Update raw data
+        setRawStaff((prev) =>
+          prev.map((s) => {
+            const staffId = getEntityId(s);
+            if (staffId !== row.id) return s;
+            return { ...s, status: newStatus };
+          })
+        );
+
+        // Đồng bộ status trong UI với translation
         setRows((prev) =>
           prev.map((r) => {
             if (r.id !== row.id) return r;
-            // Map status từ DB (active/inactive) sang UI format (Active/Inactive)
+            // Map status từ DB (active/inactive) sang UI format với translation
             const statusMap = {
-              active: "Active",
-              inactive: "Inactive",
+              active: t("common.active"),
+              inactive: t("common.inactive"),
             };
-            return { ...r, status: statusMap[newStatus] || "Inactive" };
+            return { 
+              ...r, 
+              status: statusMap[newStatus] || t("common.inactive"),
+              statusKey: newStatus || "inactive"
+            };
           })
         );
 
@@ -282,7 +291,7 @@ export default function InternalPage() {
         });
       } else {
         throw new Error(
-          response.data.message || "Có lỗi xảy ra khi cập nhật status"
+          response.data.message || t("internalPage.messages.updateStatusError")
         );
       }
     } catch (error) {
@@ -290,7 +299,7 @@ export default function InternalPage() {
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Có lỗi xảy ra khi cập nhật status";
+        t("internalPage.messages.updateStatusError");
       alert(errorMessage); // TODO: Thay bằng toast notification
       setConfirmationPopup((prev) => ({ ...prev, isLoading: false }));
     }
@@ -298,15 +307,15 @@ export default function InternalPage() {
 
   const showConfirmDialog = (row, actionType) => {
     const actionConfig = {
-      Activate: {
+      [t("internalPage.actions.activate")]: {
         type: "activate",
-        title: "Xác nhận kích hoạt",
-        message: `Bạn có chắc muốn kích hoạt tài khoản "${row.name}"?`,
+        title: t("internalPage.messages.confirmActivate"),
+        message: t("internalPage.messages.confirmActivateMessage", { name: row.name }),
       },
-      Deactivate: {
+      [t("internalPage.actions.deactivate")]: {
         type: "deactivate",
-        title: "Xác nhận vô hiệu hóa",
-        message: `Bạn có chắc muốn vô hiệu hóa tài khoản "${row.name}"?`,
+        title: t("internalPage.messages.confirmDeactivate"),
+        message: t("internalPage.messages.confirmDeactivateMessage", { name: row.name }),
       },
     };
 
@@ -342,47 +351,37 @@ export default function InternalPage() {
 
         if (refreshResponse.data.success) {
           const staff = refreshResponse.data.data;
+          setRawStaff(staff);
 
           // Format data để hiển thị trong table
-          const formattedStaff = staff.map((user) => ({
-            id: user._id || user.id,
-            name: user.full_name || "N/A",
-            phone: user.phone || "-",
-            email: user.email || "-",
-            role: user.internal_role || "N/A",
-            createdAt: user.created_at
-              ? new Date(user.created_at)
-                  .toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
-                  .replace(",", "")
-              : "-",
-            lastLogin: user.last_login_at
-              ? new Date(user.last_login_at)
-                  .toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })
-                  .replace(",", "")
-              : "-",
-            status: user.status === "active" ? "Active" : "Inactive",
-            note: "",
-          }));
+          const formattedStaff = staff.map((user) => mapStaffData(user));
 
-          setRows(formattedStaff);
+          // Chuẩn bị items để query notes
+          const noteItems = prepareNoteItems(staff, "User");
+
+          // Fetch notes batch nếu có staff
+          if (noteItems.length > 0) {
+            const notesResponse = await axiosInstance.post(
+              API_ENDPOINTS.NOTES.BATCH,
+              { items: noteItems }
+            );
+
+            // Tạo Map để lookup notes
+            const notesMap = createNotesMap(notesResponse);
+
+            // Merge notes vào staff
+            const staffWithNotes = formattedStaff.map((staffMember) =>
+              mergeNoteToEntity(staffMember, "User", notesMap)
+            );
+
+            setRows(staffWithNotes);
+          } else {
+            setRows(formattedStaff);
+          }
         }
       } else {
         throw new Error(
-          response.data.message || "Có lỗi xảy ra khi thêm nhân viên"
+          response.data.message || t("internalPage.messages.addStaffError")
         );
       }
     } catch (error) {
@@ -390,7 +389,7 @@ export default function InternalPage() {
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Có lỗi xảy ra khi thêm nhân viên";
+        t("internalPage.messages.addStaffError");
       throw new Error(errorMessage);
     }
   };
@@ -400,11 +399,11 @@ export default function InternalPage() {
       <div className="amu-toolbar">
         <div className="amu-toolbar-left">
           <div className="amu-filter-group">
-            <label className="amu-filter-label">Search</label>
+            <label className="amu-filter-label">{t("internalPage.search")}</label>
             <div className="amu-search">
               <input
                 className="amu-search-input"
-                placeholder="Name, Phone, Email"
+                placeholder={t("internalPage.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -412,7 +411,7 @@ export default function InternalPage() {
             </div>
           </div>
           <div className="amu-filter-group">
-            <label className="amu-filter-label">Status</label>
+            <label className="amu-filter-label">{t("internalPage.status")}</label>
             <div className="amu-select-wrapper">
               <select
                 className="amu-status-select"
@@ -430,7 +429,7 @@ export default function InternalPage() {
           </div>
 
           <div className="amu-filter-group">
-            <label className="amu-filter-label">Role</label>
+            <label className="amu-filter-label">{t("internalPage.role")}</label>
             <div className="amu-select-wrapper">
               <select
                 className="amu-role-select"
@@ -447,11 +446,11 @@ export default function InternalPage() {
             </div>
           </div>
           <div className="amu-filter-group">
-            <label className="amu-filter-label">Date Range</label>
+            <label className="amu-filter-label">{t("internalPage.dateRange")}</label>
             <DateRangePicker
               value={dateRange}
               onChange={(value) => setDateRange(value)}
-              placeholder="dd/mm/yyyy - dd/mm/yyyy"
+              placeholder={t("internalPage.dateRangePlaceholder")}
             />
           </div>
         </div>
@@ -459,7 +458,7 @@ export default function InternalPage() {
         <div className="amu-toolbar-right">
           <div className="amu-counters">
             <span>
-              Active: {counters.active} | Inactive: {counters.inactive} | Total:{" "}
+              {t("internalPage.counters.active")}: {counters.active} | {t("internalPage.counters.inactive")}: {counters.inactive} | {t("internalPage.counters.total")}:{" "}
               {counters.total}
             </span>
           </div>
@@ -469,7 +468,7 @@ export default function InternalPage() {
           >
             <Plus size={16} />{" "}
             <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-              Add New
+              {t("internalPage.actions.addNew")}
             </span>
           </button>
         </div>
@@ -477,24 +476,23 @@ export default function InternalPage() {
 
       <div className="amu-table">
         <div className="amu-row amu-header">
-          <div className="amu-col amu-col-name">Name</div>
-          <div className="amu-col amu-col-phone">Phone</div>
-          <div className="amu-col amu-col-email">Email</div>
-          <div className="amu-col amu-col-role">Role</div>
-          <div className="amu-col amu-col-created">Created At</div>
-          <div className="amu-col amu-col-lastlogin">Last Login</div>
-          <div className="amu-col amu-col-status">Status</div>
-          <div className="amu-col amu-col-action">Action</div>
-          <div className="amu-col amu-col-note">Note</div>
+          <div className="amu-col amu-col-name">{t("internalPage.columns.name")}</div>
+          <div className="amu-col amu-col-phone">{t("internalPage.columns.phone")}</div>
+          <div className="amu-col amu-col-email">{t("internalPage.columns.email")}</div>
+          <div className="amu-col amu-col-role">{t("internalPage.columns.role")}</div>
+          <div className="amu-col amu-col-created">{t("internalPage.columns.createdAt")}</div>
+          {/* <div className="amu-col amu-col-lastlogin">{t("internalPage.columns.lastLogin")}</div> */}
+          <div className="amu-col amu-col-status">{t("internalPage.columns.status")}</div>
+          <div className="amu-col amu-col-action">{t("internalPage.columns.action")}</div>
         </div>
 
         {loading ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
-            Đang tải dữ liệu...
+            {t("internalPage.messages.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
-            Không có dữ liệu
+            {t("internalPage.messages.noData")}
           </div>
         ) : (
           filtered.map((row) => (
@@ -507,38 +505,38 @@ export default function InternalPage() {
                 <div>{row.createdAt.split(" ")[0]}</div>
                 <div className="amu-sub">{row.createdAt.split(" ")[1]}</div>
               </div>
-              <div className="amu-col amu-col-lastlogin">
+              {/* <div className="amu-col amu-col-lastlogin">
                 <div>{row.lastLogin.split(" ")[0]}</div>
                 <div className="amu-sub">{row.lastLogin.split(" ")[1]}</div>
-              </div>
+              </div> */}
               <div className="amu-col amu-col-status">
-                <span className={`amu-badge ${row.status.toLowerCase()}`}>
+                <span className={`amu-badge ${row.statusKey || "inactive"}`}>
                   {row.status}
                 </span>
               </div>
               <div className="amu-col amu-col-action">
                 <div className="amu-actions">
-                  {row.status === "Active" && (
+                  {row.status === t("common.active") && (
                     <button
                       className="amu-action-btn amu-action-deactivate"
-                      title="Deactivate"
-                      onClick={() => showConfirmDialog(row, "Deactivate")}
+                      title={t("internalPage.actions.deactivate")}
+                      onClick={() => showConfirmDialog(row, t("internalPage.actions.deactivate"))}
                     >
                       <Pause size={14} />
                     </button>
                   )}
-                  {row.status === "Inactive" && (
+                  {row.status === t("common.inactive") && (
                     <button
                       className="amu-action-btn amu-action-activate"
-                      title="Activate"
-                      onClick={() => showConfirmDialog(row, "Activate")}
+                      title={t("internalPage.actions.activate")}
+                      onClick={() => showConfirmDialog(row, t("internalPage.actions.activate"))}
                     >
                       <Play size={14} />
                     </button>
                   )}
                 </div>
               </div>
-              <div className="amu-col amu-col-note">
+              {/* <div className="amu-col amu-col-note">
                 <NoteEditor
                   targetType="User"
                   targetId={row.id}
@@ -554,7 +552,7 @@ export default function InternalPage() {
                     );
                   }}
                 />
-              </div>
+              </div> */}
             </div>
           ))
         )}

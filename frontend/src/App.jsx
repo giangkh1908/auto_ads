@@ -13,6 +13,7 @@ import AuthModal from "./components/feature/Auth/AuthModal.jsx";
 import Footer from "./components/layout/Footer/Footer.jsx";
 import Sidebar from "./components/layout/Sidebar/Sidebar.jsx";
 import Home from "./pages/Home/Home.jsx";
+import Guide from "./pages/Guide/Guide.jsx";
 import Dashboard from "./pages/Dashboard/Dashboard.jsx";
 import NotFound from "./pages/NotFound/NotFound.jsx";
 import AccountManagement from "./pages/AccountManagement/AccountManagement.jsx";
@@ -115,6 +116,16 @@ function AppContentInner() {
               </main>
               <Footer />
             </>
+          }
+        />
+
+        {/* Route cho Guide */}
+        <Route
+          path={ROUTES.GUIDE}
+          element={
+            <main className="page-content">
+              <Guide />
+            </main>
           }
         />
 

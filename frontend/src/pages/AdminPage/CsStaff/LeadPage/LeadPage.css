@@ -234,3 +234,153 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .cs-lead-page {
+    padding: 16px;
+    margin-top: 58px;
+  }
+
+  .cs-lead-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .cs-lead-toolbar-left {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .cs-lead-search-input {
+    width: 100%;
+    min-width: 200px;
+  }
+
+  .cs-lead-date-range {
+    width: 100%;
+  }
+
+  .cs-lead-row {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 2fr;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .cs-lead-page {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .cs-lead-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .cs-lead-toolbar-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cs-lead-search-input,
+  .cs-lead-date-range {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .cs-lead-status-select,
+  .cs-lead-assigned-select,
+  .cs-lead-note-select {
+    width: 100%;
+    min-width: auto;
+    font-size: 13px;
+  }
+
+  .cs-lead-table {
+    overflow-x: auto;
+  }
+
+  .cs-lead-row {
+    grid-template-columns: 1fr;
+    min-width: 600px;
+  }
+
+  .cs-lead-header {
+    display: none;
+  }
+
+  .cs-lead-col {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cs-lead-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .cs-lead-col:last-child {
+    border-bottom: none;
+  }
+
+  .cs-lead-col-phone,
+  .cs-lead-col-assigned,
+  .cs-lead-col-status,
+  .cs-lead-col-created {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .cs-lead-page {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .cs-lead-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .cs-lead-search-input,
+  .cs-lead-date-range,
+  .cs-lead-status-select,
+  .cs-lead-assigned-select,
+  .cs-lead-note-select {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .cs-lead-row {
+    min-width: 500px;
+  }
+
+  .cs-lead-col {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .cs-lead-col::before {
+    font-size: 11px;
+  }
+
+  .cs-lead-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+}

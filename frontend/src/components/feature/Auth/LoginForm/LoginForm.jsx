@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Mail, Lock, Eye, EyeOff, Facebook } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
 import EmailVerification from '../EmailVerification/EmailVerification'
+import AccountStatusError from '../AccountStatusError/AccountStatusError'
 import axios from 'axios'
 import { toast } from 'sonner'
 import './LoginForm.css'
@@ -14,6 +15,8 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
     const [showPwd, setShowPwd] = useState(false)
     const [errors, setErrors] = useState({})
     const [showVerificationForm, setShowVerificationForm] = useState(false)
+    const [showAccountStatusError, setShowAccountStatusError] = useState(false)
+    const [accountStatus, setAccountStatus] = useState(null)
     const [userEmail, setUserEmail] = useState('')
     const [fbLoading, setFbLoading] = useState(false)
     
@@ -48,20 +51,35 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
         
         if (!validateForm()) return
         
+        // Clear errors trước khi submit
+        setErrors({})
+        
         const result = await login({ email, password })
         
         if (result.success) {
             // Close modal after successful login (navigation handled by AuthContext)
             if (onSuccess) onSuccess()
+        } else if (result.showAccountStatusError && result.status) {
+            // Hiển thị AccountStatusError component cho inactive/banned accounts
+            setAccountStatus(result.status)
+            setShowAccountStatusError(true)
         } else if (result.requiresEmailVerification) {
             // Hiển thị form xác thực email
             setUserEmail(email)
             setShowVerificationForm(true)
+        } else if (result.error) {
+            // Hiển thị error message rõ ràng cho các lỗi khác (403, 401, etc.)
+            const errorMessage = result.error || t('auth.login_failed')
+            setErrors({ submit: errorMessage })
+            // Toast đã được hiển thị trong AuthContext, nhưng cũng hiển thị trong form để rõ ràng hơn
+            toast.error(errorMessage)
         }
     }
 
     const handleBackToLogin = () => {
         setShowVerificationForm(false)
+        setShowAccountStatusError(false)
+        setAccountStatus(null)
         setUserEmail('')
     }
 
@@ -165,12 +183,38 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
                   onSuccess();
                 }
               } else {
+                // Kiểm tra xem có phải lỗi inactive/banned không
+                const errorResponse = loginResponse.data;
+                const errorCode = errorResponse?.error?.code;
+                const status = errorResponse?.status;
+                
+                if (errorCode === 'AUTH_010' || errorCode === 'AUTH_011') {
+                  // Hiển thị AccountStatusError component
+                  setAccountStatus(status);
+                  setShowAccountStatusError(true);
+                  setFbLoading(false);
+                  return;
+                }
+                
                 console.error("❌ Backend login failed:", loginResponse.data);
-                toast.error(loginResponse.data.message || t('auth.login_failed'));
+                toast.error(errorResponse?.error?.message || errorResponse?.message || t('auth.login_failed'));
                 setFbLoading(false);
               }
             } catch (error) {
               console.error("❌ Backend login error:", error);
+          
+              // Kiểm tra xem có phải lỗi inactive/banned không
+              const errorResponse = error.response?.data;
+              const errorCode = errorResponse?.error?.code;
+              const status = errorResponse?.status;
+              
+              if (errorCode === 'AUTH_010' || errorCode === 'AUTH_011') {
+                // Hiển thị AccountStatusError component
+                setAccountStatus(status);
+                setShowAccountStatusError(true);
+                setFbLoading(false);
+                return;
+              }
           
               if (error.code === "ECONNABORTED") {
                 toast.error(t('errors.network_error'));
@@ -178,12 +222,22 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
                 toast.error(t('errors.server_error'));
               } else {
                 console.error("❌ Error response:", error.response?.data);
-                toast.error(error.response?.data?.message || t('common.error'));
+                toast.error(errorResponse?.error?.message || errorResponse?.message || t('common.error'));
               }
               setFbLoading(false);
             }
         };
 
+
+    // Nếu đang hiển thị AccountStatusError
+    if (showAccountStatusError && accountStatus) {
+        return (
+            <AccountStatusError 
+                status={accountStatus}
+                onBack={handleBackToLogin}
+            />
+        )
+    }
 
     // Nếu đang hiển thị form xác thực email
     if (showVerificationForm) {
@@ -241,6 +295,13 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
             <button type="submit" className="btn-login-form" disabled={loading}>
                 {loading ? t('auth.processing') : t('auth.login_button')}
             </button>
+
+            {/* Hiển thị lỗi chung (403, 401, etc.) */}
+            {errors.submit && (
+                <div className="error-message" style={{ marginTop: '10px', textAlign: 'center' }}>
+                    {errors.submit}
+                </div>
+            )}
 
             <div className="form-switch">
                 {t('auth.no_account')} <span className="link" onClick={onSwitchRegister}>{t('auth.register_now')}</span>

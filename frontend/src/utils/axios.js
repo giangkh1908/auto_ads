@@ -9,10 +9,36 @@ const axiosInstance = axios.create({
   // withCredentials: true, // bật nếu backend dùng cookie
 })
 
+/**
+ * ✅ Validate token chỉ chứa ký tự ASCII (ISO-8859-1)
+ * HTTP headers KHÔNG hỗ trợ Unicode
+ */
+const isValidToken = (token) => {
+  if (!token || typeof token !== 'string') return false
+  // Kiểm tra token chỉ chứa ký tự ASCII (0-127)
+  // eslint-disable-next-line no-control-regex
+  return /^[\x00-\x7F]*$/.test(token)
+}
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+    
     if (token) {
+      // ✅ Validate token trước khi set vào header
+      if (!isValidToken(token)) {
+        console.error('❌ Invalid token detected (contains non-ASCII characters). Clearing...')
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER_DATA)
+        
+        // Redirect về trang chủ nếu không phải đang ở đó
+        if (window.location.pathname !== '/') {
+          window.location.replace('/')
+        }
+        return Promise.reject(new Error('Invalid token format'))
+      }
+      
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${token}`
     }

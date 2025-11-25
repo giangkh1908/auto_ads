@@ -192,12 +192,22 @@ class AuthService {
    * Handle API errors
    */
   handleError(error) {
+    // Giữ nguyên error response để AuthContext có thể xử lý error code và status
+    // Đặc biệt cho trường hợp 403 với AUTH_010 (inactive) hoặc AUTH_011 (banned)
     if (error.response?.data) {
-      // Don't create new error for 401 (handled by axios interceptor)
-      if (error.response.status === 401) {
+      // Với 401, giữ nguyên error để axios interceptor xử lý
+      // Với 403 có error code, giữ nguyên error để AuthContext/LoginForm xử lý
+      if (error.response.status === 401 || 
+          error.response.status === 403 && error.response.data?.error?.code) {
         return error;
       }
-      return new Error(error.response.data.message || "Đã có lỗi xảy ra");
+      // Các lỗi khác, tạo Error mới với message
+      const errorMessage = error.response.data.error?.message || 
+                          error.response.data.message || 
+                          "Đã có lỗi xảy ra";
+      const newError = new Error(errorMessage);
+      newError.response = error.response; // Giữ response để có thể truy cập error code
+      return newError;
     }
     return error;
   }

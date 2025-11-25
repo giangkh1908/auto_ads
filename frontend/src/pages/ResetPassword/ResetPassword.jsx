@@ -113,7 +113,7 @@ function ResetPassword() {
     return (
         <div className="reset-password-page">
             <div className="reset-password-container">
-                <div className="form-header">
+                <div className="form-header-reset">
                     <h2>{t('auth.reset_password_title')}</h2>
                     <p>{t('auth.enter_new_password')}</p>
                 </div>

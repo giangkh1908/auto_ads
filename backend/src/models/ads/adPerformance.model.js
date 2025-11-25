@@ -40,7 +40,8 @@ const adPerformanceSchema = new mongoose.Schema(
     adset_name: { type: String, trim: true },
     ad_name: { type: String, trim: true },
     page_name: { type: String, trim: true },
-    
+    objective: { type: String, trim: true },
+
     // Ngân sách và tỷ lệ chi tiêu
     daily_budget: { type: Number, default: 0 },
     daily_spend_rate: { type: Number }, // % (spend/daily_budget * 100)
@@ -62,6 +63,18 @@ const adPerformanceSchema = new mongoose.Schema(
     // Audience Reach
     audience_reach_percentage: { type: Number }, // % đối tượng tiếp cận được
 
+    // Quality & Engagement
+    quality_ranking: { type: String },
+    post_engagement: { type: Number, default: 0 },
+    
+    // Leads
+    leads: { type: Number, default: 0 },
+    cost_per_lead: { type: Number },
+    
+    // Mobile App
+    mobile_app_install: { type: Number, default: 0 },
+    cost_per_mobile_app_install: { type: Number },
+
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: { createdAt: "created_at", updatedAt: false } }
@@ -79,6 +92,7 @@ adPerformanceSchema.index({ campaign_name: 1 });
 adPerformanceSchema.index({ adset_name: 1 });
 adPerformanceSchema.index({ ad_name: 1 });
 adPerformanceSchema.index({ page_name: 1 });
+adPerformanceSchema.index({ objective: 1 });
 
 // Compound index cho aggregation queries
 adPerformanceSchema.index({ account_id: 1, campaign_id: 1, date: 1 });

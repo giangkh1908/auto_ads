@@ -1,0 +1,126 @@
+/* Account Status Error Form Styles */
+.account-status-error-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 20px;
+}
+
+.account-status-error-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.account-status-error-icon {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.account-status-error-title {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.account-status-error-description {
+    color: #666;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.account-status-error-phone {
+    text-decoration: underline;
+    color: #007bff;
+  }
+
+.account-status-error-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.btn-contact-admin {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-contact-admin:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-back-to-login {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-back-to-login:hover {
+    background: #545b62;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+@media (max-width: 600px) {
+    .account-status-error-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .account-status-error-title {
+        font-size: 20px;
+    }
+    
+    .account-status-error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-contact-admin,
+    .btn-back-to-login {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+

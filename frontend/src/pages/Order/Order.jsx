@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import "./Order.css";
 import axiosInstance from '../../utils/axios';
 import { toast } from 'sonner';
 
 
 function Order() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -14,12 +16,12 @@ function Order() {
   const selectedPackageFromNav = location.state?.selectedPackage;
 
   // State management
-  const [currentPackage] = useState({
-    name: "STARTER",
-    customers: 1,
-    pages: 1,
-    duration: "Không giới hạn",
-  });
+  // const [currentPackage] = useState({
+  //   name: "STARTER",
+  //   customers: 1,
+  //   pages: 1,
+  //   duration: "Không giới hạn",
+  // });
 
   // Map package name to type
   const mapPackageName = (name) => {
@@ -41,18 +43,22 @@ function Order() {
   const [pages, setPages] = useState(selectedPackageFromNav?.pages);
 
   const [employees, setEmployees] = useState(selectedPackageFromNav?.employees);
-  const [duration, setDuration] = useState(
-    selectedPackageFromNav?.duration || "12months"
-  );
+  
+  // Map duration từ planType (DB format) sang UI format
+  const mapDurationFromPlanType = (planType) => {
+    if (planType === "1year" || planType === "12months") return "12months";
+    if (planType === "3months") return "3months";
+    return "12months"; // default
+  };
+  
+  const [duration, setDuration] = useState(() => {
+    const initialDuration = selectedPackageFromNav?.duration 
+      ? mapDurationFromPlanType(selectedPackageFromNav.duration)
+      : "12months";
+    return initialDuration;
+  });
   const [minPages, setMinPages] = useState("");
   const [minEmployees, setMinEmployees] = useState("");
-
-  const [discountCode, setDiscountCode] = useState("");
-  const [includeVAT, setIncludeVAT] = useState(false);
-
-  // VAT information
-  const [taxCode, setTaxCode] = useState("");
-  const [companyName, setCompanyName] = useState("");
 
   // Package pricing (per month in VND)
   const [packagePricing, setPackagePricing] = useState({
@@ -77,10 +83,16 @@ function Order() {
               lower.includes("chatbot ai") ? "CHATBOT AI" :
                 lower.includes("chatbot") ? "CHATBOT" : null;
 
-            const duration =
-              lower.includes("3") ? "3months" :
-                lower.includes("6") ? "6months" :
-                  lower.includes("12") ? "12months" : null;
+            // Map planType từ DB sang duration format trong UI
+            // DB có: "3months", "12months"
+            // UI dùng: "3months", "12months"
+            let duration = null;
+            if (pkg.planType === "3months") {
+              duration = "3months";
+            } else if (pkg.planType === "12months" || pkg.planType === "1year") {
+              // Hỗ trợ cả "12months" và "1year" (nếu có)
+              duration = "12months";
+            }
 
             if (type && duration) {
               mappedPrice[type][duration] = pkg.price;
@@ -90,7 +102,7 @@ function Order() {
           setPackagePricing(mappedPrice);
         } else {
           console.error("Failed to load packages:", res.data.message);
-          toast.error(res.data.message || "Không thể tải danh sách packages");
+          toast.error(res.data.message || t("order.messages.loadError"));
           setPackages([]);
         }
       } catch (error) {
@@ -153,10 +165,6 @@ function Order() {
       employees,
       duration,
       totalPrice,
-      discountCode,
-      includeVAT,
-      taxCode: includeVAT ? taxCode : null,
-      companyName: includeVAT ? companyName : null,
     };
 
     console.log("Order data:", orderData);
@@ -177,11 +185,11 @@ function Order() {
         });
         console.log("order: ", orderData, transaction._id);
       } else {
-        alert("Không thể tạo đơn hàng!");
+        toast.error(t("order.messages.createError"));
       }
     } catch (error) {
       console.error("Order error:", error);
-      alert("Lỗi tạo đơn hàng");
+      toast.error(t("order.messages.createErrorGeneric"));
     }
   };
 
@@ -207,21 +215,21 @@ function Order() {
           </select> */}
           <br />
           {/* Current Package Info */}
-          <div className="or-current-package">
-            Đang dùng <strong>{currentPackage.name}</strong> |{" "}
-            {currentPackage.customers} Khách | {currentPackage.pages} pages |
-            Thời hạn: <strong>{currentPackage.duration}</strong>
-          </div>
+          {/* <div className="or-current-package">
+            {t("order.currentPackage")} <strong>{currentPackage.name}</strong> |{" "}
+            {currentPackage.customers} {t("order.customers")} | {currentPackage.pages} {t("order.pages")} |
+            {t("order.duration")}: <strong>{currentPackage.duration}</strong>
+          </div> */}
         </div>
 
         {/* Order Form */}
         <div className="or-order-card">
-          <h2 className="or-order-title">ĐƠN HÀNG CỦA BẠN</h2>
+          <h2 className="or-order-title">{t("order.title")}</h2>
 
           <div className="or-form-grid">
             {/* Package Type */}
             <div className="or-form-row">
-              <label className="or-label">Gói dịch vụ</label>
+              <label className="or-label">{t("order.labels.packageType")}</label>
               <select
                 className="or-select"
                 value={packageType}
@@ -229,8 +237,8 @@ function Order() {
               >
                 {/* <option value="MIỄN PHÍ">MIỄN PHÍ</option> */}
                 {/* <option value="LIVECHAT">LIVECHAT</option> */}
-                <option value="CHATBOT">CHATBOT</option>
-                <option value="CHATBOT AI">CHATBOT AI</option>
+                <option value="CHATBOT">{t("order.packageTypes.chatbot")}</option>
+                <option value="CHATBOT AI">{t("order.packageTypes.chatbotAi")}</option>
               </select>
             </div>
 
@@ -246,7 +254,7 @@ function Order() {
                     onChange={(e) => setPages(Number(e.target.value))}
                     min={minPages}
                   />
-                  <span className="or-input-label">Pages</span>
+                  <span className="or-input-label">{t("servicePackage.stats.pages")}</span>
                 </div>
               </div>
             </div>
@@ -262,7 +270,7 @@ function Order() {
                     onChange={(e) => setEmployees(Number(e.target.value))}
                     min={minEmployees}
                   />
-                  <span className="or-input-label">Nhân viên</span>
+                  <span className="or-input-label">{t("order.labels.employees")}</span>
                 </div>
               </div>
             </div>
@@ -288,88 +296,40 @@ function Order() {
 
             {/* Unit Price */}
             <div className="or-form-row">
-              <label className="or-label">Đơn giá</label>
-              <div className="or-price-display">
-                {(packagePricing[packageType]?.[duration] || 0).toLocaleString("vi-VN")}đ / tháng
+              <label className="or-label">{t("order.labels.unitPrice")}</label>
+              <div className="or-price-display" style={{ fontWeight: 'bold', fontSize: '16px', color: '#2563eb' }}>
+                {packagePricing[packageType]?.[duration] 
+                  ? `${(packagePricing[packageType][duration]).toLocaleString("vi-VN")}đ ${t("order.price.perMonth")}`
+                  : `0đ ${t("order.price.perMonth")}`}
               </div>
             </div>
 
             {/* Duration */}
             <div className="or-form-row">
-              <label className="or-label">Thời hạn gói</label>
+              <label className="or-label">{t("order.labels.packageDuration")}</label>
               <select
                 className="or-select"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
               >
-                <option value="3months">3 tháng</option>
-                {/* <option value="6months">6 tháng</option> */}
-                <option value="12months">1 năm</option>
+                <option value="3months">{t("order.durations.3months")}</option>
+                {/* <option value="6months">{t("order.durations.6months")}</option> */}
+                <option value="12months">{t("order.durations.12months")}</option>
               </select>
             </div>
 
             {/* Total */}
             <div className="or-form-row or-total-row">
-              <label className="or-label">TỔNG TIỀN</label>
+              <label className="or-label">{t("order.labels.total")}</label>
               <div className="or-total-price">
                 {totalPrice.toLocaleString("vi-VN")}đ
               </div>
             </div>
 
-            {/* Discount Code */}
-            <div className="or-form-row or-discount-row">
-              <input
-                type="text"
-                className="or-discount-input"
-                placeholder="Mã giảm giá"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-              />
-              <button className="or-discount-btn">Áp dụng</button>
-            </div>
-
-            {/* VAT Checkbox */}
-            <div className="or-form-row or-vat-row">
-              <label className="or-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={includeVAT}
-                  onChange={(e) => setIncludeVAT(e.target.checked)}
-                />
-                <span>Xuất hóa đơn VAT</span>
-              </label>
-            </div>
-
-            {/* VAT Information (shown when checkbox is checked) */}
-            {includeVAT && (
-              <>
-                <div className="or-form-row">
-                  <label className="or-label">Mã số thuế</label>
-                  <input
-                    type="text"
-                    className="or-input"
-                    placeholder="Nhập mã số thuế"
-                    value={taxCode}
-                    onChange={(e) => setTaxCode(e.target.value)}
-                  />
-                </div>
-                <div className="or-form-row">
-                  <label className="or-label">Tên đơn vị</label>
-                  <input
-                    type="text"
-                    className="or-input"
-                    placeholder="Nhập tên đơn vị"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
             {/* Upgrade Button */}
             <div className="or-form-row">
               <button className="or-upgrade-btn" onClick={handleUpgrade}>
-                <ShoppingCart /> NÂNG CẤP NGAY
+                <ShoppingCart /> {t("order.buttons.upgrade")}
               </button>
             </div>
           </div>

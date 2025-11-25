@@ -7,6 +7,8 @@ import ShopUser from "../../models/shops/shopUser.model.js";
 import Role from "../../models/role.model.js";
 import { saveLog } from "../../utils/log.js";
 import UserPackage from "../../models/userPackage.model.js";
+import mongoose from "mongoose";
+import { getUserEntitlements } from "../../services/entitlementService.js";
 
 //  Tạo Shop
 export const createShop = async (req, res) => {
@@ -57,20 +59,34 @@ export const createShop = async (req, res) => {
     const shopLimit = userPackage.shops || 0;
 
     // ĐẾM SỐ SHOP HIỆN TẠI (usage thực tế)
-    const currentShopCount = await Shop.countDocuments({
-      ownerId,
+    // Đếm cả shop mà user là owner và shop mà user được mời vào
+    const ownedShopCount = await Shop.countDocuments({
+      owner_id: ownerId,
       deleted_at: null,
     });
 
+    // Đếm shop mà user có role (không phải owner)
+    const userRoleShops = await UserRole.find({
+      user_id: ownerId,
+    }).distinct("shop_id");
+
+    const totalShopCount = userRoleShops.length;
+
     // KIỂM TRA GIỚI HẠN
-    if (currentShopCount >= shopLimit) {
+    if (totalShopCount >= shopLimit) {
       return res.status(403).json({
         success: false,
-        message: `Đã đạt giới hạn shop: ${currentShopCount}/${shopLimit}`,
+        message: `Đã đạt giới hạn shop: ${totalShopCount}/${shopLimit}. Bạn không thể tạo thêm shop mới.`,
       });
     }
 
-    const shop = new Shop({ ...req.body, owner_id: ownerId });
+    // Gán package của owner vào shop
+    const shop = new Shop({ 
+      ...req.body, 
+      owner_id: ownerId,
+      current_package_id: userPackage.package_id._id,
+      package_expired_at: userPackage.to_date || null,
+    });
     await shop.save();
     const userRole = new UserRole({
       user_id: ownerId,
@@ -159,20 +175,79 @@ export const getShopsByOwner = async (req, res) => {
         select: "full_name email phone",
       })
       .populate({
+        path: "current_package_id",
+        select: "name price duration_days month_period planType",
+      })
+      .populate({
         path: "user_roles",
         populate: { path: "role_id", select: "role_name" },
       });
 
     // 👉 Đếm số lượng employee trong mỗi shop (từ bảng ShopUser)
+    // Đếm bao gồm cả owner
     const shopEmployeesCount = await Promise.all(
       shops.map(async (shop) => {
-        const count = await ShopUser.countDocuments({
+        const ownerId = shop.owner_id?._id || shop.owner_id;
+        const shopUserCount = await ShopUser.countDocuments({
           shop_id: shop._id,
           status: "active", // chỉ tính nhân viên đang hoạt động
         });
+        
+        // Kiểm tra xem owner có trong ShopUser chưa, nếu chưa thì +1
+        let count = shopUserCount;
+        if (ownerId) {
+          const ownerInShopUser = await ShopUser.findOne({
+            shop_id: shop._id,
+            user_id: ownerId,
+            status: "active",
+          });
+          if (!ownerInShopUser) {
+            count = shopUserCount + 1; // +1 cho owner
+          }
+        }
+        
         return { shop_id: shop._id.toString(), employee_count: count };
       })
     );
+
+    // Lấy package của các owner (có thể có nhiều owner khác nhau)
+    const ownerIds = [...new Set(shops.map(shop => shop.owner_id?._id?.toString()).filter(Boolean))];
+    const ownerPackagesMap = new Map();
+    const ownerShopCountsMap = new Map();
+    
+    if (ownerIds.length > 0) {
+      const ownerPackages = await UserPackage.find({
+        user_id: { $in: ownerIds },
+        status: { $in: ["active", "expiring soon", "new signup"] },
+        deleted_at: null,
+      })
+        .populate("package_id")
+        .sort({ created_at: -1 });
+
+      // Tạo map: ownerId -> package (lấy package mới nhất của mỗi owner)
+      ownerPackages.forEach(up => {
+        const ownerIdStr = up.user_id.toString();
+        if (!ownerPackagesMap.has(ownerIdStr) || 
+            (ownerPackagesMap.get(ownerIdStr)?.created_at < up.created_at)) {
+          ownerPackagesMap.set(ownerIdStr, up);
+        }
+      });
+
+      // Đếm số shop của mỗi owner (bao gồm cả shop được mời vào)
+      const shopCounts = await Promise.all(
+        ownerIds.map(async (ownerId) => {
+          // Đếm shop mà user có role (bao gồm cả owner và được mời)
+          const userRoleShops = await UserRole.find({
+            user_id: new mongoose.Types.ObjectId(ownerId),
+          }).distinct("shop_id");
+          return { ownerId, count: userRoleShops.length };
+        })
+      );
+
+      shopCounts.forEach(({ ownerId, count }) => {
+        ownerShopCountsMap.set(ownerId, count);
+      });
+    }
 
     // Gắn role tương ứng và employee_count vào từng shop
     const shopsWithUserRole = shops.map((shop) => {
@@ -190,12 +265,49 @@ export const getShopsByOwner = async (req, res) => {
           .length
         : 0;
 
+      // Lấy package: ưu tiên từ shop, nếu không có thì lấy từ owner của shop đó
+      const ownerIdStr = shop.owner_id?._id?.toString();
+      const ownerPackage = ownerIdStr ? ownerPackagesMap.get(ownerIdStr) : null;
+      const shopPackage = shop.current_package_id || ownerPackage?.package_id;
+      const packageName = shopPackage?.name || "Basic";
+      const expiredAt = shop.package_expired_at || ownerPackage?.to_date || null;
+
+      // Lấy limits từ package hoặc ownerPackage
+      // Nếu không có package (Basic), set default limits: 1 employee, 0 page
+      let employeeLimit = 1;
+      let pageLimit = 0;
+      let shopLimit = 0;
+      
+      if (shopPackage && packageName !== "Basic") {
+        // Có package thực sự - lấy từ ownerPackage (có thể đã được customize) hoặc từ package template
+        if (ownerPackage) {
+          employeeLimit = ownerPackage.employees || shopPackage.employees || 1;
+          pageLimit = ownerPackage.pages || shopPackage.pages || 0;
+          shopLimit = ownerPackage.shops || shopPackage.shops || 0;
+        } else {
+          employeeLimit = shopPackage.employees || 1;
+          pageLimit = shopPackage.pages || 0;
+          shopLimit = shopPackage.shops || 0;
+        }
+      }
+      // Nếu không có package hoặc là Basic, giữ default: 1 employee, 0 page, 0 shop
+
+      // Lấy số shop đã dùng của owner
+      const shopCount = ownerIdStr ? (ownerShopCountsMap.get(ownerIdStr) || 0) : 0;
+
       return {
         ...shop.toObject(),
         user_role: roleEntry.role_id,
         is_current: roleEntry.is_current,
         employee_count: employeeInfo?.employee_count || 0,
         page_count: pageCount,
+        package: packageName,
+        package_id: shopPackage?._id || null,
+        expired_at: expiredAt,
+        employee_limit: employeeLimit,
+        page_limit: pageLimit,
+        shop_count: shopCount,
+        shop_limit: shopLimit,
       };
     });
 
@@ -248,10 +360,220 @@ export const switchCurrentShop = async (req, res) => {
     targetRole.is_current = true;
     await targetRole.save();
 
-    res.json({ success: true, message: "Current shop switched successfully" });
+    // Lấy thông tin shop và package
+    const shop = await Shop.findById(id)
+      .populate({
+        path: "current_package_id",
+        select: "name features pages employees shops planType",
+      })
+      .populate("owner_id");
+
+    let shopPackageInfo = null;
+    if (shop) {
+      // Lấy package từ shop hoặc từ owner
+      const shopPackage = shop.current_package_id;
+      if (shopPackage) {
+        shopPackageInfo = {
+          id: shopPackage._id.toString(),
+          name: shopPackage.name,
+          features: shopPackage.features || [],
+          pages: shopPackage.pages || 0,
+          employees: shopPackage.employees || 0,
+          shops: shopPackage.shops || 0,
+          planType: shopPackage.planType,
+        };
+      } else if (shop.owner_id) {
+        // Fallback: lấy từ owner package
+        const ownerPackage = await UserPackage.findOne({
+          user_id: shop.owner_id._id || shop.owner_id,
+          status: { $in: ["active", "expiring soon", "new signup"] },
+          deleted_at: null,
+        })
+          .populate({
+            path: "package_id",
+            select: "name features pages employees shops planType",
+          })
+          .sort({ created_at: -1 });
+
+        if (ownerPackage && ownerPackage.package_id) {
+          shopPackageInfo = {
+            id: ownerPackage.package_id._id.toString(),
+            name: ownerPackage.package_id.name,
+            features: ownerPackage.package_id.features || [],
+            pages: ownerPackage.pages || ownerPackage.package_id.pages || 0,
+            employees: ownerPackage.employees || ownerPackage.package_id.employees || 0,
+            shops: ownerPackage.shops || ownerPackage.package_id.shops || 0,
+            planType: ownerPackage.package_id.planType,
+          };
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Current shop switched successfully",
+      shop: {
+        id: shop?._id,
+        shop_name: shop?.shop_name,
+        package: shopPackageInfo,
+      }
+    });
   } catch (err) {
     console.error("Error switching shop:", err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Lấy package của shop hiện tại
+export const getCurrentShopPackage = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Lấy shop hiện tại của user
+    const currentRole = await UserRole.findOne({
+      user_id: userId,
+      is_current: true,
+    });
+
+    if (!currentRole) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy shop hiện tại",
+      });
+    }
+
+    const shopId = currentRole.shop_id;
+    const shop = await Shop.findById(shopId)
+      .populate({
+        path: "current_package_id",
+        select: "name features pages employees shops planType",
+      })
+      .populate("owner_id");
+
+    if (!shop) {
+      return res.status(404).json({
+        success: false,
+        message: "Shop không tồn tại",
+      });
+    }
+
+    // Lấy package từ shop hoặc từ owner
+    const shopPackage = shop.current_package_id;
+    const ownerId = shop.owner_id?._id || shop.owner_id;
+    let packageInfo = null;
+    let limits = { pages: 0, employees: 1, shops: 0 };
+    let usage = { pages: 0, employees: 0, shops: 0 };
+
+    if (shopPackage) {
+      packageInfo = {
+        id: shopPackage._id.toString(),
+        name: shopPackage.name,
+        features: shopPackage.features || [],
+        pages: shopPackage.pages || 0,
+        employees: shopPackage.employees || 0,
+        shops: shopPackage.shops || 0,
+        planType: shopPackage.planType,
+      };
+      limits = {
+        pages: shopPackage.pages || 0,
+        employees: shopPackage.employees || 0,
+        shops: shopPackage.shops || 0,
+      };
+    } else if (ownerId) {
+      // Fallback: lấy từ owner package
+      const ownerPackage = await UserPackage.findOne({
+        user_id: ownerId,
+        status: { $in: ["active", "expiring soon", "new signup"] },
+        deleted_at: null,
+      })
+        .populate({
+          path: "package_id",
+          select: "name features pages employees shops planType",
+        })
+        .sort({ created_at: -1 });
+
+      if (ownerPackage && ownerPackage.package_id) {
+        packageInfo = {
+          id: ownerPackage.package_id._id.toString(),
+          name: ownerPackage.package_id.name,
+          features: ownerPackage.package_id.features || [],
+          pages: ownerPackage.pages || ownerPackage.package_id.pages || 0,
+          employees: ownerPackage.employees || ownerPackage.package_id.employees || 0,
+          shops: ownerPackage.shops || ownerPackage.package_id.shops || 0,
+          planType: ownerPackage.package_id.planType,
+        };
+        limits = {
+          pages: ownerPackage.pages || ownerPackage.package_id.pages || 0,
+          employees: ownerPackage.employees || ownerPackage.package_id.employees || 0,
+          shops: ownerPackage.shops || ownerPackage.package_id.shops || 0,
+        };
+      }
+    }
+
+    // Lấy usage từ owner entitlements và đếm riêng cho shop này
+    if (ownerId) {
+      try {
+        const ownerEntitlements = await getUserEntitlements(ownerId.toString());
+        if (ownerEntitlements) {
+          // Lấy limits từ entitlements
+          if (ownerEntitlements.limits) {
+            limits = ownerEntitlements.limits;
+          }
+          
+          // Đếm usage riêng cho shop này
+          // Đếm số employee trong shop này (bao gồm cả owner)
+          const shopUserCount = await ShopUser.countDocuments({
+            shop_id: shopId,
+            status: "active",
+          });
+          
+          // Kiểm tra xem owner có trong ShopUser chưa, nếu chưa thì +1
+          const ownerInShopUser = await ShopUser.findOne({
+            shop_id: shopId,
+            user_id: ownerId,
+            status: "active",
+          });
+          
+          const shopEmployeeCount = ownerInShopUser ? shopUserCount : shopUserCount + 1;
+          
+          // Đếm số page trong shop này
+          const shopPageCount = Array.isArray(shop.facebook_pages)
+            ? shop.facebook_pages.filter((p) => p.connected_status === "connected").length
+            : 0;
+          
+          // Lấy số shop của owner (từ entitlements)
+          const ownerShopCount = ownerEntitlements.usage?.shops || 0;
+          
+          usage = {
+            employees: shopEmployeeCount,
+            pages: shopPageCount,
+            shops: ownerShopCount, // Vẫn dùng tổng số shop của owner
+          };
+        }
+      } catch (err) {
+        console.error("Error getting owner entitlements:", err);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        shop: {
+          id: shop._id,
+          shop_name: shop.shop_name,
+        },
+        package: packageInfo,
+        limits,
+        usage,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting current shop package:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server khi lấy package của shop",
+      error: error.message,
+    });
   }
 };
 
@@ -427,6 +749,7 @@ export const connectFacebookPage = async (req, res) => {
       page_id: pageId,
       page_token: pageAccessToken,
       connected_status: 'connected',
+      page_status: 'active',
       ...(pageInfo ? { page_info: pageInfo } : {}),
       connected_at: new Date(),
       last_synced_at: null,
@@ -441,6 +764,20 @@ export const connectFacebookPage = async (req, res) => {
     await shop.save();
 
     // Cập nhật ShopUser bằng findOneAndUpdate (tránh VersionError)
+    // Build newEntry object cho MongoDB aggregation
+    const shopUserNewEntry = {
+      page_id: pageId,
+      page_name: pageInfo?.name || "",
+      page_category: pageInfo?.category || "",
+      page_access_token: pageAccessToken,
+      picture_url: pageInfo?.picture_url || "",
+      connected_status: 'connected',
+      page_status: 'active',
+      connected_at: new Date(),
+      assigned_by: userId,
+      assigned_at: new Date(),
+    };
+
     const updatedShopUser = await ShopUser.findOneAndUpdate(
       { user_id: userId, shop_id: shopId, removed_at: null },
       [
@@ -463,13 +800,13 @@ export const connectFacebookPage = async (req, res) => {
                         in: {
                           $cond: [
                             { $eq: ["$$p.page_id", pageId] },
-                            { ...newEntry },
+                            shopUserNewEntry,
                             "$$p",
                           ],
                         },
                       },
                     },
-                    { $concatArrays: ["$$pages", [newEntry]] },
+                    { $concatArrays: ["$$pages", [shopUserNewEntry]] },
                   ],
                 },
               },
@@ -573,6 +910,89 @@ export const disconnectFacebookPage = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Đã ngắt kết nối page.', data: { shop: updatedShop, shopUser: updatedShopUser, } });
   } catch (error) {
     console.log('disconnectFacebookPage error:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi hệ thống.' });
+  }
+};
+
+// Pause/Resume Facebook Page
+export const updatePageStatus = async (req, res) => {
+  try {
+    const { pageId, pageStatus } = req.body;
+    if (!pageId || !pageStatus) {
+      return res.status(400).json({ success: false, message: 'Thiếu tham số.' });
+    }
+    if (!["active", "pause"].includes(pageStatus)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ. Chỉ chấp nhận: active, pause' });
+    }
+
+    const userId = req.user._id;
+    const currentUser = await User.findById(userId);
+
+    // Lấy shop hiện tại của user
+    const currentUserRole = await UserRole.findOne({
+      user_id: userId,
+      is_current: true,
+    });
+
+    if (!currentUserRole) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy vai trò hiện tại của người dùng." });
+    }
+
+    const shopId = currentUserRole.shop_id;
+
+    // Tìm ShopUser tương ứng
+    const shopUser = await ShopUser.findOne({
+      user_id: userId,
+      shop_id: shopId,
+      removed_at: null,
+    });
+
+    if (!shopUser) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy ShopUser tương ứng." });
+    }
+
+    // Update page_status trong Shop
+    const shop = await Shop.findById(shopId);
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy shop." });
+    }
+
+    const pageIndex = shop.facebook_pages.findIndex(p => p.page_id === pageId);
+    if (pageIndex === -1) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy page trong shop." });
+    }
+
+    shop.facebook_pages[pageIndex].page_status = pageStatus;
+    await shop.save();
+
+    // Update page_status trong ShopUser
+    const shopUserPageIndex = shopUser.facebook_pages?.findIndex(p => p.page_id === pageId);
+    if (shopUserPageIndex !== -1 && shopUser.facebook_pages) {
+      shopUser.facebook_pages[shopUserPageIndex].page_status = pageStatus;
+      await shopUser.save();
+    }
+
+    await saveLog({
+      user_id: userId,
+      user_name: currentUser.full_name || currentUser.email,
+      shop_id: shopId,
+      shop_name: shop?.shop_name || "Shop",
+      action: pageStatus === "pause" ? "PAUSE_FACEBOOK_PAGE" : "RESUME_FACEBOOK_PAGE",
+      target_type: "FacebookPage",
+      target_id: pageId,
+      target_name: pageId,
+      request: req.body,
+      success: true,
+      ip_address: req.ip,
+    });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: pageStatus === "pause" ? 'Đã tạm dừng page.' : 'Đã kích hoạt lại page.',
+      data: { shop, shopUser } 
+    });
+  } catch (error) {
+    console.log('updatePageStatus error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi hệ thống.' });
   }
 };

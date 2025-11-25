@@ -1,9 +1,11 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Users, UserCog, FileText, ClipboardList } from 'lucide-react';
 import './AdminSidebar.css';
 
 export default function AdminSidebar() {
+  const { t } = useTranslation('admin');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,14 +31,14 @@ export default function AdminSidebar() {
             onClick={() => navigate('/admin/system-admin/user-management')}
           >
             <Users size={18} />
-            <span>Customer</span>
+            <span>{t('sidebar.customer')}</span>
           </button>
           <button
             className={`admin-sidebar-tab ${isInternal ? 'active' : ''}`}
             onClick={() => navigate('/admin/system-admin/user-management/internal')}
           >
             <UserCog size={18} />
-            <span>Internal</span>
+            <span>{t('sidebar.internal')}</span>
           </button>
         </div>
       </nav>
@@ -53,14 +55,14 @@ export default function AdminSidebar() {
             onClick={() => navigate('/admin/system-admin/system-monitoring')}
           >
             <FileText size={18} />
-            <span>System Log</span>
+            <span>{t('sidebar.systemLog')}</span>
           </button>
           <button
             className={`admin-sidebar-tab ${isCustomerLog ? 'active' : ''}`}
             onClick={() => navigate('/admin/system-admin/system-monitoring/customer-log')}
           >
             <ClipboardList size={18} />
-            <span>Customer Log</span>
+            <span>{t('sidebar.customerLog')}</span>
           </button>
         </div>
       </nav>

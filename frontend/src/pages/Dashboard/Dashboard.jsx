@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import facebook_icon from "../../assets/facebook.png";
@@ -8,7 +8,7 @@ import profileService from "../../services/profileService";
 import shopService from "../../services/shopService";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useMyPackage } from "../../hooks/useMyPackage.js";
+import { useShopPackage } from "../../hooks/useShopPackage.js";
 
 function Dashboard() {
   const [filterValue, setFilterValue] = useState("all");
@@ -18,67 +18,98 @@ function Dashboard() {
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const [connectedPages, setConnectedPages] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { t } = useTranslation();
-  const { pkg, loading: pkgLoading, canAdd } = useMyPackage();
-  const canConnectPage = pkg && canAdd("pages"); // ← KIỂM TRA LIMIT PAGE
+  const { shopPkg, loading: pkgLoading } = useShopPackage();
+  
+  // Lấy package từ shopPkg
+  const pkg = shopPkg?.package ? {
+    package: shopPkg.package,
+    limits: {
+      pages: shopPkg.package.pages || 0,
+      employees: shopPkg.package.employees || 0,
+      shops: shopPkg.package.shops || 0,
+    },
+    usage: {
+      pages: connectedPages.length, // Số page đã kết nối
+      employees: 0,
+      shops: 0,
+    },
+  } : null;
+  
+  // Kiểm tra có thể kết nối page mới không (dựa trên shop package)
+  const canConnectPage = pkg && (connectedPages.length < (pkg.limits?.pages || 0));
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const me = await profileService.getCurrentProfile();
-        const shop = me?.data?.shopUser || me?.shopUser;
-        const pages = Array.isArray(shop?.facebook_pages)
-          ? shop.facebook_pages
-          : [];
-        const normalized = pages
-          .filter((p) => p.connected_status === "connected")
-          .map((p) => ({
-            id: p.page_id,
-            name: p.page_info?.name || "Facebook Page",
-            pageId: p.page_id,
-            link: `https://www.facebook.com/${p.id}`,
-            avatar:
-              p.page_info?.picture_url ||
-              `https://graph.facebook.com/${p.page_id}/picture?type=square`,
-            status: "active",
-            followerCount: 0,
-          }));
-        setConnectedPages(normalized);
-      } catch (e) {
-        console.error("Load dashboard shop info error:", e);
-      }
-    };
-    load();
+  // Tách logic load thành function riêng để tái sử dụng
+  const loadPages = useCallback(async () => {
+    try {
+      const me = await profileService.getCurrentProfile();
+      const shop = me?.data?.shopUser || me?.shopUser;
+      const pages = Array.isArray(shop?.facebook_pages)
+        ? shop.facebook_pages
+        : [];
+      const normalized = pages
+        .filter((p) => p.connected_status === "connected")
+        .map((p) => ({
+          id: p.page_id,
+          name: p.page_info?.name || "Facebook Page",
+          pageId: p.page_id,
+          link: `https://www.facebook.com/${p.id}`,
+          avatar:
+            p.page_info?.picture_url ||
+            `https://graph.facebook.com/${p.page_id}/picture?type=square`,
+          status: p.page_status || "active",
+          followerCount: 0,
+        }));
+      setConnectedPages(normalized);
+      return true;
+    } catch (e) {
+      console.error("Load dashboard shop info error:", e);
+      return false;
+    }
   }, []);
 
-  const handleRefresh = () => {
-    console.log("Refreshing...");
+  // Load pages khi component mount
+  useEffect(() => {
+    loadPages();
+  }, [loadPages]);
+
+  // Handle refresh button
+  const handleRefresh = async () => {
+    if (isRefreshing) return; // Prevent multiple clicks
+    
+    setIsRefreshing(true);
+    const success = await loadPages();
+    if (success) {
+      toast.success(t("dashboard.refresh_success") || "Đã làm mới danh sách");
+    } else {
+      toast.error(t("dashboard.refresh_error") || "Không thể làm mới dữ liệu");
+    }
+    setIsRefreshing(false);
   };
 
-  const handleContribute = () => {
-    console.log("Contributing page...");
-  };
+  // const handleContribute = () => {
+  //   console.log("Contributing page...");
+  // };
 
   const handleAddNewPage = () => {
     navigate(ROUTES.CONNECT_PAGE);
   };
 
-  // Menu items data
-  const menuItems = [
-    { id: "rename", icon: <Edit3 size={16} />, text: t("dashboard.rename_page") },
-    { id: "pause", icon: <Pause size={16} />, text: t("dashboard.pause_page") },
-    { id: "disconnect", icon: <PlugZap size={16} />, text: t("dashboard.disconnect_page") },
-    { id: "refresh", icon: <RefreshCcw size={16} />, text: t("dashboard.refresh_page") },
-    { id: "switch", icon: <Repeat size={16} />, text: t("dashboard.switch_shop") },
-    { id: "notifications", icon: <Bell size={16} />, text: t("dashboard.notifications") },
-    { id: "customers", icon: <Users size={16} />, text: t("dashboard.customers") },
-    { id: "livechat", icon: <MessageCircle size={16} />, text: t("dashboard.livechat") },
-    { id: "chatbot", icon: <Bot size={16} />, text: t("dashboard.chatbot") },
-    { id: "campaigns", icon: <Play size={16} />, text: t("dashboard.campaigns") },
-    { id: "sequence", icon: <Calendar size={16} />, text: t("dashboard.sequence") },
-    { id: "keywords", icon: <Key size={16} />, text: t("dashboard.keywords") },
-    { id: "shop", icon: <Store size={16} />, text: t("dashboard.shop") },
-  ];
+  // Get menu items based on page status
+  const getMenuItems = (pageStatus) => {
+    const items = [];
+    
+    if (pageStatus === "pause") {
+      items.push({ id: "resume", icon: <Play size={16} />, text: t("dashboard.resume_page") });
+    } else {
+      items.push({ id: "pause", icon: <Pause size={16} />, text: t("dashboard.pause_page") });
+    }
+    
+    items.push({ id: "disconnect", icon: <PlugZap size={16} />, text: t("dashboard.disconnect_page") });
+    
+    return items;
+  };
 
   const handlePageMenu = (pageId) => {
     setOpenMenuId(openMenuId === pageId ? null : pageId);
@@ -88,6 +119,50 @@ function Dashboard() {
     setOpenMenuId(null);
     if (itemId === "shop") {
       navigate(ROUTES.SHOP);
+      return;
+    }
+    if (itemId === "pause") {
+      try {
+        const res = await shopService.updatePageStatus({
+          pageId,
+          pageStatus: "pause",
+        });
+        if (res?.success) {
+          setConnectedPages((prev) =>
+            prev.map((p) =>
+              p.id === pageId ? { ...p, status: "pause" } : p
+            )
+          );
+          toast.success(res.message || "Đã tạm dừng page.");
+        } else {
+          toast.warning(res.message || "Không thể tạm dừng page.");
+        }
+      } catch (e) {
+        console.log("Pause page error:", e);
+        toast.error("Có lỗi khi tạm dừng page.");
+      }
+      return;
+    }
+    if (itemId === "resume") {
+      try {
+        const res = await shopService.updatePageStatus({
+          pageId,
+          pageStatus: "active",
+        });
+        if (res?.success) {
+          setConnectedPages((prev) =>
+            prev.map((p) =>
+              p.id === pageId ? { ...p, status: "active" } : p
+            )
+          );
+          toast.success(res.message || "Đã kích hoạt lại page.");
+        } else {
+          toast.warning(res.message || "Không thể kích hoạt lại page.");
+        }
+      } catch (e) {
+        console.log("Resume page error:", e);
+        toast.error("Có lỗi khi kích hoạt lại page.");
+      }
       return;
     }
     if (itemId === "disconnect") {
@@ -191,15 +266,22 @@ function Dashboard() {
                 </button>
               </div>
 
-              <button className="btn-refresh" onClick={handleRefresh}>
-                <RefreshCcw size={16} />
+              <button 
+                className="btn-refresh" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCcw 
+                  size={16} 
+                  className={isRefreshing ? "spinning" : ""}
+                />
                 &nbsp;{t("dashboard.refresh_page")}
               </button>
 
-              <button className="btn-contribute" onClick={handleContribute}>
+              {/* <button className="btn-contribute" onClick={handleContribute}>
                 <Link2 size={16} />
                 &nbsp;{t("dashboard.merge_page")}
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -218,8 +300,8 @@ function Dashboard() {
                   canConnectPage
                     ? t("dashboard.connect_new_page")
                     : pkg
-                      ? `Đã đạt giới hạn: ${pkg.usage?.pages || 0}/${pkg.limits?.pages || 0}`
-                      : "Cần gói dịch vụ để kết nối Page"
+                      ? `Đã đạt giới hạn: ${connectedPages.length}/${pkg.limits?.pages || 0}`
+                      : "Shop owner cần gói dịch vụ để kết nối Page"
                 }
               >
                 <div className="add-page-content">
@@ -231,7 +313,7 @@ function Dashboard() {
                     {pkgLoading 
                       ? "..." 
                       : pkg 
-                        ? `${pkg.usage?.pages || 0}/${pkg.limits?.pages || 0}` 
+                        ? `${connectedPages.length}/${pkg.limits?.pages || 0}` 
                         : `${connectedPages.length}/?`}
                     )
                   </div>
@@ -265,11 +347,13 @@ function Dashboard() {
                               alt="Facebook"
                               className="fb_icon"
                             />
-                            {page.followerCount}
+                            {/* {page.followerCount} */}
                           </span>
                         </div>
                         <div className="page-stats-right">
-                          <span className="page-status active">{t("dashboard.active")}</span>
+                          <span className={`page-status ${page.status === "pause" ? "pause" : "active"}`}>
+                            {page.status === "pause" ? t("dashboard.pause") : t("dashboard.active")}
+                          </span>
                           <div className="page-menu-container" ref={menuRef}>
                             <button
                               className="page-menu-button"
@@ -285,7 +369,7 @@ function Dashboard() {
                                 className="page-dropdown-menu"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                {menuItems.map((item) => (
+                                {getMenuItems(page.status).map((item) => (
                                   <button
                                     key={item.id}
                                     className="dropdown-menu-item"

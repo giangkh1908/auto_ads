@@ -5,13 +5,18 @@ import axiosInstance from "../../utils/axios";
 import { toast } from "sonner";
 import { ROUTES, STORAGE_KEYS } from "../../constants/app.constants";
 import "./AccountManagement.css";
-import { CheckCircle, XCircle, Archive, Trash2, Play, Pause } from "lucide-react";
+import { CheckCircle, XCircle, Archive, Trash2, Play, Pause, Crown } from "lucide-react";
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup";
 import { onShopChange } from "../../utils/shopCache";
+import { useShopPackage } from "../../hooks/useShopPackage";
 
 function AccountManagement() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { shopPkg } = useShopPackage();
+  
+  // Lấy package của shop owner (từ shop package)
+  const ownerPackage = shopPkg?.package;
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -89,8 +94,10 @@ function AccountManagement() {
       const accountIds = items.map((acc) => acc.external_id).filter(Boolean);
       if (accountIds.length === 0) return;
       await fetchAccountStats(accountIds);
+      toast.success(t('account_management.sync_success'));
     } catch (e) {
       console.error(e);
+      toast.error(t('account_management.sync_error'));
     } finally {
       setSyncing(false);
     }
@@ -262,12 +269,12 @@ function AccountManagement() {
               
               cacheKeysToRemove.forEach(key => {
                 localStorage.removeItem(key);
-                console.log('✅ Đã xóa cache key:', key);
+                console.log(' Đã xóa cache key:', key);
               });
               
-              console.log('✅ Đã xóa tất cả cache của tài khoản quảng cáo:', deletedExternalId);
+              console.log(' Đã xóa tất cả cache của tài khoản quảng cáo:', deletedExternalId);
             } catch (error) {
-              console.error('❌ Lỗi khi xóa cache tài khoản quảng cáo:', error);
+              console.error(' Lỗi khi xóa cache tài khoản quảng cáo:', error);
             }
           }
           
@@ -372,10 +379,24 @@ function AccountManagement() {
 
               <div>
                 <button
-                  className="add-account"
-                  onClick={() => navigate(ROUTES.CONNECT_AD_ACCOUNT)}
+                  className={`add-account ${!ownerPackage ? 'premium-feature' : ''}`}
+                  onClick={() => {
+                    if (!ownerPackage) {
+                      toast.error("Tính năng này yêu cầu shop owner có gói dịch vụ. Vui lòng yêu cầu shop owner mua gói để sử dụng.");
+                      navigate(ROUTES.SERVICE_PACKAGE);
+                      return;
+                    }
+                    navigate(ROUTES.CONNECT_AD_ACCOUNT);
+                  }}
+                  disabled={!ownerPackage}
+                  title={!ownerPackage ? "Shop owner cần mua gói dịch vụ để sử dụng tính năng này" : ""}
                 >
                   + {t('account_management.add_account')}
+                  {!ownerPackage && (
+                    <span className="premium-badge">
+                      <Crown size={12} />
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

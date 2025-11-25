@@ -1,6 +1,8 @@
 import cron from "node-cron";
 import AdsAccount from "../models/ads/adsAccount.model.js";
 import { syncAdHourlyInsightsForAccount } from "../services/adHourlyInsightsService.js";
+import { FEATURE_KEYS } from "../services/entitlementService.js";
+import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 
 const VIETNAM_OFFSET_MINUTES = 7 * 60;
 const VIETNAM_OFFSET_MS = VIETNAM_OFFSET_MINUTES * 60 * 1000;
@@ -21,23 +23,40 @@ export const startAdHourlyInsightsCron = () => {
 
     try {
       const activeAccounts = await AdsAccount.find({ status: "ACTIVE" })
-        .select("_id external_id name")
+        .select("_id external_id name shop_admin_id")
         .lean();
 
-      if (!activeAccounts || activeAccounts.length === 0) {
-        console.log(`[${retrievedAtIso}] ⚠️ No active accounts found for hourly insights (retrieved_at=${retrievedAtIso})`);
+      const { eligibleAccounts, skippedAccounts } = await filterAccountsByFeature(
+        activeAccounts,
+        FEATURE_KEYS.ANALYTICS_CHAT_AI
+      );
+
+      if (!eligibleAccounts || eligibleAccounts.length === 0) {
+        console.log(
+          `[${retrievedAtIso}] ⚠️ No eligible accounts with analytics feature (retrieved_at=${retrievedAtIso})`
+        );
         return;
       }
 
-      console.log(`[${retrievedAtIso}] 📊 Found ${activeAccounts.length} active accounts for hourly insights (retrieved_at=${retrievedAtIso})`);
+      if (skippedAccounts > 0) {
+        console.log(
+          `[${retrievedAtIso}] ℹ️ Skipped ${skippedAccounts} account(s) without analytics feature (retrieved_at=${retrievedAtIso})`
+        );
+      }
+
+      console.log(
+        `[${retrievedAtIso}] 📊 Found ${eligibleAccounts.length} eligible accounts for hourly insights (retrieved_at=${retrievedAtIso})`
+      );
 
       let totalProcessed = 0;
       let totalUpserts = 0;
 
-      for (let index = 0; index < activeAccounts.length; index++) {
-        const account = activeAccounts[index];
+      for (let index = 0; index < eligibleAccounts.length; index++) {
+        const account = eligibleAccounts[index];
         const accountStart = new Date().toISOString();
-        console.log(`[${accountStart}] 🔄 [${index + 1}/${activeAccounts.length}] Syncing hourly insights for account ${account.external_id} (retrieved_at=${retrievedAtIso})`);
+        console.log(
+          `[${accountStart}] 🔄 [${index + 1}/${eligibleAccounts.length}] Syncing hourly insights for account ${account.external_id} (retrieved_at=${retrievedAtIso})`
+        );
 
         try {
           const result = await syncAdHourlyInsightsForAccount(account, { retrievedAtHour: retrievedAt }); // ✅ Pass thời gian thực

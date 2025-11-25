@@ -374,11 +374,32 @@
   transition: all 0.3s ease;
   box-shadow: 0 0 15px rgba(106, 0, 244, 0.4);
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-generate-ai:hover {
   background-position: right center;
   transform: translateY(-2px);
+}
+
+/* Premium feature badge */
+.btn-generate-ai.premium-feature {
+  position: relative;
+}
+
+.btn-generate-ai .premium-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #fff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: 5px;
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
 }
 
 

@@ -7,6 +7,8 @@ const BILLING_EVENT_LABELS = {
   IMPRESSIONS: "Hiển thị (lượt xem quảng cáo)",
   LINK_CLICKS: "Nhấp vào liên kết",
   APP_INSTALLS: "Cài đặt ứng dụng",
+  CONVERSATIONS: "Cuộc trò chuyện",
+  PURCHASE: "Mua hàng",
 };
 
 const EngagementSchema = {
@@ -42,11 +44,17 @@ const EngagementSchema = {
           label: "Loại tương tác",
           options: (objective) => {
             const config = ADSET_CONFIG_BY_OBJECTIVE[objective];
-            return config?.optimization_goals || [];
+            const goals = config?.optimization_goals || [];
+            return [
+              { value: "", label: "~ Chọn loại tương tác ~" },
+              ...goals
+            ];
           },
-          default: "POST_ENGAGEMENT",
+          default: "",
           validate: (value) => {
-            if (!value) return "Thiếu mục tiêu tối ưu hóa";
+            if (!value || value === "") {
+              return "Vui lòng chọn loại tương tác";
+            }
             return true;
           },
         },
@@ -79,6 +87,143 @@ const EngagementSchema = {
               : null,
           validate: (value) => {
             if (!value) return "Thiếu sự kiện tính phí";
+            return true;
+          },
+        },
+      ],
+    },
+    {
+      id: "engagement-destination",
+      title: "Vị trí chuyển đổi",
+      icon: "Target",
+      // ✅ Ẩn section này nếu chưa chọn optimization_goal
+      visibleIf: (adset) => {
+        return adset?.optimization_goal && adset.optimization_goal !== "";
+      },
+      fields: [
+        {
+          type: "radio-group",
+          name: "engagement_destination",
+          // label: "Chọn nơi bạn muốn người dùng tương tác",
+          // ✅ Filter options dựa trên optimization_goal
+          options: (objective, adset) => {
+            const allOptions = [
+              {
+                value: "MESSENGER",
+                label: "Tin nhắn",
+                icon: "MessageSquare",
+              },
+              {
+                value: "ON_POST",
+                label: "Trên quảng cáo",
+                icon: "Megaphone",
+              },
+              { value: "CALL", label: "Cuộc gọi", icon: "Phone" },
+              { value: "WEBSITE", label: "Trang web", icon: "Globe" },
+              { value: "APP", label: "Ứng dụng", icon: "Smartphone" },
+              { value: "ON_PAGE", label: "Facebook", icon: "Facebook" },
+            ];
+
+            const optimizationGoal = adset?.optimization_goal;
+
+            // Nếu chưa chọn optimization_goal, hiển thị tất cả
+            if (!optimizationGoal || optimizationGoal === "") {
+              return allOptions;
+            }
+
+            // Filter theo optimization_goal
+            switch (optimizationGoal) {
+              case "CONVERSATIONS":
+                // Chỉ MESSENGER
+                return allOptions.filter((opt) => opt.value === "MESSENGER");
+
+              case "MESSAGING_PURCHASE_CONVERSION":
+                // Chỉ MESSENGER
+                return allOptions.filter((opt) => opt.value === "MESSENGER");
+
+              case "LINK_CLICKS":
+                // MESSENGER, WEBSITE, APP
+                return allOptions.filter((opt) =>
+                  ["MESSENGER", "WEBSITE", "APP"].includes(opt.value)
+                );
+
+              case "REACH":
+                // Tất cả 6 options
+                return allOptions;
+
+              default:
+                // Các optimization_goal khác: hiển thị tất cả
+                return allOptions;
+            }
+          },
+          default: "ON_POST",
+          // ✅ onChange được xử lý trong AdsetStep.jsx (FieldRenderer radio-group)
+        },
+        {
+          type: "input",
+          name: "promoted_object.page_id",
+          label: "Page ID",
+          placeholder: "Nhập Page ID",
+          visibleIf: (adset) =>
+            adset.engagement_destination === "MESSENGER" ||
+            adset.engagement_destination === "ON_PAGE" ||
+            adset.engagement_destination === "ON_POST",
+          validate: (value, adset) => {
+            if (
+              (adset.engagement_destination === "MESSENGER" ||
+                adset.engagement_destination === "ON_PAGE" ||
+                adset.engagement_destination === "ON_POST") &&
+              !value
+            ) {
+              return "Page ID là bắt buộc cho lựa chọn này";
+            }
+            return true;
+          },
+        },
+        {
+          type: "input",
+          name: "promoted_object.application_id",
+          label: "ID ứng dụng",
+          placeholder: "Nhập ID ứng dụng của bạn",
+          visibleIf: (adset) => adset.engagement_destination === "APP",
+        },
+        {
+          type: "input",
+          name: "promoted_object.object_store_url",
+          label: "URL App Store",
+          placeholder: "https://...",
+          visibleIf: (adset) => adset.engagement_destination === "APP",
+        },
+        {
+          type: "input",
+          name: "promoted_object.phone_number_id",
+          label: "Phone Number ID",
+          placeholder: "Nhập Phone Number ID",
+          visibleIf: (adset) => adset.engagement_destination === "CALL",
+          validate: (value, adset) => {
+            if (adset.engagement_destination === "CALL" && !value) {
+              return "Phone Number ID là bắt buộc cho cuộc gọi";
+            }
+            return true;
+          },
+        },
+        {
+          type: "input",
+          name: "promoted_object.pixel_id",
+          label: "Pixel ID",
+          placeholder: "Nhập Pixel ID để theo dõi chuyển đổi",
+          // ✅ Hiển thị khi chọn LINK_CLICKS - WEBSITE
+          visibleIf: (adset) =>
+            adset.optimization_goal === "LINK_CLICKS" &&
+            adset.engagement_destination === "WEBSITE",
+          validate: (value, adset) => {
+            if (
+              adset.optimization_goal === "LINK_CLICKS" &&
+              adset.engagement_destination === "WEBSITE" &&
+              !value
+            ) {
+              return "Pixel ID là bắt buộc";
+            }
             return true;
           },
         },
@@ -165,7 +310,7 @@ const EngagementSchema = {
           type: "datetime",
           name: "start_time",
           label: "Ngày bắt đầu",
-          disabled: (adset, mode) => mode === "edit" && adset?.external_id
+          disabled: (adset, mode) => mode === "edit" && adset?.external_id,
         },
         {
           type: "datetime",
@@ -226,21 +371,41 @@ const EngagementSchema = {
             ];
             return languages.map((l) => ({ value: l.code, label: l.name }));
           },
-          default: "vi",
+          default: "all",
         },
       ],
     },
     {
       id: "location",
-      title: "Vị trí",
+      title: "Vị trí địa lý",
       icon: "MapPin",
       fields: [
         {
-          type: "tags-country",
+          type: "location",
           name: "targeting.locations",
-          label: "Quốc gia",
-          placeholder: "Tìm kiếm vị trí (quốc gia)",
-          default: ["Viet Nam"],
+          placeholder: "Tìm kiếm thành phố, tỉnh thành...",
+          default: {
+            regions: [],
+            cities: [],
+            custom_locations: [],
+            excluded_ids: [],
+          },
+          validate: (value) => {
+            if (
+              !value ||
+              (!value.regions?.length &&
+                !value.cities?.length &&
+                !value.custom_locations?.length)
+            ) {
+              return "Vui lòng chọn ít nhất 1 vị trí";
+            }
+            const total =
+              (value.regions?.length || 0) + (value.cities?.length || 0);
+            if (total > 250) {
+              return "Tối đa 250 vị trí được cho phép";
+            }
+            return true;
+          },
         },
       ],
     },

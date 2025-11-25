@@ -7,6 +7,17 @@ import { FEATURE_KEYS, userHasFeature } from "./entitlementService.js";
 let schedulerTask = null;
 
 const resolveRuleOwnerId = (rule) => {
+  // Ưu tiên lấy shop owner từ shop_id
+  if (rule.shop_id) {
+    const shop = rule.shop_id;
+    // Nếu đã populate, shop là object, nếu chưa thì là ObjectId
+    if (shop && typeof shop === 'object' && shop.owner_id) {
+      const ownerId = shop.owner_id._id || shop.owner_id;
+      if (ownerId) return ownerId.toString();
+    }
+  }
+  
+  // Fallback: lấy từ subscriber_id hoặc created_by
   const candidate =
     rule.subscriber_id?._id ||
     rule.subscriber_id ||
@@ -83,7 +94,15 @@ async function processScheduledRules() {
     })
       .populate("account_id", "external_id name")
       .populate("created_by", "full_name email")
-      .populate("subscriber_id", "full_name email");
+      .populate("subscriber_id", "full_name email")
+      .populate({
+        path: "shop_id",
+        select: "owner_id",
+        populate: {
+          path: "owner_id",
+          select: "_id",
+        },
+      });
 
     if (rules.length === 0) {
       return;

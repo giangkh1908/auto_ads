@@ -2,11 +2,11 @@ import mongoose from "mongoose";
 
 const noteSchema = new mongoose.Schema(
   {
-    // Loại entity (User, Lead, PaymentTransaction, ShopPackage)
+    // Loại entity (User, Lead, PaymentTransaction, ShopPackage, UserPackage, Transaction)
     target_type: {
       type: String,
       required: true,
-      enum: ["User", "Lead", "PaymentTransaction", "ShopPackage"],
+      enum: ["User", "Lead", "PaymentTransaction", "ShopPackage", "UserPackage", "Transaction"],
       index: true,
     },
 

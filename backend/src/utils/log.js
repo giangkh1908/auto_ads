@@ -45,6 +45,16 @@ export const saveLog = async (logData) => {
         description = `${userName} đã ngắt kết nối fanpage: "${disconnectedPage}" khỏi cửa hàng: "${shopName}"`;
         break;
 
+      case "PAUSE_FACEBOOK_PAGE":
+        const pausedPage = logData.request?.pageId || logData.target_name || "Fanpage";
+        description = `${userName} đã tạm dừng fanpage: "${pausedPage}" trong cửa hàng: "${shopName}"`;
+        break;
+
+      case "RESUME_FACEBOOK_PAGE":
+        const resumedPage = logData.request?.pageId || logData.target_name || "Fanpage";
+        description = `${userName} đã kích hoạt lại fanpage: "${resumedPage}" trong cửa hàng: "${shopName}"`;
+        break;
+
       case "ADD_EMPLOYEE":
         description = `${userName} đã thêm nhân viên mới: "${logData.target_name || "Nhân viên"}" vào cửa hàng: "${shopName}"`;
         break;

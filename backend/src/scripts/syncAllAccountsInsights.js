@@ -5,6 +5,8 @@ import AdsAccount from "../models/ads/adsAccount.model.js";
 import User from "../models/user.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
 import AdsCampaign from "../models/ads/adsCampaign.model.js";
+import { FEATURE_KEYS } from "../services/entitlementService.js";
+import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 import {
   fetchAccountInsights,
   saveInsightsToAdPerformance,
@@ -19,11 +21,21 @@ async function syncAllAccountsInsights() {
 
     const accounts = await AdsAccount.find({
       status: "ACTIVE",
-    }).populate("shop_admin_id", "_id");
+    })
+      .populate("shop_admin_id", "_id")
+      .lean();
 
-    console.log(`📊 Found ${accounts.length} active accounts to sync`);
+    const { eligibleAccounts, skippedAccounts } = await filterAccountsByFeature(
+      accounts,
+      FEATURE_KEYS.ANALYTICS_CHAT_AI
+    );
 
-    if (accounts.length === 0) {
+    console.log(`📊 Found ${eligibleAccounts.length} eligible accounts to sync`);
+    if (skippedAccounts) {
+      console.log(`ℹ️ Skipped ${skippedAccounts} account(s) without analytics feature`);
+    }
+
+    if (eligibleAccounts.length === 0) {
       console.log("⚠️ No active accounts found");
       process.exit(0);
     }
@@ -43,9 +55,11 @@ async function syncAllAccountsInsights() {
     let totalSaved = 0;
     let totalSkipped = 0;
 
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      console.log(`\n[${i + 1}/${accounts.length}] Processing account: ${account.name} (${account.external_id})`);
+    for (let i = 0; i < eligibleAccounts.length; i++) {
+      const account = eligibleAccounts[i];
+      console.log(
+        `\n[${i + 1}/${eligibleAccounts.length}] Processing account: ${account.name} (${account.external_id})`
+      );
 
       try {
         if (!account.shop_admin_id) {

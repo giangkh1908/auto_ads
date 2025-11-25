@@ -91,7 +91,7 @@
 
 .cs-sp-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 0.7fr 0.85fr 2.4fr;
+  grid-template-columns: 1.2fr 0.8fr 1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.7fr 2fr;
   gap: 0;
   padding: 0;
   border-bottom: 1px solid #eee;
@@ -178,4 +178,185 @@
 .cs-sp-badge-unassigned {
   background: #fff3cd;
   color: #856404;
+}
+
+.cs-sp-assign-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.cs-sp-assign-btn:hover {
+  background-color: #f0f0f0;
+  color: #2563eb;
+  transform: scale(1.1);
+}
+
+.cs-sp-assign-btn:active {
+  transform: scale(0.95);
+}
+
+.cs-sp-assigned-btn {
+  color: #2563eb;
+}
+
+.cs-sp-assigned-btn:hover {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .cs-sp-page {
+    padding: 16px;
+    margin-top: 58px;
+  }
+
+  .cs-sp-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .cs-sp-toolbar-left {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .cs-sp-search-input {
+    width: 100%;
+    min-width: 200px;
+  }
+
+  .cs-sp-table {
+    overflow-x: auto;
+  }
+
+  .cs-sp-row {
+    grid-template-columns: 1.1fr 0.7fr 1.3fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.75fr 2.2fr;
+    min-width: 1000px;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .cs-sp-page {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .cs-sp-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .cs-sp-toolbar-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cs-sp-search-input {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .cs-sp-select {
+    width: 100%;
+    min-width: auto;
+    font-size: 13px;
+  }
+
+  .cs-sp-table {
+    overflow-x: auto;
+  }
+
+  .cs-sp-row {
+    grid-template-columns: 1fr;
+    min-width: 700px;
+  }
+
+  .cs-sp-header {
+    display: none;
+  }
+
+  .cs-sp-col {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cs-sp-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .cs-sp-col:last-child {
+    border-bottom: none;
+  }
+
+  .cs-sp-col-phone,
+  .cs-sp-col-email,
+  .cs-sp-col-package,
+  .cs-sp-col-purchased,
+  .cs-sp-col-expired,
+  .cs-sp-col-segment,
+  .cs-sp-col-user-status,
+  .cs-sp-col-assigned {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .cs-sp-page {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .cs-sp-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .cs-sp-search-input,
+  .cs-sp-select {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .cs-sp-row {
+    min-width: 600px;
+  }
+
+  .cs-sp-col {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .cs-sp-col::before {
+    font-size: 11px;
+  }
+
+  .cs-sp-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
 }

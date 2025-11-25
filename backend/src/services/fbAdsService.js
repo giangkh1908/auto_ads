@@ -1185,6 +1185,9 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
       'cost_per_conversion',
       'purchase_roas',
       'website_purchase_roas',
+      'quality_ranking',
+      'engagement_rate_ranking',
+      'conversion_rate_ranking',
     ];
 
     const needActions = options.needActions === true;
@@ -1197,12 +1200,16 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
       access_token: accessToken
     });
 
-    const rawTimeIncrement = options.timeIncrement ?? 1;
-    const numericTimeIncrement = Number(rawTimeIncrement);
-    const resolvedTimeIncrement = Number.isFinite(numericTimeIncrement)
-      ? Math.max(1, Math.floor(numericTimeIncrement))
-      : 1;
-    params.set('time_increment', String(resolvedTimeIncrement));
+    if (options.timeIncrement === 'all_days') {
+      params.set('time_increment', 'all_days');
+    } else {
+      const rawTimeIncrement = options.timeIncrement ?? 1;
+      const numericTimeIncrement = Number(rawTimeIncrement);
+      const resolvedTimeIncrement = Number.isFinite(numericTimeIncrement)
+        ? Math.max(1, Math.floor(numericTimeIncrement))
+        : 1;
+      params.set('time_increment', String(resolvedTimeIncrement));
+    }
 
     if (needActions && options.actionBreakdowns) {
       params.set('action_breakdowns', options.actionBreakdowns);
@@ -1212,18 +1219,21 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
       params.set('breakdowns', options.breakdowns);
     }
 
-    // Xử lý time_range
-    if (options.timeRange) {
+    // Xử lý time_range và date_preset
+    if (options.datePreset) {
+      // Nếu có datePreset (ví dụ: 'lifetime'), dùng date_preset parameter
+      params.set('date_preset', options.datePreset);
+    } else if (options.timeRange) {
       if (typeof options.timeRange === 'string') {
-        // Nếu là preset (ví dụ: 'last_30d')
-        params.set('time_range', JSON.stringify({ preset: options.timeRange }));
+        // Nếu là preset string (ví dụ: 'last_30d')
+        params.set('date_preset', options.timeRange);
       } else if (typeof options.timeRange === 'object') {
         // Nếu là object { since: 'YYYY-MM-DD', until: 'YYYY-MM-DD' }
         params.set('time_range', JSON.stringify(options.timeRange));
       }
     } else {
       // Mặc định là last_30d
-      params.set('time_range', JSON.stringify({ preset: 'last_30d' }));
+      params.set('date_preset', 'last_30d');
     }
     
     console.log('[fbAdsService] Fetching account insights', {
@@ -1456,20 +1466,46 @@ export async function fetchAccountInsights(accessToken, adAccountId, options = {
           );
           item.website_purchases = pw ? Number(pw.value || 0) : 0;
           
+          // Leads
+          const lead = item.actions.find(a => a.action_type === 'lead');
+          item.leads = lead ? Number(lead.value || 0) : 0;
+
+          // Mobile App Install
+          const install = item.actions.find(a => a.action_type === 'mobile_app_install');
+          item.mobile_app_install = install ? Number(install.value || 0) : 0;
+
+          // Post Engagement
+          const engagement = item.actions.find(a => a.action_type === 'post_engagement');
+          item.post_engagement = engagement ? Number(engagement.value || 0) : 0;
+
           if (!item.results) {
             const purchaseAction = item.actions.find(a => a.action_type === 'purchase');
             item.results = purchaseAction ? Number(purchaseAction.value || 0) : 0;
           }
         } else {
           item.website_purchases = 0;
+          item.leads = 0;
+          item.mobile_app_install = 0;
+          item.post_engagement = 0;
           if (!item.results) {
             item.results = 0;
           }
+        }
+
+        // Calculate Costs
+        if (item.leads > 0 && item.spend) {
+          item.cost_per_lead = Number(item.spend) / item.leads;
+        }
+        if (item.mobile_app_install > 0 && item.spend) {
+          item.cost_per_mobile_app_install = Number(item.spend) / item.mobile_app_install;
         }
       }
     } else {
       insightsData.forEach(item => {
         item.website_purchases = item.results || 0;
+        item.leads = 0;
+        item.mobile_app_install = 0;
+        item.post_engagement = 0;
       });
     }
     
@@ -1674,6 +1710,14 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
           cost_per_result: item.cost_per_result ? parseFloat(item.cost_per_result) : null,
           
           audience_reach_percentage: item.audience_reach_percentage ?? null,
+
+          // New metrics
+          quality_ranking: item.quality_ranking || null,
+          post_engagement: item.post_engagement || 0,
+          leads: item.leads || 0,
+          cost_per_lead: item.cost_per_lead || null,
+          mobile_app_install: item.mobile_app_install || 0,
+          cost_per_mobile_app_install: item.cost_per_mobile_app_install || null,
         };
 
         if (adset?.daily_budget) {
@@ -1922,4 +1966,3 @@ export async function saveInsightsToAdHourlyCollection(insightsData, accountId) 
     throw error;
   }
 }
-

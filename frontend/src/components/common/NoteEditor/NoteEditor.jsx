@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { saveNote } from "../../../utils/noteUtils";
 import { useToast } from "../../../hooks/useToast";
 import "./NoteEditor.css";
@@ -15,7 +16,10 @@ export default function NoteEditor({
   placeholder = "Click để thêm ghi chú...",
   onNoteSaved = null,
   maxLength = 1000,
+  disabled = false,
+  disabledMessage = "Vui lòng nhận xử lý để thêm ghi chú",
 }) {
+  const { t } = useTranslation("common");
   const [note, setNote] = useState(initialNote);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,7 +43,14 @@ export default function NoteEditor({
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    if (disabled && isEditing) {
+      setIsEditing(false);
+    }
+  }, [disabled, isEditing]);
+
   const handleClick = () => {
+    if (disabled) return;
     if (!isEditing) {
       setIsEditing(true);
     }
@@ -58,7 +69,7 @@ export default function NoteEditor({
     }
 
     if (!targetType || !targetId) {
-      toast.error("Thiếu thông tin để lưu note");
+      toast.error(t("noteEditor.missingInfo"));
       return;
     }
 
@@ -84,7 +95,7 @@ export default function NoteEditor({
 
       if (savedNote) {
         setIsEditing(false);
-        toast.success("Lưu ghi chú thành công");
+        toast.success(t("noteEditor.saveSuccess"));
         
         // Callback để parent component có thể update state
         if (onNoteSaved) {
@@ -94,14 +105,14 @@ export default function NoteEditor({
           });
         }
       } else {
-        throw new Error("Không thể lưu ghi chú");
+        throw new Error(t("noteEditor.saveError"));
       }
     } catch (error) {
       console.error("Error saving note:", error);
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          "Có lỗi xảy ra khi lưu ghi chú"
+          t("noteEditor.saveErrorGeneric")
       );
     } finally {
       setIsSaving(false);
@@ -158,7 +169,7 @@ export default function NoteEditor({
               disabled={isSaving}
               type="button"
             >
-              {isSaving ? "Đang lưu..." : "Lưu"}
+              {isSaving ? t("noteEditor.saving") : t("noteEditor.save")}
             </button>
             <button
               className="note-editor-btn note-editor-btn-cancel"
@@ -168,7 +179,7 @@ export default function NoteEditor({
               }}
               disabled={isSaving}
             >
-              Hủy
+              {t("noteEditor.cancel")}
             </button>
           </div>
         </div>
@@ -179,9 +190,11 @@ export default function NoteEditor({
   // Nếu không edit, hiển thị text có thể click
   return (
     <div
-      className={`note-editor-display ${!note ? "note-editor-empty" : ""}`}
+      className={`note-editor-display ${!note ? "note-editor-empty" : ""} ${
+        disabled ? "note-editor-disabled" : ""
+      }`}
       onClick={handleClick}
-      title="Click để chỉnh sửa"
+      title={disabled ? disabledMessage : t("noteEditor.clickToEdit")}
     >
       {note || placeholder}
     </div>

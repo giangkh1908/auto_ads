@@ -1,10 +1,9 @@
-import {useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "./SystemLog.css";
 import { Search, ChevronDown } from "lucide-react";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 import { getSystemLogs } from "../../../../../services/systemLogService.js";
-
-const ROLES = ["All", "System Admin", "CS Staff", "Accountant", "System"];
 
 /**
  * Format date from ISO string to "dd/mm/yyyy HH:mm:ss"
@@ -42,13 +41,40 @@ const formatDateTime = (dateString) => {
 // };
 
 export default function SystemLog() {
+  const { t, i18n } = useTranslation("admin");
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
+  const [roleFilter, setRoleFilter] = useState(t("systemLog.roles.all"));
   const [dateRange, setDateRange] = useState("");
+
+  const ROLES = useMemo(() => [
+    t("systemLog.roles.all"),
+    t("systemLog.roles.systemAdmin"),
+    t("systemLog.roles.csStaff"),
+    t("systemLog.roles.accountant"),
+    t("systemLog.roles.system")
+  ], [t]);
+
+  // Reset filter khi đổi ngôn ngữ
+  useEffect(() => {
+    setRoleFilter(t("systemLog.roles.all"));
+  }, [i18n.language, t]);
+
+  // Convert translated roleFilter back to original value for API
+  const getOriginalRole = useCallback((translatedRole) => {
+    const roleMap = {
+      [t("systemLog.roles.all")]: "All",
+      [t("systemLog.roles.systemAdmin")]: "System Admin",
+      [t("systemLog.roles.csStaff")]: "CS Staff",
+      [t("systemLog.roles.accountant")]: "Accountant",
+      [t("systemLog.roles.system")]: "System",
+    };
+    return roleMap[translatedRole] || translatedRole;
+  }, [t]);
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 100,
@@ -102,7 +128,7 @@ export default function SystemLog() {
       setError(null);
       try {
         const response = await getSystemLogs({
-          role: roleFilter,
+          role: getOriginalRole(roleFilter),
           search: debouncedSearch.trim(),
           dateRange,
           page: pagination.page,
@@ -119,13 +145,13 @@ export default function SystemLog() {
             totalPages: response.pagination?.totalPages || 0,
           }));
         } else {
-          setError(response.message || "Có lỗi xảy ra khi lấy system logs");
+          setError(response.message || t("systemLog.messages.error"));
         }
       } catch (err) {
         if (!isMounted) return;
         console.error("Error fetching system logs:", err);
         setError(
-          err.message || "Có lỗi xảy ra khi lấy system logs. Vui lòng thử lại."
+          err.message || t("systemLog.messages.error")
         );
         setLogs([]);
       } finally {
@@ -147,6 +173,8 @@ export default function SystemLog() {
     pagination.page,
     pagination.limit,
     debouncedSearch, // Use debounced search state
+    getOriginalRole, // Add getOriginalRole to dependencies
+    t, // Add t to dependencies
   ]);
 
   // Handle search change
@@ -181,11 +209,11 @@ export default function SystemLog() {
       <div className="system-log-toolbar">
         <div className="system-log-toolbar-left">
           <div className="system-log-filter-group">
-            <label className="system-log-filter-label">Search</label>
+            <label className="system-log-filter-label">{t("systemLog.search")}</label>
             <div className="system-log-search">
               <input
                 className="system-log-search-input"
-                placeholder="Name, Phone, Email"
+                placeholder={t("systemLog.searchPlaceholder")}
                 value={search}
                 onChange={handleSearchChange}
                 disabled={loading}
@@ -196,7 +224,7 @@ export default function SystemLog() {
             </div>
           </div>
           <div className="system-log-filter-group">
-            <label className="system-log-filter-label">Role</label>
+            <label className="system-log-filter-label">{t("systemLog.role")}</label>
             <div className="system-log-select-wrapper">
               <select
                 className="system-log-role-select"
@@ -215,11 +243,11 @@ export default function SystemLog() {
           </div>
 
           <div className="system-log-filter-group">
-            <label className="system-log-filter-label">Date Range</label>
+            <label className="system-log-filter-label">{t("systemLog.dateRange")}</label>
             <DateRangePicker
               value={dateRange}
               onChange={handleDateRangeChange}
-              placeholder="dd/mm/yyyy - dd/mm/yyyy"
+              placeholder={t("systemLog.dateRangePlaceholder")}
               disabled={loading}
             />
           </div>
@@ -236,22 +264,22 @@ export default function SystemLog() {
       {/* Loading state */}
       {loading && (
         <div className="system-log-loading" style={{ padding: "16px", textAlign: "center" }}>
-          Đang tải...
+          {t("systemLog.messages.loading")}
         </div>
       )}
 
       {/* Logs table */}
       <div className="system-log-table">
         <div className="system-log-row system-log-header">
-          <div className="system-log-col system-log-col-user">User</div>
-          <div className="system-log-col system-log-col-role">Role</div>
-          <div className="system-log-col system-log-col-time">Time</div>
-          <div className="system-log-col system-log-col-event">Event</div>
+          <div className="system-log-col system-log-col-user">{t("systemLog.columns.user")}</div>
+          <div className="system-log-col system-log-col-role">{t("systemLog.columns.role")}</div>
+          <div className="system-log-col system-log-col-time">{t("systemLog.columns.time")}</div>
+          <div className="system-log-col system-log-col-event">{t("systemLog.columns.event")}</div>
         </div>
 
         {!loading && logs.length === 0 && !error && (
           <div style={{ padding: "16px", textAlign: "center", color: "#666" }}>
-            Không có log nào
+            {t("systemLog.messages.noData")}
           </div>
         )}
 
@@ -259,10 +287,10 @@ export default function SystemLog() {
           logs.map((log) => (
             <div className="system-log-row" key={log._id}>
               <div className="system-log-col system-log-col-user">
-                {log.user || "Hệ thống"}
+                {log.user || t("systemLog.system.system")}
               </div>
               <div className="system-log-col system-log-col-role">
-                {log.role || "System"}
+                {log.role || t("systemLog.system.system")}
               </div>
               <div className="system-log-col system-log-col-time">
                 {formatDateTime(log.time)}
@@ -286,7 +314,7 @@ export default function SystemLog() {
           }}
         >
           <div>
-            Hiển thị {logs.length} / {pagination.total} logs
+            {t("systemLog.pagination.showing")} {logs.length} {t("systemLog.pagination.of")} {pagination.total} {t("systemLog.pagination.logs")}
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <button
@@ -300,10 +328,10 @@ export default function SystemLog() {
                 opacity: pagination.page === 1 || loading ? 0.5 : 1,
               }}
             >
-              Trước
+              {t("systemLog.pagination.previous")}
             </button>
             <span style={{ padding: "8px 16px" }}>
-              Trang {pagination.page} / {pagination.totalPages}
+              {t("systemLog.pagination.page")} {pagination.page} {t("systemLog.pagination.of")} {pagination.totalPages}
             </span>
             <button
               onClick={() =>
@@ -320,7 +348,7 @@ export default function SystemLog() {
                   pagination.page >= pagination.totalPages || loading ? 0.5 : 1,
               }}
             >
-              Sau
+              {t("systemLog.pagination.next")}
             </button>
           </div>
         </div>

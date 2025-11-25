@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../hooks/useAuth";
-import { STORAGE_KEYS } from "../../../constants/app.constants";
+import { STORAGE_KEYS, ROUTES } from "../../../constants/app.constants";
 import { saveShopCache, getShopCache, clearShopCache, onShopChange } from "../../../utils/shopCache";
 import "./Header.css";
 import avatar from "../../../assets/no-avatar.jpg";
@@ -94,7 +94,15 @@ function Header({ onLoginClick }) {
         
         // Nếu có cache và shopId khớp → sử dụng cache
         if (cachedShop && cachedShop.id === savedShopId) {
-          setSelectedShop(cachedShop);
+          // Đảm bảo package là string hoặc null (không set "Basic")
+          const packageName = typeof cachedShop.package === 'string' 
+            ? cachedShop.package 
+            : (cachedShop.package?.name || null);
+          const normalizedShop = {
+            ...cachedShop,
+            package: packageName && packageName !== "Basic" ? packageName : null,
+          };
+          setSelectedShop(normalizedShop);
           setLoading(false);
           // Vẫn load danh sách shops để hiển thị dropdown, nhưng không cần đợi
           fetchShopsList();
@@ -118,7 +126,7 @@ function Header({ onLoginClick }) {
           const formattedShops = data.data.map((shop) => ({
             id: shop._id,
             shop_name: shop.shop_name || "Cửa hàng không tên",
-            package: shop.package || "Basic",
+            package: shop.package && shop.package !== "Basic" ? shop.package : null,
             role: shop.user_role?.role_name || "Member",
             is_current: shop.is_current || false,
           }));
@@ -177,7 +185,7 @@ function Header({ onLoginClick }) {
           const formattedShops = data.data.map((shop) => ({
             id: shop._id,
             shop_name: shop.shop_name || "Cửa hàng không tên",
-            package: shop.package || "Basic",
+            package: shop.package && shop.package !== "Basic" ? shop.package : null,
             role: shop.user_role?.role_name || "Member",
             is_current: shop.is_current || false,
           }));
@@ -195,8 +203,16 @@ function Header({ onLoginClick }) {
   useEffect(() => {
     const removeListener = onShopChange((newShop) => {
       if (newShop) {
+        // Đảm bảo package là string hoặc null (không set "Basic")
+        const packageName = typeof newShop.package === 'string' 
+          ? newShop.package 
+          : (newShop.package?.name || null);
+        const normalizedShop = {
+          ...newShop,
+          package: packageName && packageName !== "Basic" ? packageName : null,
+        };
         // Cập nhật shop hiển thị trong Header
-        setSelectedShop(newShop);
+        setSelectedShop(normalizedShop);
         // Cập nhật danh sách shops nếu cần
         setShops((prevShops) => {
           const updated = prevShops.map((s) =>
@@ -253,17 +269,30 @@ function Header({ onLoginClick }) {
       const data = await res.json();
 
       if (data.success) {
+        // Lấy shop cũ trước khi xóa cache
+        const previousShop = selectedShop;
+        
         // Xóa cache cũ
         clearShopCache();
         
         // Cập nhật localStorage
         localStorage.setItem("selectedShopId", shop.id);
 
-        // Cập nhật state
-        setSelectedShop(shop);
+        // Cập nhật state với package info từ API response
+        // Đảm bảo package là string hoặc null (không set "Basic")
+        const packageName = data.shop?.package?.name || data.shop?.package || shop.package || null;
+        const finalPackageName = typeof packageName === 'string' 
+          ? (packageName !== "Basic" ? packageName : null)
+          : (packageName?.name && packageName.name !== "Basic" ? packageName.name : null);
+        const shopWithPackage = {
+          ...shop,
+          package: finalPackageName,
+        };
+        setSelectedShop(shopWithPackage);
         
-        // Lưu shop mới vào cache (bao gồm role)
-        saveShopCache(shop);
+        // Lưu shop mới vào cache (bao gồm role và package)
+        // Truyền previousShop để kiểm tra và xóa cache ads nếu shop thay đổi
+        saveShopCache(shopWithPackage, previousShop);
 
         // Hiển thị thông báo đẹp (tùy bạn dùng toast/notify)
         if (window.showToast) {
@@ -315,12 +344,12 @@ function Header({ onLoginClick }) {
           </h1>
         </button>
 
-        {/* Nav khi không ở Home hoặc ở service-package đã login*/}
-        {pathname !== "/" && !(pathname === "/service-package" && !isAuthenticated) && (
+        {/* Nav khi không ở Home, Guide hoặc ở service-package đã login*/}
+        {pathname !== "/" && pathname !== ROUTES.GUIDE && !(pathname === ROUTES.SERVICE_PACKAGE && !isAuthenticated) && (
           <div className="app-nav">
             <button
-              className={`nav-btn ${pathname === "/dashboard" ? "active" : ""}`}
-              onClick={() => navigate("/dashboard")}
+              className={`nav-btn ${pathname === ROUTES.DASHBOARD ? "active" : ""}`}
+              onClick={() => navigate(ROUTES.DASHBOARD)}
             >
               <LayoutDashboard size={18} />
               &nbsp;{t("header.dashboard")}
@@ -328,17 +357,17 @@ function Header({ onLoginClick }) {
 
             <button
               className={`nav-btn ${
-                pathname === "/account-management" ? "active" : ""
+                pathname === ROUTES.ACCOUNT_MANAGEMENT ? "active" : ""
               }`}
-              onClick={() => navigate("/account-management")}
+              onClick={() => navigate(ROUTES.ACCOUNT_MANAGEMENT)}
             >
               <Megaphone size={18} />
               &nbsp;{t("header.facebook_ads")}
             </button>
 
             <button
-              className={`nav-btn ${pathname === "/analytics" ? "active" : ""}`}
-              onClick={() => navigate("/analytics")}
+              className={`nav-btn ${pathname === ROUTES.ANALYTICS ? "active" : ""}`}
+              onClick={() => navigate(ROUTES.ANALYTICS)}
             >
               <BarChart3 size={18} />
               &nbsp;{t("header.analytics")}
@@ -346,9 +375,9 @@ function Header({ onLoginClick }) {
 
             <button
               className={`nav-btn ${
-                pathname.startsWith("/shop") ? "active" : ""
+                pathname.startsWith(ROUTES.SHOP) ? "active" : ""
               }`}
-              onClick={() => navigate("/shop")}
+              onClick={() => navigate(ROUTES.SHOP)}
             >
               <Store size={18} />
               &nbsp;{t("header.shop")}
@@ -356,9 +385,9 @@ function Header({ onLoginClick }) {
 
             <button
               className={`nav-btn ${
-                pathname === "/service-package" ? "active" : ""
+                pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""
               }`}
-              onClick={() => navigate("/service-package")}
+              onClick={() => navigate(ROUTES.SERVICE_PACKAGE)}
             >
               <Package size={18} />
               &nbsp;{t("header.package")}
@@ -366,19 +395,19 @@ function Header({ onLoginClick }) {
           </div>
         )}
 
-        {/* Nav 2 khi ở Home hoặc ở service-package chưa login*/}
-        {(pathname === "/" || (pathname === "/service-package" && !isAuthenticated)) && (
+        {/* Nav 2 khi ở Home, Guide hoặc ở service-package chưa login*/}
+        {(pathname === "/" || pathname === ROUTES.GUIDE || (pathname === ROUTES.SERVICE_PACKAGE && !isAuthenticated)) && (
           <div className="app-nav-2">
             <button
-              className={`nav-btn-2 ${pathname === "/guide" ? "active" : ""}`}
-              onClick={() => navigate("/guide")}
+              className={`nav-btn-2 ${pathname === ROUTES.GUIDE ? "active" : ""}`}
+              onClick={() => navigate(ROUTES.GUIDE)}
             >
               <BookOpen size={20} />
               &nbsp;{t("header.guide")}
             </button>
             <button
-              className={`nav-btn-2 ${pathname === "/service-package" ? "active" : ""}`}
-              onClick={() => navigate("/service-package")}
+              className={`nav-btn-2 ${pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""}`}
+              onClick={() => navigate(ROUTES.SERVICE_PACKAGE)}
             >
               <Gem size={20} /> {t("header.service")}
             </button>
@@ -386,9 +415,9 @@ function Header({ onLoginClick }) {
             {isAuthenticated && (
               <button
                 className={`nav-btn-2 ${
-                  pathname === "/dashboard" ? "active" : ""
+                  pathname === ROUTES.DASHBOARD ? "active" : ""
                 }`}
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate(ROUTES.DASHBOARD)}
               >
                 <LayoutDashboard size={20} />
                 &nbsp;{t("header.dashboard")}
@@ -419,8 +448,8 @@ function Header({ onLoginClick }) {
               </ul>
             )}
           </div>
-          {/* Chỉ hiển thị menu user khi đã login và KHÔNG ở trang Home, và nếu ở service-package thì phải đã login */}
-          {isAuthenticated && pathname !== "/" && !(pathname === "/service-package" && !isAuthenticated) && (
+          {/* Chỉ hiển thị menu user khi đã login và KHÔNG ở trang Home, Guide, và nếu ở service-package thì phải đã login */}
+          {isAuthenticated && pathname !== "/" && pathname !== ROUTES.GUIDE && !(pathname === "/service-package" && !isAuthenticated) && (
             <div className="user-menu">
               {/* SHOP SELECTOR */}
               <div className="shop-selector" onClick={() => toggleMenu("shop")}>
@@ -433,6 +462,25 @@ function Header({ onLoginClick }) {
                         {selectedShop.shop_name}
                       </strong>
                       <small className="shop-role">{selectedShop.role}</small>
+                      {(() => {
+                        // Lấy package name
+                        const packageName = typeof selectedShop.package === 'string' 
+                          ? selectedShop.package 
+                          : selectedShop.package?.name || '';
+                        
+                        // Chỉ hiển thị nếu có package và không phải "Basic" hoặc empty
+                        if (packageName && packageName !== 'Basic' && packageName.trim() !== '') {
+                          return (
+                            <>
+                              {" | "}
+                              <small className={`shop-package package-${packageName.toLowerCase().replace(/\s+/g, '-')}`}>
+                                {packageName}
+                              </small>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     {/* <ChevronDown size={16} /> */}
                   </>
@@ -466,17 +514,15 @@ function Header({ onLoginClick }) {
                           }}
                         >
                           <div className="shop-item-name">
-                            {shop.shop_name}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span>{shop.shop_name}</span>
+                            </div>
                             {switching && selectedShop?.id === shop.id && (
                               <span style={{ marginLeft: 8, fontSize: 12 }}>
                                 Đang chuyển...
                               </span>
                             )}
                           </div>
-                          {/* <div className="shop-item-role">{shop.role}</div> */}
-                          {/* {selectedShop?.id === shop.id && (
-                            <Check size={16} className="check" />
-                          )} */}
                         </div>
                       ))
                     )}
@@ -520,8 +566,8 @@ function Header({ onLoginClick }) {
             </div>
           )}
 
-          {/* Chỉ hiển thị nút Đăng nhập nếu CHƯA đăng nhập và ở Home hoặc service-package */}
-          {!isAuthenticated && (pathname === "/" || pathname === "/service-package") && (
+          {/* Chỉ hiển thị nút Đăng nhập nếu CHƯA đăng nhập và ở Home, Guide hoặc service-package */}
+          {!isAuthenticated && (pathname === "/" || pathname === ROUTES.GUIDE || pathname === "/service-package") && (
             <button className="btn-login" onClick={onLoginClick}>
               {t("header.login")}
             </button>

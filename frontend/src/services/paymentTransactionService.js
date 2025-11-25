@@ -83,7 +83,7 @@ class PaymentTransactionService {
       const response = await axiosInstance.put(
         `/api/payment-transactions/${id}`,
         {
-          status: "canceled",
+          status: "rejected",
           metadata: { rejectReason: note },
         }
       );

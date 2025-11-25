@@ -430,6 +430,17 @@ a {
   border-left: 3px solid #667eea;
 }
 
+.shop-item-package {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
 /* .shop-item-category {
   font-size: 12px;
   color: #6b7280;
@@ -456,4 +467,13 @@ a {
 
 .btn-manage-shop:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.upgrade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffa500;
+  font-size: 12px;
+  font-weight: 600;
 }

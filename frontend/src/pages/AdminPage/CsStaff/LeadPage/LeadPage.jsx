@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import "./LeadPage.css";
 import { Search, ChevronDown, UserPlus, UserCheck } from "lucide-react";
 import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
@@ -6,9 +7,6 @@ import leadService from "../../../../services/leadService";
 import { useToast } from "../../../../hooks/useToast";
 import { useAuth } from "../../../../hooks/useAuth";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
-
-const STATUSES = ["All", "New", "Contacted"];
-const ASSIGNED_STATUSES = ["All", "Assigned", "Unassigned"];
 
 // Format date từ ISO string sang dd/mm/yyyy HH:mm:ss
 const formatDate = (dateString) => {
@@ -24,24 +22,30 @@ const formatDate = (dateString) => {
 };
 
 // Map status từ DB sang UI
-const mapStatusToUI = (dbStatus) => {
+const mapStatusToUI = (dbStatus, t) => {
   const statusMap = {
-    new: "New",
-    contacted: "Contacted",
+    new: t("leadPage.statuses.new"),
+    contacted: t("leadPage.statuses.contacted"),
   };
   return statusMap[dbStatus] || dbStatus;
 };
 
 
 export default function LeadPage() {
+  const { t, i18n } = useTranslation("admin");
+  const [rawLeads, setRawLeads] = useState([]);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All");
-  const [assignedStatus, setAssignedStatus] = useState("All");
+  const [status, setStatus] = useState(t("common.all"));
+  const [assignedStatus, setAssignedStatus] = useState(t("common.all"));
   const [dateRange, setDateRange] = useState("");
   const toast = useToast();
   const { user } = useAuth();
+  const currentUserId = user?._id || user?.id;
+
+  const STATUSES = useMemo(() => [t("common.all"), t("leadPage.statuses.new"), t("leadPage.statuses.contacted")], [t]);
+  const ASSIGNED_STATUSES = useMemo(() => [t("common.all"), t("common.assigned"), t("common.unassigned")], [t]);
   
   // Track previous search và filters để phân biệt thay đổi
   // Khởi tạo với null để detect lần mount đầu tiên
@@ -73,10 +77,17 @@ export default function LeadPage() {
         }
       }
 
+      // Map UI status back to DB status for API
+      const getDbStatus = (uiStatus) => {
+        if (uiStatus === t("leadPage.statuses.new")) return "new";
+        if (uiStatus === t("leadPage.statuses.contacted")) return "contacted";
+        return uiStatus;
+      };
+
       const params = {
         search: search.trim() || undefined,
-        status: status !== "All" ? status : undefined,
-        assigned_status: assignedStatus !== "All" ? assignedStatus : undefined,
+        status: status !== t("common.all") ? getDbStatus(status) : undefined,
+        assigned_status: assignedStatus !== t("common.all") ? (assignedStatus === t("common.assigned") ? "assigned" : "unassigned") : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         page: 1,
@@ -86,14 +97,15 @@ export default function LeadPage() {
       const response = await leadService.getLeads(params);
       
       if (response.success) {
+        setRawLeads(response.data);
         // Map dữ liệu từ DB format sang UI format
         const mappedLeads = response.data.map((lead) => ({
           id: lead.id,
           leadName: lead.lead_name,
           phone: lead.phone,
           createdAt: formatDate(lead.created_at),
-          status: mapStatusToUI(lead.status),
-          assignedStatus: lead.assigned_to ? "Assigned" : "Unassigned",
+          status: mapStatusToUI(lead.status, t),
+          assignedStatus: lead.assigned_to ? t("common.assigned") : t("common.unassigned"),
           assignedTo: lead.assigned_to, // Lưu thông tin assigned_to để so sánh
           isAssignedToMe: lead.assigned_to && user && (() => {
             const assignedUserId = lead.assigned_to._id;
@@ -106,10 +118,10 @@ export default function LeadPage() {
         }));
         setRows(mappedLeads);
       } else {
-        toast.error(response.message || "Có lỗi xảy ra khi lấy danh sách leads");
+        toast.error(response.message || t("leadPage.messages.fetchError"));
       }
     } catch (error) {
-      toast.error(error.message || "Có lỗi xảy ra khi lấy danh sách leads");
+      toast.error(error.message || t("leadPage.messages.fetchError"));
     } finally {
       setLoading(false);
     }
@@ -184,16 +196,43 @@ export default function LeadPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, filtersKey]);
 
+  // Re-map data khi ngôn ngữ thay đổi
+  useEffect(() => {
+    if (rawLeads.length > 0) {
+      const mappedLeads = rawLeads.map((lead) => ({
+        id: lead.id,
+        leadName: lead.lead_name,
+        phone: lead.phone,
+        createdAt: formatDate(lead.created_at),
+        status: mapStatusToUI(lead.status, t),
+        assignedStatus: lead.assigned_to ? t("common.assigned") : t("common.unassigned"),
+        assignedTo: lead.assigned_to,
+        isAssignedToMe: lead.assigned_to && user && (() => {
+          const assignedUserId = lead.assigned_to._id;
+          const currentUserId = user._id || user.id;
+          return String(assignedUserId) === String(currentUserId);
+        })(),
+        note: lead.note || "",
+        noteId: lead.noteId || null,
+        _raw: lead,
+      }));
+      setRows(mappedLeads);
+      // Reset filters về "All" khi đổi ngôn ngữ
+      setStatus(t("common.all"));
+      setAssignedStatus(t("common.all"));
+    }
+  }, [i18n.language, rawLeads, t, user]);
+
   return (
     <div className="cs-lead-page">
       <div className="cs-lead-toolbar">
         <div className="cs-lead-toolbar-left">
         <div className="cs-lead-filter-group">
-            <label className="cs-lead-filter-label">Search</label>
+            <label className="cs-lead-filter-label">{t("leadPage.search")}</label>
           <div className="cs-lead-search">
             <input
               className="cs-lead-search-input"
-              placeholder="Name, Phone"
+              placeholder={t("leadPage.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -203,7 +242,7 @@ export default function LeadPage() {
           </div>
         </div>
           <div className="cs-lead-filter-group">
-            <label className="cs-lead-filter-label">Status</label>
+            <label className="cs-lead-filter-label">{t("leadPage.status")}</label>
             <div className="cs-lead-select-wrapper">
               <select
                 className="cs-lead-status-select"
@@ -221,7 +260,7 @@ export default function LeadPage() {
           </div>
 
           <div className="cs-lead-filter-group">
-            <label className="cs-lead-filter-label">Assigned Status</label>
+            <label className="cs-lead-filter-label">{t("leadPage.assignedStatus")}</label>
             <div className="cs-lead-select-wrapper">
               <select
                 className="cs-lead-assigned-select"
@@ -239,11 +278,11 @@ export default function LeadPage() {
           </div>
 
           <div className="cs-lead-filter-group">
-            <label className="cs-lead-filter-label">Date Range</label>
+            <label className="cs-lead-filter-label">{t("leadPage.dateRange")}</label>
             <DateRangePicker
               value={dateRange}
               onChange={(value) => setDateRange(value)}
-              placeholder="dd/mm/yyyy - dd/mm/yyyy"
+              placeholder={t("leadPage.dateRangePlaceholder")}
             />
           </div>
         </div>
@@ -251,18 +290,18 @@ export default function LeadPage() {
 
       <div className="cs-lead-table">
         <div className="cs-lead-row cs-lead-header">
-          <div className="cs-lead-col cs-lead-col-name">Lead Name</div>
-          <div className="cs-lead-col cs-lead-col-phone">Phone</div>
-          <div className="cs-lead-col cs-lead-col-created">Created At</div>
-          <div className="cs-lead-col cs-lead-col-status">Status</div>
-          <div className="cs-lead-col cs-lead-col-assigned">Assigned Status</div>
-          <div className="cs-lead-col cs-lead-col-note">Note</div>
+          <div className="cs-lead-col cs-lead-col-name">{t("leadPage.columns.leadName")}</div>
+          <div className="cs-lead-col cs-lead-col-phone">{t("leadPage.columns.phone")}</div>
+          <div className="cs-lead-col cs-lead-col-created">{t("leadPage.columns.createdAt")}</div>
+          <div className="cs-lead-col cs-lead-col-status">{t("leadPage.columns.status")}</div>
+          <div className="cs-lead-col cs-lead-col-assigned">{t("leadPage.columns.assignedStatus")}</div>
+          <div className="cs-lead-col cs-lead-col-note">{t("leadPage.columns.note")}</div>
         </div>
 
         {loading ? (
-          <div className="cs-lead-loading">Đang tải...</div>
+          <div className="cs-lead-loading">{t("leadPage.messages.loading")}</div>
         ) : rows.length === 0 ? (
-          <div className="cs-lead-empty">Không có dữ liệu</div>
+          <div className="cs-lead-empty">{t("leadPage.messages.noData")}</div>
         ) : (
           rows.map((lead) => (
           <div className="cs-lead-row" key={lead.id}>
@@ -281,7 +320,7 @@ export default function LeadPage() {
                   onChange={async (e) => {
                     // Check ngay lập tức: chỉ cho phép nếu được assign cho user hiện tại
                     if (!lead.isAssignedToMe) {
-                      toast.error("Chỉ người dùng được gán lead mới có thể thay đổi status");
+                      toast.error(t("leadPage.messages.onlyAssignedCanChange"));
                       return;
                     }
 
@@ -297,7 +336,7 @@ export default function LeadPage() {
 
                     try {
                       await leadService.updateLeadStatus(lead.id, newStatus);
-                      toast.success("Cập nhật status thành công");
+                      toast.success(t("leadPage.messages.updateStatusSuccess"));
                     } catch (error) {
                       // Revert on error
                       setRows((prev) =>
@@ -305,7 +344,7 @@ export default function LeadPage() {
                           r.id === lead.id ? { ...r, status: oldStatus } : r
                         )
                       );
-                      const errorMessage = error.message || "Có lỗi xảy ra khi cập nhật status";
+                      const errorMessage = error.message || t("leadPage.messages.updateStatusError");
                       toast.error(errorMessage);
                       
                       // Nếu lỗi là do không có quyền, reload trang
@@ -318,9 +357,9 @@ export default function LeadPage() {
                       }
                     }
                   }}
-                  title={lead.isAssignedToMe ? "Thay đổi status" : "Chỉ người dùng được gán lead mới có thể thay đổi status"}
+                  title={lead.isAssignedToMe ? t("leadPage.actions.changeStatus") : t("leadPage.actions.changeStatusTooltip")}
                 >
-                  {STATUSES.filter((s) => s !== "All").map((s) => (
+                  {STATUSES.filter((s) => s !== t("common.all")).map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
@@ -330,23 +369,22 @@ export default function LeadPage() {
               </div>
             </div>
             <div className="cs-lead-col cs-lead-col-assigned">
-              {lead.assignedStatus === "Unassigned" ? (
+              {!lead.assignedTo ? (
                 <button
                   className="cs-lead-assign-btn"
                   onClick={async () => {
-                    const currentUserId = user?._id || user?.id;
                     if (!user || !currentUserId) {
-                      toast.error("Không thể xác định người dùng");
+                      toast.error(t("leadPage.messages.userNotFound"));
                       return;
                     }
 
                     try {
                       await leadService.assignLead(lead.id, currentUserId);
-                      toast.success("Gán lead thành công");
+                      toast.success(t("leadPage.messages.assignSuccess"));
                       // Refresh data
                       fetchLeads();
                     } catch (error) {
-                      const errorMessage = error.message || "Có lỗi xảy ra khi gán lead";
+                      const errorMessage = error.message || t("leadPage.messages.assignError");
                       toast.error(errorMessage);
                       
                       // Nếu lỗi là do lead đã được assign cho user khác, reload trang
@@ -359,7 +397,7 @@ export default function LeadPage() {
                       }
                     }
                   }}
-                  title="Click để gán lead cho bạn"
+                  title={t("leadPage.actions.assignTooltip")}
                 >
                   <UserPlus size={18} />
                 </button>
@@ -369,20 +407,20 @@ export default function LeadPage() {
                   onClick={async () => {
                     try {
                       await leadService.assignLead(lead.id, null);
-                      toast.success("Hủy gán lead thành công");
+                      toast.success(t("leadPage.messages.unassignSuccess"));
                       // Refresh data
                       fetchLeads();
                     } catch (error) {
-                      toast.error(error.message || "Có lỗi xảy ra khi hủy gán lead");
+                      toast.error(error.message || t("leadPage.messages.unassignError"));
                     }
                   }}
-                  title="Click để hủy gán lead"
+                  title={t("leadPage.actions.unassignTooltip")}
                 >
                   <UserCheck size={18} />
                 </button>
               ) : (
                 <span className="cs-lead-badge cs-lead-badge-assigned">
-                  Assigned
+                  {t("common.assigned")}
                 </span>
               )}
             </div>
@@ -392,6 +430,8 @@ export default function LeadPage() {
                 targetId={lead.id}
                 initialNote={lead.note || ""}
                 noteId={lead.noteId}
+                disabled={!lead.isAssignedToMe}
+                disabledMessage={t("leadPage.note.disabledMessage")}
                 onNoteSaved={(savedData) => {
                   setRows((prev) =>
                     prev.map((r) =>

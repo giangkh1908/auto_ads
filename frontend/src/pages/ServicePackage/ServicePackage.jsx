@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import './ServicePackage.css';
 import axiosInstance from '../../utils/axios';
 import { toast } from 'sonner';
+import { getFeatureLabel } from '../../constants/app.constants';
+import { useShopPackage } from '../../hooks/useShopPackage';
 
 function ServicePackage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { shopPkg } = useShopPackage();
   const [activeTab, setActiveTab] = useState('3months');
   const [packages, setPackages] = useState([]);
 
@@ -22,23 +27,56 @@ function ServicePackage() {
           setPackages(data.data);
         } else {
           console.error("Failed to load packages:", data.message);
-          toast.error(data.message || "Không thể tải danh sách packages");
+          toast.error(data.message || t("servicePackage.messages.loadError"));
           setPackages([]);
         }
       } catch (e) {
         console.error("Load packages error:", e);
-        toast.error("Lỗi khi tải danh sách packages");
+        toast.error(t("servicePackage.messages.loadErrorGeneric"));
         setPackages([]);
       }
     };
 
     fetchPackages();
-  }, [activeTab]);
+  }, [activeTab, t]);
+
+  // Check if a plan is the current shop owner's package
+  const isCurrentPackage = (plan) => {
+    if (!shopPkg || !shopPkg.package) return false;
+    
+    // So sánh tên gói (case-insensitive)
+    const currentPackageName = shopPkg.package.name?.toLowerCase() || '';
+    const planName = plan.name?.toLowerCase() || '';
+    
+    // So sánh planType (chuẩn hóa: "12months" = "1year")
+    const currentPlanType = shopPkg.package.planType;
+    const planPlanType = plan.planType;
+    
+    // Chuẩn hóa planType để so sánh
+    const normalizePlanType = (pt) => {
+      if (!pt) return null;
+      if (pt === "1year" || pt === "12months") return "12months";
+      if (pt === "3months") return "3months";
+      return pt;
+    };
+    
+    const normalizedCurrent = normalizePlanType(currentPlanType);
+    const normalizedPlan = normalizePlanType(planPlanType);
+    
+    // So sánh cả name và planType
+    return currentPackageName === planName && normalizedCurrent === normalizedPlan;
+  };
 
   // Handle buy button click
   const handleBuyClick = (plan) => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để mua gói dịch vụ');
+      toast.error(t("servicePackage.messages.loginRequired"));
+      return;
+    }
+
+    // Không cho phép mua lại gói đang sử dụng
+    if (isCurrentPackage(plan)) {
+      toast.error(t("servicePackage.messages.alreadyUsing"));
       return;
     }
 
@@ -61,10 +99,19 @@ function ServicePackage() {
       {/* Hero Section */}
       <section className="sp-hero">
         <div className="sp-hero-content">
-          <h1 className="sp-hero-title">BẢNG GIÁ PHẦN MỀM FCHAT</h1>
+          <h1 className="sp-hero-title">{t("servicePackage.title")}</h1>
           <p className="sp-hero-subtitle">
-            Fchat Miễn Phí Trọn Đời! Bạn chỉ trả tiền khi thấy hiệu quả!
+            {t("servicePackage.subtitle")}
           </p>
+          {shopPkg?.package ? (
+            <p style={{ marginTop: '20px'}}>
+              Shop đang sử dụng gói <strong>{shopPkg.package.name}</strong> | Thời hạn: <strong>{shopPkg.package.planType === '3months' ? '3 tháng' : shopPkg.package.planType === '12months' ? '1 năm' : 'N/A'}</strong>
+            </p>
+          ) : (
+            <p style={{ marginTop: '20px'}}>
+              Shop chưa sử dụng gói nào
+            </p>
+          )}
         </div>
       </section>
 
@@ -77,22 +124,31 @@ function ServicePackage() {
               className={`sp-tab-btn ${activeTab === '3months' ? 'sp-tab-active' : ''}`}
               onClick={() => setActiveTab('3months')}
             >
-              3 Tháng
+              {t("servicePackage.tabs.3months")}
             </button>
             <button
               className={`sp-tab-btn ${activeTab === '12months' ? 'sp-tab-active' : ''}`}
               onClick={() => setActiveTab('12months')}
             >
-              {/* <Check size={16} className="sp-tab-check" /> */}
-              1 Năm
+              1 Năm <span className="sp-tab-discount">-33%</span>
             </button>
           </div>
 
           {/* Pricing Cards */}
           <div className="sp-cards-grid">
-            {packages.map((plan, index) => (
+            {packages.map((plan, index) => {
+              // Xác định badge class dựa trên tên package
+              const getBadgeClass = (packageName) => {
+                if (!packageName) return 'sp-badge-purple';
+                const name = packageName.toLowerCase();
+                if (name.includes('chatbot ai')) return 'sp-badge-chatbot-ai';
+                if (name.includes('chatbot')) return 'sp-badge-chatbot';
+                return 'sp-badge-purple';
+              };
+
+              return (
               <div key={index} className="sp-card">
-                <div className={`sp-badge sp-badge-blue`}>
+                <div className={`sp-badge ${getBadgeClass(plan.name)}`}>
                   {plan.name}
                 </div>
 
@@ -101,8 +157,7 @@ function ServicePackage() {
                   <div className="sp-card-price">
                     <span className="sp-price-value">{plan.price.toLocaleString()}đ</span>
                     <span className="sp-price-label">
-                      {/* / {plan.planType === '3months' ? "Tháng" : "Năm"} */}
-                      / Tháng
+                      {plan.planType === '3months' ? t("servicePackage.price.perMonth") : t("servicePackage.price.perMonth")}
                     </span>
                   </div>
                 </div>
@@ -110,7 +165,7 @@ function ServicePackage() {
                 <div className="sp-card-stats">
                   <div className="sp-stat">
                     <span className="sp-stat-num">{plan.pages}</span>
-                    <span className="sp-stat-text">Pages</span>
+                    <span className="sp-stat-text">{t("servicePackage.stats.pages")}</span>
                   </div>
                 </div>
 
@@ -129,148 +184,42 @@ function ServicePackage() {
 
                   <div className="sp-feature">
                     <span className="sp-feature-text">
-                      {plan.pages} Pages
+                      {plan.pages} {t("servicePackage.stats.pages")}
                     </span>
                   </div>
 
                   <div className="sp-feature">
                     <span className="sp-feature-text">
-                      {plan.employees} Nhân viên
+                      {plan.employees} {t("servicePackage.stats.employees")}
                     </span>
                   </div>
 
                   <div className="sp-feature">
                     <span className="sp-feature-text">
-                      {plan.shops} Shop
+                      {plan.shops} {t("servicePackage.stats.shops")}
                     </span>
                   </div>
 
                   {plan.features.map((f, i) => (
                     <div key={i} className="sp-feature">
-                      <span className="sp-feature-text">{f}</span>
+                      <span className="sp-feature-text">{getFeatureLabel(f)}</span>
                     </div>
                   ))}
                 </div>
 
                 <button
-                  className="sp-card-btn sp-btn-primary"
+                  className={`sp-card-btn ${isCurrentPackage(plan) ? 'sp-btn-disabled' : 'sp-btn-primary'}`}
                   onClick={() => handleBuyClick(plan)}
+                  // disabled={isCurrentPackage(plan)}
                 >
-                  Mua Ngay
+                  {isCurrentPackage(plan) ? t("servicePackage.buttons.inUse") : t("servicePackage.buttons.buyNow")}
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
-
-      {/* Features Comparison Table */}
-      {/* <section className="sp-features">
-        <div className="sp-container">
-          <h2 className="sp-section-title">TÍNH NĂNG</h2>
-          <div className="sp-table-wrapper">
-            <table className="sp-table">
-              <thead>
-                <tr>
-                  <th className="sp-th-name"></th>
-                  <th className="sp-th">FREE</th>
-                  <th className="sp-th">LIVECHAT</th>
-                  <th className="sp-th">CHATBOT</th>
-                  <th className="sp-th">CHATBOT AI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {features.map((feature, index) => (
-                  <tr key={index} className="sp-tr" style={{ animationDelay: `${index * 0.05}s` }}>
-                    <td className="sp-td-name">{feature.name}</td>
-                    <td className="sp-td">
-                      {feature.free === '✓' ? <Check size={18} className="sp-check" /> : feature.free}
-                    </td>
-                    <td className="sp-td">
-                      {feature.livechat === '✓' ? <Check size={18} className="sp-check" /> : feature.livechat}
-                    </td>
-                    <td className="sp-td">
-                      {feature.chatbot === '✓' ? <Check size={18} className="sp-check" /> : feature.chatbot}
-                    </td>
-                    <td className="sp-td">
-                      {feature.chatbotai === '✓' ? <Check size={18} className="sp-check" /> : feature.chatbotai}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section> */}
-
-      {/* Additional Services */}
-      {/* <section className="sp-services">
-        <div className="sp-container">
-          <h2 className="sp-section-title">MUA THÊM DỊCH VỤ CHO GÓI TRẢ PHÍ</h2>
-          <div className="sp-services-grid">
-            {additionalServices.map((service, index) => (
-              <div
-                key={index}
-                className="sp-service-card"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="sp-service-name">{service.name}</div>
-                <div className="sp-service-duration">{service.duration}</div>
-                <div className="sp-service-price">
-                  <span className="sp-service-amount">{service.price}</span>
-                  <span className="sp-service-period">/ {service.period}</span>
-                </div>
-                <button className="sp-service-btn">MUA NGAY</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-      {/* Usage Table */}
-      {/* <section className="sp-usage">
-        <div className="sp-container">
-          <h2 className="sp-section-title">Mức thêm dung lượng lưu trữ khách hàng</h2>
-          <div className="sp-usage-wrapper">
-            <table className="sp-usage-table">
-              <thead>
-                <tr>
-                  <th className="sp-usage-th-name">Khách hàng</th>
-                  <th className="sp-usage-th">5K</th>
-                  <th className="sp-usage-th">10K</th>
-                  <th className="sp-usage-th">20K</th>
-                  <th className="sp-usage-th">30K</th>
-                  <th className="sp-usage-th">50K</th>
-                  <th className="sp-usage-th">100K</th>
-                  <th className="sp-usage-th">Hơn nữa</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="sp-usage-tr">
-                  <td className="sp-usage-td-name">Giá / tháng</td>
-                  <td className="sp-usage-td">100</td>
-                  <td className="sp-usage-td">150</td>
-                  <td className="sp-usage-td">200</td>
-                  <td className="sp-usage-td">300</td>
-                  <td className="sp-usage-td">500</td>
-                  <td className="sp-usage-td">1,000</td>
-                  <td className="sp-usage-td">2,500</td>
-                </tr>
-                <tr className="sp-usage-tr">
-                  <td className="sp-usage-td-name">Giá năm (Tiết kiệm)</td>
-                  <td className="sp-usage-td">1,200</td>
-                  <td className="sp-usage-td">1,800</td>
-                  <td className="sp-usage-td">2,400</td>
-                  <td className="sp-usage-td">3,600</td>
-                  <td className="sp-usage-td">6,000</td>
-                  <td className="sp-usage-td">12,000</td>
-                  <td className="sp-usage-td">30,000</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section> */}
     </div>
   );
 }

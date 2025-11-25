@@ -17,5 +17,15 @@
       "email_invalid": "Invalid email",
       "password_min": "Password must be at least 6 characters",
       "password_mismatch": "Passwords do not match"
+    },
+    "noteEditor": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "clickToEdit": "Click to edit",
+      "saveSuccess": "Note saved successfully",
+      "saveError": "Cannot save note",
+      "saveErrorGeneric": "Error saving note",
+      "missingInfo": "Missing information to save note"
     }
   }

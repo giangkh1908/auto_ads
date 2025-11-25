@@ -75,7 +75,7 @@ function ResetForm({ onSwitchLogin }) {
 
     return (
         <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-header">
+            <div className="form-header-reset">
                 <h3>{t('auth.reset_password_title')}</h3>
                 <p>{t('auth.reset_instruction')}</p>
             </div>

@@ -140,6 +140,14 @@ export async function listAdsCtrl(req, res) {
       [items, total] = await Promise.all([
         Ads.find(filter)
           .populate('created_by', 'full_name email')
+          .populate({
+            path: 'set_id',
+            select: 'name campaign_id',
+            populate: {
+              path: 'campaign_id',
+              select: 'name objective'
+            }
+          })
           .sort({ createdAt: -1 }), // Sort ở Backend trước
         Ads.countDocuments(filter)
       ]);
@@ -157,6 +165,14 @@ export async function listAdsCtrl(req, res) {
       [items, total] = await Promise.all([
         Ads.find(filter)
           .populate('created_by', 'full_name email')
+          .populate({
+            path: 'set_id',
+            select: 'name campaign_id',
+            populate: {
+              path: 'campaign_id',
+              select: 'name objective'
+            }
+          })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(Number(limit)),
@@ -201,8 +217,6 @@ export async function syncAdsCtrl(req, res) {
 
     if (!accessToken) {
       return res.status(400).json({
-        message:
-          "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
         message:
           "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
         missingToken: true,

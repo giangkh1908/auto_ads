@@ -9,7 +9,7 @@ function ChatAIWidget({ accountId, accountName }) {
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef(null)
 
-  const { messages, isLoading, sendMessage, clearMessages } = useChat(accountId)
+  const { messages, isLoading, sendMessage } = useChat(accountId)
 
   // Auto-scroll
   useEffect(() => {
@@ -63,23 +63,28 @@ function ChatAIWidget({ accountId, accountName }) {
           </div>
 
           <div className="chat-widget-body">
-            {messages.length === 0 && !isLoading ? (
+            {messages.length === 0 && !isLoading && (
               <div className="chat-widget-welcome">
                 <h3>Chào mừng đến với AI Analytics! 👋</h3>
                 <p>Bạn có thể hỏi bất kỳ câu hỏi nào về quảng cáo:</p>
                 <ul className="chat-widget-welcome-examples">
-                  <li>📊 Xem tổng quan hiệu suất quảng cáo hôm nay</li>
-                  <li>📈 So sánh các chiến dịch</li>
-                  <li>🔍 Phân tích xu hướng theo thời gian</li>
-                  <li>🏆 Xếp hạng campaigns/adsets/ads</li>
+                  <li onClick={() => setInputValue("Chi tiêu hôm nay thế nào?")}>📊 Chi tiêu hôm nay thế nào?</li>
+                  <li onClick={() => setInputValue("Có bao nhiêu chiến dịch?")}>🔢 Có bao nhiêu chiến dịch?</li>
+                  <li onClick={() => setInputValue("Xu hướng CTR 7 ngày qua")}>📈 Xu hướng CTR 7 ngày qua</li>
+                  <li onClick={() => setInputValue("Campaign nào hiệu quả nhất?")}>🏆 Campaign nào hiệu quả nhất?</li>
                 </ul>
               </div>
-            ) : (
+            )}
+
+            {(messages.length > 0 || isLoading) && (
               <div className="chat-widget-messages">
                 {messages.map((m) => (
                   <div key={m.id} className={`chat-widget-message ${m.role === 'user' ? 'user' : 'assistant'} ${m.isError ? 'error' : ''}`}>
                     <div className="chat-widget-message-role">{m.role === 'user' ? '👤' : '🤖'}</div>
-                    <div className="chat-widget-message-content">{m.content}</div>
+                    <div
+                      className="chat-widget-message-content"
+                      dangerouslySetInnerHTML={{ __html: m.content }}
+                    />
                     {m.timestamp && (
                       <div className="chat-widget-message-time">
                         {new Date(m.timestamp).toLocaleTimeString('vi-VN')}
@@ -87,16 +92,19 @@ function ChatAIWidget({ accountId, accountName }) {
                     )}
                   </div>
                 ))}
+
+                {isLoading && (
+                  <div className="chat-widget-message assistant">
+                    <div className="chat-widget-message-role">🤖</div>
+                    <div className="chat-widget-message-content loading">
+                      <div className="chat-widget-loading-dots">
+                        <span></span><span></span><span></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
-              </div>
-            )}
-            
-            {isLoading && (
-              <div className="chat-widget-loading">
-                <div className="chat-widget-loading-dots">
-                  <span></span><span></span><span></span>
-                </div>
-                <span>AI đang phân tích...</span>
               </div>
             )}
           </div>

@@ -11,7 +11,7 @@ import logo_1 from "../../../assets/Logo_Fchat.png";
 function AdminHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation("admin");
   const { user, logout } = useAuth();
   const { internalRole, tabs } = useAdminRole();
   const [openMenu, setOpenMenu] = useState(null); // "avatar", "language" || null
@@ -54,6 +54,23 @@ function AdminHeader() {
     setOpenMenu(null);
   };
 
+  // Helper function to translate tab name based on path
+  const getTranslatedTabName = (tabPath, tabName) => {
+    const tabTranslationMap = {
+      '/admin/cs-staff/leads': 'header.tabs.leads',
+      '/admin/cs-staff/service-package': 'header.tabs.servicePackage',
+      '/admin/cs-staff/payment': 'header.tabs.payment',
+      '/admin/accountant/transactions': 'header.tabs.transactions',
+      '/admin/accountant/reports': 'header.tabs.paymentReports',
+      '/admin/system-admin/payment-management': 'header.tabs.paymentManagement',
+      '/admin/system-admin/user-management': 'header.tabs.userManagement',
+      '/admin/system-admin/system-monitoring': 'header.tabs.systemMonitoring',
+    };
+    
+    const translationKey = tabTranslationMap[tabPath];
+    return translationKey ? t(translationKey) : tabName;
+  };
+
   return (
     <header className="admin-header">
       <div className="admin-header-content">
@@ -74,6 +91,7 @@ function AdminHeader() {
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = pathname === tab.path || pathname.startsWith(tab.path + "/");
+              const translatedName = getTranslatedTabName(tab.path, tab.name);
               return (
                 <button
                   key={tab.path}
@@ -81,7 +99,7 @@ function AdminHeader() {
                   onClick={() => navigate(tab.path)}
                 >
                   <Icon size={18} />
-                  &nbsp;{tab.name}
+                  &nbsp;{translatedName}
                 </button>
               );
             })}
@@ -102,10 +120,10 @@ function AdminHeader() {
               <ul className="admin-dropdown-language">
                 <li onClick={() => handleLanguageChange("vi")}>
                   <img src={viFlag} alt="Vietnamese" />{" "}
-                  {t("header.languages.vi")}
+                  {t("translation:header.languages.vi")}
                 </li>
                 <li onClick={() => handleLanguageChange("en")}>
-                  <img src={enFlag} alt="English" /> {t("header.languages.en")}
+                  <img src={enFlag} alt="English" /> {t("translation:header.languages.en")}
                 </li>
               </ul>
             )}
@@ -134,16 +152,16 @@ function AdminHeader() {
                     <div className="admin-dropdown-infor-avatar">
                       <b>{user?.full_name}</b>
                       <small>
-                        Role: {internalRole}
+                        {t("header.role")}: {internalRole}
                         <br />
-                        Email: {user?.email}
+                        {t("header.email")}: {user?.email}
                       </small>
                     </div>
                     <div className="admin-dropdown-option-avatar">
                       <li onClick={() => navigate("/profile")}>
-                        {t("header.profile")}
+                        {t("translation:header.profile")}
                       </li>
-                      <li onClick={logout}>{t("header.logout")}</li>
+                      <li onClick={logout}>{t("translation:header.logout")}</li>
                     </div>
                   </div>
                 )}

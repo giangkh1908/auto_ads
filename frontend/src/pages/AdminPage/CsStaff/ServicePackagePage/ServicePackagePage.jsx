@@ -1,116 +1,275 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "./ServicePackagePage.css";
-import { Search, ChevronDown } from "lucide-react";
-
-const PACKAGES = ["All", "Chatbot", "Chatbot AI"];
-const SEGMENTS = ["All", "Expiring Soon", "Recently Expired", "New Signup", "No Issue"];
-const USER_STATUSES = ["All", "Active", "Inactive", "Banned"];
-const ASSIGNED_STATUSES = ["All", "Assigned", "Unassigned"];
-
-// Mock data demo UI – có thể thay bằng dữ liệu API sau
-const MOCK_SERVICE_PACKAGES = [
-  {
-    id: "sp1",
-    name: "Vũ Quỳnh Lan",
-    phone: "0909090909",
-    email: "quynhlan@gmail.com",
-    package: "Chatbot",
-    purchasedDate: "01/08/2024",
-    expiredDate: "01/09/2024",
-    segment: "Expiring Soon",
-    userStatus: "Active",
-    assignedStatus: "Assigned",
-    note: "Đã gọi warning.",
-  },
-  {
-    id: "sp2",
-    name: "Kim Hồng Giang",
-    phone: "0122936534",
-    email: "kimgiang@gmail.com",
-    package: "Chatbot AI",
-    purchasedDate: "22/07/2024",
-    expiredDate: "22/08/2024",
-    segment: "Recently Expired",
-    userStatus: "Banned",
-    assignedStatus: "Unassigned",
-    note: "",
-  },
-  {
-    id: "sp3",
-    name: "Nguyễn Thành Long",
-    phone: "0123456789",
-    email: "longnthe171630@fpt.edu.vn",
-    package: "Chatbot",
-    purchasedDate: "11/10/2024",
-    expiredDate: "11/11/2024",
-    segment: "New Signup",
-    userStatus: "Active",
-    assignedStatus: "Unassigned",
-    note: "Không nghe máy.",
-  },
-  {
-    id: "sp4",
-    name: "Hà Anh Tuấn",
-    phone: "0123456789",
-    email: "anhtuan@gmail.com",
-    package: "Chatbot AI",
-    purchasedDate: "04/09/2024",
-    expiredDate: "04/10/2024",
-    segment: "No Issue",
-    userStatus: "Inactive",
-    assignedStatus: "Unassigned",
-    note: "Lỗi Service. Liên hệ Dev Team để trợ giúp.",
-  },
-];
+import { Search, ChevronDown, UserPlus, UserCheck } from "lucide-react";
+import axiosInstance from "../../../../utils/axios";
+import { toast } from "sonner";
+import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
+import { fetchLatestNotesBatch } from "../../../../utils/noteUtils";
+import { useAuth } from "../../../../hooks/useAuth";
 
 export default function ServicePackagePage() {
-  const [rows] = useState(MOCK_SERVICE_PACKAGES);
+  const { t, i18n } = useTranslation("admin");
+  const [rawPackages, setRawPackages] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [packageFilter, setPackageFilter] = useState("All");
-  const [segment, setSegment] = useState("All");
-  const [userStatus, setUserStatus] = useState("All");
-  const [assignedStatus, setAssignedStatus] = useState("All");
+  const [packageFilter, setPackageFilter] = useState(t("common.all"));
+  const [segment, setSegment] = useState(t("common.all"));
+  const [userStatus, setUserStatus] = useState(t("common.all"));
+  const [assignedStatus, setAssignedStatus] = useState(t("common.all"));
+  const { user } = useAuth();
+  const currentUserId = user?._id || user?.id;
+
+  const SEGMENTS = useMemo(() => [
+    t("common.all"),
+    t("servicePackagePage.segments.expiringSoon"),
+    t("servicePackagePage.segments.recentlyExpired"),
+    t("servicePackagePage.segments.newSignup"),
+    t("servicePackagePage.segments.noIssue")
+  ], [t]);
+  const USER_STATUSES = useMemo(() => [
+    t("common.all"),
+    t("servicePackagePage.userStatuses.active"),
+    t("servicePackagePage.userStatuses.inactive"),
+    t("servicePackagePage.userStatuses.banned")
+  ], [t]);
+  const ASSIGNED_STATUSES = useMemo(() => [t("common.all"), t("common.assigned"), t("common.unassigned")], [t]);
+
+  // Helper function để map dữ liệu từ backend sang format UI
+  const mapUserPackageData = useCallback((userPackage) => {
+    const user = userPackage.user_id || {};
+    const pkg = userPackage.package_id || {};
+    const salesman = userPackage.salesman_id || {};
+
+    const getDisplayName = (entity = {}) =>
+      entity.full_name || entity.name || entity.username || "-";
+
+    // Format date
+    const formatDate = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    // Xác định segment dựa trên from_date và to_date
+    const getSegment = () => {
+      if (!userPackage.from_date || !userPackage.to_date) return t("servicePackagePage.segments.noIssue");
+      
+      const now = new Date();
+      const fromDate = new Date(userPackage.from_date);
+      const toDate = new Date(userPackage.to_date);
+      const daysUntilExpiry = Math.ceil((toDate - now) / (1000 * 60 * 60 * 24));
+      const daysSinceExpiry = Math.ceil((now - toDate) / (1000 * 60 * 60 * 24));
+      const daysSinceSignup = Math.ceil((now - fromDate) / (1000 * 60 * 60 * 24));
+
+      // New Signup: mới mua ≤ 7 ngày
+      if (daysSinceSignup <= 7) {
+        return t("servicePackagePage.segments.newSignup");
+      }
+      
+      // Recently Expired: đã hết hạn trong vòng 14 ngày gần đây
+      if (toDate < now && daysSinceExpiry <= 14) {
+        return t("servicePackagePage.segments.recentlyExpired");
+      }
+      
+      // Expiring Soon: còn ≤ 7 ngày và chưa hết hạn
+      if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
+        return t("servicePackagePage.segments.expiringSoon");
+      }
+      
+      // No Issue: các trường hợp khác
+      return t("servicePackagePage.segments.noIssue");
+    };
+
+    // Map user status với translation
+    const mapUserStatus = (status) => {
+      const statusMap = {
+        active: t("servicePackagePage.userStatuses.active"),
+        inactive: t("servicePackagePage.userStatuses.inactive"),
+        banned: t("servicePackagePage.userStatuses.banned"),
+        pending: t("common.pending"),
+      };
+      return statusMap[status?.toLowerCase()] || t("servicePackagePage.userStatuses.active");
+    };
+
+    // Map package name (loại bỏ số tháng nếu có)
+    const mapPackageName = (name) => {
+      if (!name) return "-";
+      const lower = name.toLowerCase();
+      if (lower.includes("chatbot ai")) return "Chatbot AI";
+      if (lower.includes("chatbot")) return "Chatbot";
+      return name;
+    };
+
+    return {
+      id: userPackage._id,
+      userId: user._id || "-",
+      name: getDisplayName(user),
+      phone: user.phone || "-",
+      email: user.email || "-",
+      package: mapPackageName(pkg.name),
+      purchasedDate: formatDate(userPackage.from_date || userPackage.created_at),
+      expiredDate: formatDate(userPackage.to_date),
+      segment: getSegment(),
+      userStatus: mapUserStatus(user.status),
+      userStatusKey: (user.status || "active").toLowerCase(), // Lưu status gốc để dùng cho CSS class
+      assignedStatus: salesman._id ? t("common.assigned") : t("common.unassigned"),
+      salesmanId: salesman._id || null,
+      salesmanName: getDisplayName(salesman),
+      note: "",
+      noteId: null,
+      originalData: userPackage,
+    };
+  }, [t]);
+
+  // Fetch user packages từ API
+  const fetchUserPackages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get("/api/user-package", {
+        params: {
+          page: 1,
+          limit: 1000, // Lấy tất cả để filter ở frontend
+        },
+      });
+
+      if (response.data?.success) {
+        setRawPackages(response.data.data || []);
+        const mappedData = (response.data.data || []).map((pkg) => mapUserPackageData(pkg));
+        
+        // Fetch notes cho tất cả user packages
+        const noteItems = mappedData.map((item) => ({
+          target_type: "UserPackage",
+          target_id: item.id,
+        }));
+        
+        const notesMap = await fetchLatestNotesBatch(noteItems);
+        
+        // Merge notes vào data
+        const dataWithNotes = mappedData.map((item) => {
+          const noteKey = `UserPackage_${item.id}`;
+          const note = notesMap.get(noteKey);
+          return {
+            ...item,
+            note: note?.note || "",
+            noteId: note?._id || null,
+          };
+        });
+        
+        setRows(dataWithNotes);
+      } else {
+        toast.error(response.data?.message || t("servicePackagePage.messages.fetchErrorGeneric"));
+        setRows([]);
+      }
+    } catch (error) {
+      console.error("Error fetching user packages:", error);
+      toast.error(t("servicePackagePage.messages.fetchError"));
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [mapUserPackageData]);
+
+  useEffect(() => {
+    fetchUserPackages();
+  }, [fetchUserPackages]);
+
+  // Re-map data khi ngôn ngữ thay đổi
+  useEffect(() => {
+    if (rawPackages.length > 0) {
+      const mappedData = rawPackages.map((pkg) => mapUserPackageData(pkg));
+      
+      // Fetch notes cho tất cả user packages
+      const noteItems = mappedData.map((item) => ({
+        target_type: "UserPackage",
+        target_id: item.id,
+      }));
+      
+      fetchLatestNotesBatch(noteItems).then((notesMap) => {
+        const dataWithNotes = mappedData.map((item) => {
+          const noteKey = `UserPackage_${item.id}`;
+          const note = notesMap.get(noteKey);
+          return {
+            ...item,
+            note: note?.note || "",
+            noteId: note?._id || null,
+          };
+        });
+        setRows(dataWithNotes);
+      });
+      
+      // Reset filters về "All" khi đổi ngôn ngữ
+      setPackageFilter(t("common.all"));
+      setSegment(t("common.all"));
+      setUserStatus(t("common.all"));
+      setAssignedStatus(t("common.all"));
+    }
+  }, [i18n.language, rawPackages, mapUserPackageData, t]);
+
+  // Dynamic filters từ dữ liệu thực tế
+  const packagesList = useMemo(() => {
+    const packages = new Set(rows.map((r) => r.package).filter(Boolean));
+    return [t("common.all"), ...Array.from(packages).sort()];
+  }, [rows, t]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return rows.filter((row) => {
-      // Search theo ID, name, phone, email
+      // Search theo ID, userId, name, phone, email
       const matchSearch =
         !s ||
         row.id.toLowerCase().includes(s) ||
+        (row.userId || "").toString().toLowerCase().includes(s) ||
         row.name.toLowerCase().includes(s) ||
         (row.phone || "").toLowerCase().includes(s) ||
         (row.email || "").toLowerCase().includes(s);
 
       // Lọc theo package
-      const matchPackage = packageFilter === "All" ? true : row.package === packageFilter;
+      const allValue = t("common.all");
+      const matchPackage = packageFilter === "All" || packageFilter === allValue ? true : row.package === packageFilter;
 
       // Lọc theo segment
-      const matchSegment = segment === "All" ? true : row.segment === segment;
+      const matchSegment = segment === "All" || segment === allValue ? true : row.segment === segment;
 
       // Lọc theo user status
-      const matchUserStatus = userStatus === "All" ? true : row.userStatus === userStatus;
+      const matchUserStatus = userStatus === "All" || userStatus === allValue ? true : row.userStatus === userStatus;
 
       // Lọc theo assigned status
       const matchAssignedStatus =
-        assignedStatus === "All" ? true : row.assignedStatus === assignedStatus;
+        assignedStatus === "All" || assignedStatus === allValue
+          ? true
+          : assignedStatus === t("common.assigned")
+          ? row.assignedStatus === t("common.assigned")
+          : row.assignedStatus === t("common.unassigned");
 
       return (
         matchSearch && matchPackage && matchSegment && matchUserStatus && matchAssignedStatus
       );
     });
-  }, [search, packageFilter, segment, userStatus, assignedStatus, rows]);
+  }, [search, packageFilter, segment, userStatus, assignedStatus, rows, t]);
+
+  // Reset filter nếu giá trị không còn trong danh sách
+  useEffect(() => {
+    const allValue = t("common.all");
+    if (packageFilter !== "All" && packageFilter !== allValue && !packagesList.includes(packageFilter)) {
+      setPackageFilter(allValue);
+    }
+  }, [packagesList, packageFilter, t]);
 
   return (
     <div className="cs-sp-page">
       <div className="cs-sp-toolbar">
         <div className="cs-sp-toolbar-left">
           <div className="cs-sp-filter-group">
-            <label className="cs-sp-filter-label">Search</label>
+            <label className="cs-sp-filter-label">{t("servicePackagePage.search")}</label>
             <div className="cs-sp-search">
               <input
                 className="cs-sp-search-input"
-                placeholder="ID, Name, Phone, Email"
+                placeholder={t("servicePackagePage.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -121,14 +280,14 @@ export default function ServicePackagePage() {
           </div>
 
           <div className="cs-sp-filter-group">
-            <label className="cs-sp-filter-label">Package</label>
+            <label className="cs-sp-filter-label">{t("servicePackagePage.package")}</label>
             <div className="cs-sp-select-wrapper">
               <select
                 className="cs-sp-select"
                 value={packageFilter}
                 onChange={(e) => setPackageFilter(e.target.value)}
               >
-                {PACKAGES.map((p) => (
+                {packagesList.map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -139,7 +298,7 @@ export default function ServicePackagePage() {
           </div>
 
           <div className="cs-sp-filter-group">
-            <label className="cs-sp-filter-label">Segment</label>
+            <label className="cs-sp-filter-label">{t("servicePackagePage.segment")}</label>
             <div className="cs-sp-select-wrapper">
               <select
                 className="cs-sp-select"
@@ -157,7 +316,7 @@ export default function ServicePackagePage() {
           </div>
 
           <div className="cs-sp-filter-group">
-            <label className="cs-sp-filter-label">User Status</label>
+            <label className="cs-sp-filter-label">{t("servicePackagePage.userStatus")}</label>
             <div className="cs-sp-select-wrapper">
               <select
                 className="cs-sp-select"
@@ -175,7 +334,7 @@ export default function ServicePackagePage() {
           </div>
 
           <div className="cs-sp-filter-group">
-            <label className="cs-sp-filter-label">Assigned Status</label>
+            <label className="cs-sp-filter-label">{t("servicePackagePage.assignedStatus")}</label>
             <div className="cs-sp-select-wrapper">
               <select
                 className="cs-sp-select"
@@ -194,21 +353,33 @@ export default function ServicePackagePage() {
         </div>
       </div>
 
-      <div className="cs-sp-table">
-        <div className="cs-sp-row cs-sp-header">
-          <div className="cs-sp-col cs-sp-col-name">Name</div>
-          <div className="cs-sp-col cs-sp-col-phone">Phone</div>
-          <div className="cs-sp-col cs-sp-col-email">Email</div>
-          <div className="cs-sp-col cs-sp-col-package">Package</div>
-          <div className="cs-sp-col cs-sp-col-purchased">Purchased Date</div>
-          <div className="cs-sp-col cs-sp-col-expired">Expired Date</div>
-          <div className="cs-sp-col cs-sp-col-segment">Segment</div>
-          <div className="cs-sp-col cs-sp-col-user-status">User Status</div>
-          <div className="cs-sp-col cs-sp-col-assigned">Assigned Status</div>
-          <div className="cs-sp-col cs-sp-col-note">Note</div>
+      {loading && (
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          {t("servicePackagePage.messages.loading")}
         </div>
+      )}
 
-        {filtered.map((row) => (
+      {!loading && (
+        <div className="cs-sp-table">
+          <div className="cs-sp-row cs-sp-header">
+            <div className="cs-sp-col cs-sp-col-name">{t("servicePackagePage.columns.name")}</div>
+            <div className="cs-sp-col cs-sp-col-phone">{t("servicePackagePage.columns.phone")}</div>
+            <div className="cs-sp-col cs-sp-col-email">{t("servicePackagePage.columns.email")}</div>
+            <div className="cs-sp-col cs-sp-col-package">{t("servicePackagePage.columns.package")}</div>
+            <div className="cs-sp-col cs-sp-col-purchased">{t("servicePackagePage.columns.purchasedDate")}</div>
+            <div className="cs-sp-col cs-sp-col-expired">{t("servicePackagePage.columns.expiredDate")}</div>
+            <div className="cs-sp-col cs-sp-col-segment">{t("servicePackagePage.columns.segment")}</div>
+            <div className="cs-sp-col cs-sp-col-user-status">{t("servicePackagePage.columns.userStatus")}</div>
+            <div className="cs-sp-col cs-sp-col-assigned">{t("servicePackagePage.columns.assignedStatus")}</div>
+            <div className="cs-sp-col cs-sp-col-note">{t("servicePackagePage.columns.note")}</div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              {t("servicePackagePage.messages.noData")}
+            </div>
+          ) : (
+            filtered.map((row) => (
           <div className="cs-sp-row" key={row.id}>
             <div className="cs-sp-col cs-sp-col-name">{row.name}</div>
             <div className="cs-sp-col cs-sp-col-phone">{row.phone || "-"}</div>
@@ -219,24 +390,88 @@ export default function ServicePackagePage() {
             <div className="cs-sp-col cs-sp-col-segment">{row.segment}</div>
             <div className="cs-sp-col cs-sp-col-user-status">
               <span
-                className={`cs-sp-badge cs-sp-badge-${row.userStatus.toLowerCase()}`}
+                className={`cs-sp-badge cs-sp-badge-${row.userStatusKey || "active"}`}
               >
                 {row.userStatus}
               </span>
             </div>
             <div className="cs-sp-col cs-sp-col-assigned">
-              <span
-                className={`cs-sp-badge cs-sp-badge-${
-                  row.assignedStatus === "Assigned" ? "assigned" : "unassigned"
-                }`}
-              >
-                {row.assignedStatus}
-              </span>
+              {!row.salesmanId ? (
+                <button
+                  className="cs-sp-assign-btn"
+                  onClick={async () => {
+                    const currentUserId = user?._id || user?.id;
+                    if (!user || !currentUserId) {
+                      toast.error(t("servicePackagePage.messages.userNotFound"));
+                      return;
+                    }
+
+                    try {
+                      await axiosInstance.put(`/api/user-package/${row.id}`, {
+                        salesman_id: currentUserId,
+                      });
+                      toast.success(t("servicePackagePage.messages.assignSuccess"));
+                      fetchUserPackages();
+                    } catch (error) {
+                      const errorMessage = error.response?.data?.message || error.message || t("servicePackagePage.messages.assignError");
+                      toast.error(errorMessage);
+                    }
+                  }}
+                  title={t("servicePackagePage.actions.assignTooltip")}
+                >
+                  <UserPlus size={18} />
+                </button>
+              ) : row.salesmanId && (user?._id || user?.id) && String(row.salesmanId) === String(user._id || user.id) ? (
+                <button
+                  className="cs-sp-assign-btn cs-sp-assigned-btn"
+                  onClick={async () => {
+                    try {
+                      await axiosInstance.put(`/api/user-package/${row.id}`, {
+                        salesman_id: null,
+                      });
+                      toast.success(t("servicePackagePage.messages.unassignSuccess"));
+                      fetchUserPackages();
+                    } catch (error) {
+                      toast.error(error.response?.data?.message || error.message || t("servicePackagePage.messages.unassignError"));
+                    }
+                  }}
+                  title={t("servicePackagePage.actions.unassignTooltip")}
+                >
+                  <UserCheck size={18} />
+                </button>
+              ) : (
+                <span
+                  className={`cs-sp-badge cs-sp-badge-assigned`}
+                >
+                  {row.salesmanName || t("common.assigned")}
+                </span>
+              )}
             </div>
-            <div className="cs-sp-col cs-sp-col-note">{row.note || "-"}</div>
+            <div className="cs-sp-col cs-sp-col-note">
+              <NoteEditor
+                targetType="UserPackage"
+                targetId={row.id}
+                initialNote={row.note || ""}
+                noteId={row.noteId}
+                placeholder={t("servicePackagePage.note.placeholder")}
+                disabled={
+                  !(
+                    row.salesmanId &&
+                    currentUserId &&
+                    String(row.salesmanId) === String(currentUserId)
+                  )
+                }
+                disabledMessage={t("servicePackagePage.note.disabledMessage")}
+                onNoteSaved={() => {
+                  fetchUserPackages();
+                }}
+              />
+            </div>
           </div>
-        ))}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

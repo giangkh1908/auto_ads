@@ -1,0 +1,652 @@
+{
+  "leadPage": {
+    "title": "Quản lý Lead",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên, Số điện thoại",
+    "status": "Trạng thái",
+    "assignedStatus": "Trạng thái gán",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "leadName": "Tên",
+      "phone": "Số điện thoại",
+      "createdAt": "Ngày tạo",
+      "status": "Trạng thái",
+      "assignedStatus": "Trạng thái gán",
+      "note": "Ghi chú"
+    },
+    "statuses": {
+      "all": "Tất cả",
+      "new": "Mới",
+      "contacted": "Đã liên hệ"
+    },
+    "assignedStatuses": {
+      "all": "Tất cả",
+      "assigned": "Đã gán",
+      "unassigned": "Chưa gán"
+    },
+    "actions": {
+      "assign": "Nhận",
+      "unassign": "Hủy nhận",
+      "assignTooltip": "Click để nhận",
+      "unassignTooltip": "Click để hủy nhận",
+      "changeStatus": "Thay đổi trạng thái",
+      "changeStatusTooltip": "Chỉ người dùng đã nhận mới có thể thay đổi trạng thái"
+    },
+    "messages": {
+      "loading": "Đang tải...",
+      "noData": "Không có dữ liệu",
+      "assignSuccess": "Nhận thành công",
+      "unassignSuccess": "Hủy nhận",
+      "updateStatusSuccess": "Cập nhật trạng thái thành công",
+      "assignError": "Có lỗi xảy ra khi nhận",
+      "unassignError": "Có lỗi xảy ra khi hủy nhận",
+      "updateStatusError": "Có lỗi xảy ra khi cập nhật trạng thái",
+      "userNotFound": "Không thể xác định người dùng",
+      "onlyAssignedCanChange": "Chỉ người dùng đã nhận mới có thể thay đổi trạng thái",
+      "fetchError": "Có lỗi xảy ra khi lấy danh sách"
+    },
+    "note": {
+      "placeholder": "Click để thêm ghi chú...",
+      "disabledMessage": "Vui lòng nhận để ghi chú"
+    }
+  },
+  "paymentPage": {
+    "title": "Quản lý Thanh toán",
+    "summary": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "rejected": "Đã từ chối",
+      "failed": "Thất bại",
+      "cancelled": "Đã hủy",
+      "total": "Tổng cộng"
+    },
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "ID, Tên, Số điện thoại, Email, Mã giao dịch",
+    "package": "Gói dịch vụ",
+    "paymentMethod": "Phương thức thanh toán",
+    "status": "Trạng thái",
+    "assignedStatus": "Trạng thái gán",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "package": "Gói dịch vụ",
+      "method": "Phương thức",
+      "paymentTime": "Thời gian thanh toán",
+      "status": "Trạng thái",
+      "assignedStatus": "Trạng thái gán",
+      "action": "Hành động",
+      "note": "Ghi chú"
+    },
+    "assignedStatuses": {
+      "all": "Tất cả",
+      "assigned": "Đã gán",
+      "unassigned": "Chưa gán"
+    },
+    "actions": {
+      "assign": "Nhận giao dịch",
+      "unassign": "Hủy nhận giao dịch",
+      "assignTooltip": "Click để nhận cho bạn",
+      "unassignTooltip": "Click để hủy nhận giao dịch",
+      "approveReject": "Duyệt/Từ chối",
+      "viewInvoice": "Xem hóa đơn"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "assignSuccess": "Nhận giao dịch thành công",
+      "unassignSuccess": "Hủy nhận giao dịch",
+      "assignError": "Có lỗi xảy ra khi nhận giao dịch",
+      "unassignError": "Có lỗi xảy ra khi hủy nhận giao dịch",
+      "userNotFound": "Không thể xác định người dùng",
+      "fetchError": "Lỗi khi tải danh sách giao dịch",
+      "fetchErrorGeneric": "Không thể tải danh sách giao dịch"
+    },
+    "note": {
+      "placeholder": "Click để thêm ghi chú...",
+      "disabledMessage": "Vui lòng nhận giao dịch để ghi chú"
+    }
+  },
+  "servicePackagePage": {
+    "title": "Quản lý Gói dịch vụ",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "ID, Tên, Số điện thoại, Email",
+    "package": "Gói dịch vụ",
+    "segment": "Tình trạng",
+    "userStatus": "Trạng thái người dùng",
+    "assignedStatus": "Trạng thái gán",
+    "columns": {
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "package": "Gói dịch vụ",
+      "purchasedDate": "Ngày mua",
+      "expiredDate": "Ngày hết hạn",
+      "segment": "Tình trạng",
+      "userStatus": "Trạng thái người dùng",
+      "assignedStatus": "Trạng thái gán",
+      "note": "Ghi chú"
+    },
+    "segments": {
+      "all": "Tất cả",
+      "expiringSoon": "Sắp hết hạn",
+      "recentlyExpired": "Vừa hết hạn",
+      "newSignup": "Đăng ký mới",
+      "noIssue": "Không vấn đề"
+    },
+    "userStatuses": {
+      "all": "Tất cả",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị cấm"
+    },
+    "assignedStatuses": {
+      "all": "Tất cả",
+      "assigned": "Đã gán",
+      "unassigned": "Chưa gán"
+    },
+    "actions": {
+      "assign": "Nhận gói dịch vụ",
+      "unassign": "Hủy nhận gói dịch vụ",
+      "assignTooltip": "Click để nhận gói dịch vụ",
+      "unassignTooltip": "Click để hủy nhận gói dịch vụ"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "assignSuccess": "Nhận gói dịch vụ thành công",
+      "unassignSuccess": "Hủy nhận gói dịch vụ",
+      "assignError": "Có lỗi xảy ra khi gán salesman",
+      "unassignError": "Có lỗi xảy ra khi hủy gán salesman",
+      "userNotFound": "Không thể xác định người dùng",
+      "fetchError": "Lỗi khi tải danh sách gói dịch vụ",
+      "fetchErrorGeneric": "Không thể tải danh sách gói dịch vụ"
+    },
+    "note": {
+      "placeholder": "Click để thêm ghi chú...",
+      "disabledMessage": "Vui lòng nhận gói để ghi chú"
+    }
+  },
+  "systemLog": {
+    "title": "System Log",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm...",
+    "role": "Vai trò",
+    "category": "Danh mục",
+    "level": "Mức độ",
+    "action": "Hành động",
+    "success": "Thành công",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "user": "Người dùng",
+      "role": "Vai trò",
+      "time": "Thời gian",
+      "event": "Sự kiện",
+      "action": "Hành động",
+      "category": "Danh mục",
+      "level": "Mức độ",
+      "success": "Thành công"
+    },
+    "roles": {
+      "all": "Tất cả",
+      "systemAdmin": "System Admin",
+      "csStaff": "CS Staff",
+      "accountant": "Accountant",
+      "system": "System"
+    },
+    "categories": {
+      "all": "Tất cả",
+      "auth": "Xác thực",
+      "admin": "Quản trị",
+      "system": "Hệ thống",
+      "automation": "Tự động hóa",
+      "scheduler": "Lịch trình",
+      "security": "Bảo mật",
+      "api": "API",
+      "other": "Khác"
+    },
+    "levels": {
+      "all": "Tất cả",
+      "info": "Thông tin",
+      "warning": "Cảnh báo",
+      "error": "Lỗi",
+      "success": "Thành công"
+    },
+    "successOptions": {
+      "all": "Tất cả",
+      "true": "Thành công",
+      "false": "Thất bại"
+    },
+    "messages": {
+      "loading": "Đang tải...",
+      "noData": "Không có dữ liệu",
+      "error": "Có lỗi xảy ra khi tải system logs"
+    },
+    "pagination": {
+      "showing": "Hiển thị",
+      "of": "/",
+      "logs": "logs",
+      "page": "Trang",
+      "previous": "Trước",
+      "next": "Sau"
+    },
+    "system": {
+      "system": "Hệ thống"
+    }
+  },
+  "common": {
+    "all": "Tất cả",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động",
+    "assigned": "Đã gán",
+    "unassigned": "Chưa gán",
+    "pending": "Chờ duyệt",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "error": "Có lỗi xảy ra",
+    "success": "Thành công",
+    "failed": "Thất bại",
+    "canceled": "Đã hủy",
+    "new": "Mới",
+    "contacted": "Đã liên hệ"
+  },
+  "header": {
+    "role": "Vai trò",
+    "email": "Email",
+    "tabs": {
+      "leads": "Leads",
+      "servicePackage": "Gói dịch vụ",
+      "payment": "Thanh toán",
+      "transactions": "Giao dịch",
+      "paymentReports": "Báo cáo thanh toán",
+      "paymentManagement": "Quản lý thanh toán",
+      "userManagement": "Quản lý người dùng",
+      "systemMonitoring": "Giám sát hệ thống"
+    }
+  },
+  "internalPage": {
+    "title": "Quản lý nhân viên nội bộ",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên, Số điện thoại, Email",
+    "status": "Trạng thái",
+    "role": "Vai trò",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "role": "Vai trò",
+      "createdAt": "Ngày tạo",
+      "lastLogin": "Đăng nhập cuối",
+      "status": "Trạng thái",
+      "action": "Hành động",
+      "note": "Ghi chú"
+    },
+    "statuses": {
+      "all": "Tất cả",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động"
+    },
+    "roles": {
+      "all": "Tất cả",
+      "systemAdmin": "System Admin",
+      "csStaff": "CS Staff",
+      "accountant": "Accountant"
+    },
+    "actions": {
+      "addNew": "Thêm mới",
+      "activate": "Kích hoạt",
+      "deactivate": "Vô hiệu hóa"
+    },
+    "counters": {
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "total": "Tổng cộng"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "confirmActivate": "Xác nhận kích hoạt",
+      "confirmActivateMessage": "Bạn có chắc muốn kích hoạt tài khoản \"{{name}}\"?",
+      "confirmDeactivate": "Xác nhận vô hiệu hóa",
+      "confirmDeactivateMessage": "Bạn có chắc muốn vô hiệu hóa tài khoản \"{{name}}\"?",
+      "updateStatusError": "Có lỗi xảy ra khi cập nhật status",
+      "addStaffError": "Có lỗi xảy ra khi thêm nhân viên"
+    }
+  },
+  "customerPage": {
+    "title": "Quản lý khách hàng",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên, Số điện thoại, Email",
+    "status": "Trạng thái",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "shop": "Cửa hàng",
+      "createdAt": "Ngày tạo",
+      "lastLogin": "Đăng nhập cuối",
+      "status": "Trạng thái",
+      "action": "Hành động"
+    },
+    "statuses": {
+      "all": "Tất cả",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị cấm"
+    },
+    "actions": {
+      "viewDetails": "Xem chi tiết",
+      "activate": "Kích hoạt",
+      "deactivate": "Vô hiệu hóa",
+      "ban": "Cấm",
+      "unban": "Gỡ cấm",
+      "viewEditDetails": "Xem & Chỉnh sửa chi tiết"
+    },
+    "counters": {
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị cấm",
+      "total": "Tổng cộng"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "confirmActivate": "Xác nhận kích hoạt",
+      "confirmActivateMessage": "Bạn có chắc muốn kích hoạt tài khoản \"{{name}}\"?",
+      "confirmDeactivate": "Xác nhận vô hiệu hóa",
+      "confirmDeactivateMessage": "Bạn có chắc muốn vô hiệu hóa tài khoản \"{{name}}\"?",
+      "confirmBan": "Xác nhận cấm",
+      "confirmBanMessage": "Bạn có chắc muốn cấm tài khoản \"{{name}}\"?",
+      "confirmUnban": "Xác nhận gỡ cấm",
+      "confirmUnbanMessage": "Bạn có chắc muốn gỡ cấm tài khoản \"{{name}}\"? Tài khoản sẽ được kích hoạt lại.",
+      "activateSuccess": "Đã kích hoạt tài khoản \"{{name}}\"",
+      "deactivateSuccess": "Đã vô hiệu hóa tài khoản \"{{name}}\"",
+      "banSuccess": "Đã cấm tài khoản \"{{name}}\"",
+      "unbanSuccess": "Đã gỡ cấm tài khoản \"{{name}}\"",
+      "updateStatusError": "Có lỗi xảy ra khi cập nhật status"
+    }
+  },
+  "paymentManagement": {
+    "title": "Quản lý thanh toán",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên, Số điện thoại, Email, Mã giao dịch",
+    "package": "Gói dịch vụ",
+    "paymentMethod": "Phương thức thanh toán",
+    "status": "Trạng thái",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "userId": "User ID",
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "transactionId": "Mã giao dịch",
+      "package": "Gói dịch vụ",
+      "amount": "Số tiền",
+      "method": "Phương thức",
+      "paymentTime": "Thời gian thanh toán",
+      "status": "Trạng thái",
+      "action": "Hành động",
+      "note": "Ghi chú"
+    },
+    "statuses": {
+      "all": "Tất cả",
+      "pending": "Chờ duyệt",
+      "success": "Thành công",
+      "failed": "Thất bại",
+      "canceled": "Đã hủy",
+      "rejected": "Từ chối",
+      "initializing": "Đang khởi tạo"
+    },
+    "summary": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "failed": "Thất bại",
+      "canceled": "Đã hủy",
+      "initializing": "Đang khởi tạo",
+      "total": "Tổng cộng"
+    },
+    "actions": {
+      "approveReject": "Duyệt/Từ chối",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "viewInvoice": "Xem hóa đơn"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "fetchError": "Lỗi khi tải danh sách giao dịch",
+      "fetchErrorGeneric": "Không thể tải danh sách giao dịch",
+      "confirmApprove": "Xác nhận duyệt giao dịch",
+      "confirmApproveMessage": "Bạn có chắc chắn muốn duyệt giao dịch {{transactionId}} của {{name}}?",
+      "confirmReject": "Xác nhận từ chối giao dịch",
+      "confirmRejectMessage": "Bạn có chắc chắn muốn từ chối giao dịch {{transactionId}} của {{name}}?",
+      "approveSuccess": "Đã duyệt giao dịch thành công",
+      "approveError": "Không thể duyệt giao dịch",
+      "approveErrorGeneric": "Có lỗi xảy ra khi duyệt giao dịch",
+      "rejectSuccess": "Đã từ chối giao dịch",
+      "rejectError": "Không thể từ chối giao dịch",
+      "rejectErrorGeneric": "Có lỗi xảy ra khi từ chối giao dịch",
+      "rejectReasonLabel": "Lý do từ chối",
+      "rejectReasonPlaceholder": "Nhập lý do từ chối giao dịch..."
+    }
+  },
+  "transactionsPage": {
+    "title": "Giao dịch",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "ID, Tên, Số điện thoại, Email, Mã giao dịch",
+    "package": "Gói dịch vụ",
+    "paymentMethod": "Phương thức thanh toán",
+    "status": "Trạng thái",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "name": "Tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "transactionId": "Mã giao dịch",
+      "package": "Gói dịch vụ",
+      "amount": "Số tiền",
+      "method": "Phương thức",
+      "paymentTime": "Thời gian thanh toán",
+      "status": "Trạng thái",
+      "action": "Hành động",
+      "remark": "Ghi chú"
+    },
+    "summary": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "rejected": "Đã từ chối",
+      "failed": "Thất bại",
+      "cancelled": "Đã hủy",
+      "total": "Tổng cộng"
+    },
+    "actions": {
+      "approveReject": "Duyệt/Từ chối",
+      "viewInvoice": "Xem hóa đơn",
+      "download": "Tải xuống"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "fetchError": "Lỗi khi tải danh sách giao dịch",
+      "fetchErrorGeneric": "Không thể tải danh sách giao dịch"
+    }
+  },
+  "reportPage": {
+    "title": "Báo cáo thanh toán",
+    "paymentMethod": "Phương thức thanh toán",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "package": "Gói dịch vụ",
+      "totalRevenue": "Tổng doanh thu",
+      "numberOfTransactions": "Số lượng giao dịch"
+    },
+    "total": "TỔNG CỘNG",
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "fetchError": "Lỗi khi tải dữ liệu báo cáo",
+      "fetchErrorGeneric": "Không thể tải dữ liệu báo cáo"
+    }
+  },
+  "addNewStaff": {
+    "title": "Thêm nhân viên mới",
+    "email": "Email",
+    "emailPlaceholder": "Nhập email",
+    "role": "Vai trò",
+    "required": "*",
+    "add": "Thêm",
+    "processing": "Đang xử lý...",
+    "messages": {
+      "emailRequired": "Vui lòng nhập email",
+      "roleRequired": "Vui lòng chọn role",
+      "addSuccess": "Thêm staff thành công!",
+      "addError": "Thêm staff thất bại",
+      "addErrorGeneric": "Có lỗi xảy ra khi thêm staff"
+    }
+  },
+  "customerUpdate": {
+    "title": "Chi tiết người dùng",
+    "fullName": "Tên người dùng",
+    "fullNamePlaceholder": "Nhập tên người dùng",
+    "userId": "ID người dùng",
+    "email": "Email",
+    "emailPlaceholder": "Nhập địa chỉ email",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "Nhập số điện thoại",
+    "country": "Quốc gia",
+    "countryPlaceholder": "Nhập quốc gia",
+    "servicePackage": "Gói dịch vụ",
+    "note": "Ghi chú",
+    "cancel": "Hủy",
+    "saveChanges": "Lưu thay đổi",
+    "saving": "Đang lưu...",
+    "loading": "Đang tải thông tin...",
+    "statusOptions": {
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị cấm",
+      "pending": "Chờ xử lý"
+    },
+    "messages": {
+      "loadError": "Không thể tải thông tin user",
+      "loadErrorGeneric": "Có lỗi xảy ra khi tải thông tin user",
+      "updateSuccess": "Cập nhật thông tin user thành công!",
+      "updateError": "Có lỗi xảy ra khi cập nhật",
+      "updateErrorGeneric": "Có lỗi xảy ra khi cập nhật user"
+    }
+  },
+  "customerLog": {
+    "title": "Customer Log",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "User, UserID, Shop name, ShopID",
+    "dateRange": "Thời gian",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "columns": {
+      "user": "Người dùng",
+      "userId": "ID Người dùng",
+      "shopName": "Tên cửa hàng",
+      "shopId": "ID Cửa hàng",
+      "time": "Thời gian",
+      "role": "Vai trò",
+      "userStatus": "Trạng thái",
+      "event": "Sự kiện"
+    },
+    "roles": {
+      "marketer": "Marketer",
+      "marketingAdmin": "Marketing Admin",
+      "shopOwner": "Shop Owner",
+      "nA": "N/A"
+    },
+    "statuses": {
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "banned": "Bị cấm"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "noData": "Không có dữ liệu",
+      "fetchError": "Có lỗi xảy ra khi tải customer logs"
+    }
+  },
+  "viewShop": {
+    "title": "Chi tiết cửa hàng",
+    "columns": {
+      "shopName": "Tên cửa hàng",
+      "role": "Vai trò"
+    },
+    "messages": {
+      "loading": "Đang tải dữ liệu...",
+      "error": "Có lỗi xảy ra khi tải dữ liệu shop",
+      "errorGeneric": "Không thể tải dữ liệu shop",
+      "empty": "User chưa thuộc shop nào"
+    }
+  },
+  "sidebar": {
+    "customer": "Khách hàng",
+    "internal": "Nội bộ",
+    "systemLog": "Nhật ký hệ thống",
+    "customerLog": "Nhật ký khách hàng"
+  },
+  "invoice": {
+    "title": "Hóa đơn",
+    "loading": "Đang tải hóa đơn...",
+    "download": "Tải xuống PDF",
+    "headerTitle": "HÓA ĐƠN",
+    "sellerInfo": {
+      "title": "Thông tin người bán:",
+      "companyName": "Công ty:",
+      "address": "Địa chỉ:"
+    },
+    "buyerInfo": {
+      "title": "Thông tin người mua:",
+      "name": "Tên Khách hàng:",
+      "email": "Địa chỉ email:",
+      "phone": "Số điện thoại:"
+    },
+    "invoiceDetails": {
+      "title": "Thông tin hóa đơn:",
+      "invoiceNo": "Số hóa đơn:",
+      "invoiceDate": "Ngày lập hóa đơn:",
+      "transactionId": "Mã giao dịch:",
+      "paymentMethod": "Phương thức thanh toán:",
+      "paymentTime": "Thời gian thanh toán:",
+      "status": "Trạng thái thanh toán:"
+    },
+    "serviceDetails": {
+      "title": "Chi tiết dịch vụ:",
+      "package": "Gói dịch vụ",
+      "pages": "Số lượng Fanpages",
+      "employees": "Số lượng nhân viên",
+      "unitPrice": "Đơn giá (VNĐ/tháng)",
+      "duration": "Thời hạn gói",
+      "subtotal": "Tổng cộng (VNĐ)",
+      "grandTotal": "Tổng cộng"
+    },
+    "status": {
+      "paid": "Đã thanh toán"
+    },
+    "disclaimer": "Hóa đơn này được tự động phát hành sau khi thanh toán thành công.",
+    "messages": {
+      "loadError": "Không thể tải hóa đơn",
+      "loadErrorGeneric": "Có lỗi xảy ra khi tải hóa đơn",
+      "notFound": "Không tìm thấy hóa đơn",
+      "generatingPDF": "Đang tạo PDF...",
+      "downloadSuccess": "Tải xuống PDF thành công",
+      "downloadError": "Có lỗi xảy ra khi tải xuống PDF"
+    }
+  }
+}
+

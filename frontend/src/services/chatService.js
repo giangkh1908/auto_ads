@@ -22,6 +22,23 @@ class ChatService {
   }
 
   /**
+   * Start new conversation session
+   */
+  async startConversation({ account_id }) {
+    try {
+      const response = await axiosInstance.post(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/ai/chat/conversation/start`,
+        {
+          account_id,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Handle API errors
    */
   handleError(error) {

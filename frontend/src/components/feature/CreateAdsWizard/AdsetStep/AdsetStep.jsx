@@ -18,6 +18,8 @@ import {
   Globe,
   Smartphone,
   MessageSquare,
+  MessageCircle,
+  Megaphone,
   Phone,
   Facebook,
 } from "lucide-react";
@@ -31,10 +33,7 @@ import {
 } from "../../../../utils/validation";
 // import { validateNonEmpty } from "../../../../utils/validation";
 import { getAdsetDefaultsByObjective } from "../../../../constants/wizardConstants";
-import {
-  getOptimizationGoals,
-  getCompatibleBillingEvents,
-} from "../../../../constants/wizardConstants";
+import { getCompatibleBillingEvents } from "../../../../constants/wizardConstants";
 import no_avatar from "../../../../assets/no-avatar.jpg";
 import "./AdsetStep.css";
 
@@ -44,6 +43,7 @@ import EngagementSchema from "./objectives/Engagement";
 import LeadsSchema from "./objectives/Leads";
 import SalesSchema from "./objectives/Sales";
 import AppPromotionSchema from "./objectives/AppPromotion";
+import HybridLocationSelector from "./LocationSelector/HybridLocationSelector";
 
 const SCHEMA_MAP = {
   AWARENESS: AwarenessSchema,
@@ -65,6 +65,8 @@ const ICON_MAP = {
   Globe,
   Smartphone,
   MessageSquare,
+  MessageCircle,
+  Megaphone,
   Phone,
   Facebook,
 };
@@ -143,11 +145,11 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
   }
 
   const isDisabled =
-  typeof field.disabled === "function"
-    ? field.disabled.length === 2 
-      ? field.disabled(adset, mode)
-      : field.disabled(mode)
-    : field.disabled; 
+    typeof field.disabled === "function"
+      ? field.disabled.length === 2
+        ? field.disabled(adset, mode)
+        : field.disabled(mode)
+      : field.disabled;
   const hint =
     typeof field.hint === "function" ? field.hint(adset) : field.hint;
 
@@ -196,15 +198,95 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
               const selectedValue = e.target.value;
               handleChange(selectedValue);
 
-              // For optimization_goal: also set destination_type if exists
+              // For optimization_goal: also set destination_type and billing_event if needed
               if (field.name === "optimization_goal") {
+                // ✅ Không xử lý nếu chọn placeholder
+                if (!selectedValue || selectedValue === "") {
+                  toast.warning("Vui lòng chọn mục tiêu");
+                  return;
+                }
+
                 const selectedOpt = options.find(
                   (opt) => opt.value === selectedValue
                 );
+                const updates = {};
+
+                // Set destination_type if exists
                 if (selectedOpt?.destination_type) {
+                  updates.destination_type = selectedOpt.destination_type;
+                }
+
+                // ✅ Auto-set billing_event phù hợp với optimization_goal
+                const compatibleBillingEvents = getCompatibleBillingEvents(
+                  objective,
+                  selectedValue
+                );
+                if (
+                  compatibleBillingEvents &&
+                  compatibleBillingEvents.length > 0
+                ) {
+                  // Ưu tiên billing_event trùng với optimization_goal nếu có
+                  // Ví dụ: optimization_goal = "LINK_CLICKS" → billing_event = "LINK_CLICKS"
+                  const preferredBillingEvent =
+                    compatibleBillingEvents.includes(selectedValue)
+                      ? selectedValue
+                      : compatibleBillingEvents[0];
+
+                  if (preferredBillingEvent) {
+                    updates.billing_event = preferredBillingEvent;
+                  }
+                }
+
+                // ✅ Reset engagement_destination nếu không hợp lệ với optimization_goal mới
+                if (objective === "ENGAGEMENT" && adset.engagement_destination) {
+                  let validDestinations = [];
+                  switch (selectedValue) {
+                    case "CONVERSATIONS":
+                      validDestinations = ["MESSENGER"];
+                      break;
+                    case "MESSAGING_PURCHASE_CONVERSION":
+                      validDestinations = ["MESSENGER"];
+                      break;
+                    case "LINK_CLICKS":
+                      validDestinations = ["MESSENGER", "WEBSITE", "APP"];
+                      break;
+                    case "REACH":
+                      validDestinations = ["MESSENGER", "ON_POST", "CALL", "WEBSITE", "APP", "ON_PAGE"];
+                      break;
+                    default:
+                      // Các optimization_goal khác: giữ nguyên
+                      validDestinations = ["MESSENGER", "ON_POST", "CALL", "WEBSITE", "APP", "ON_PAGE"];
+                  }
+
+                  // Nếu engagement_destination hiện tại không hợp lệ, reset về default hợp lệ
+                  if (!validDestinations.includes(adset.engagement_destination)) {
+                    updates.engagement_destination = validDestinations[0] || "ON_POST";
+                    // Reset destination_type tương ứng
+                    const destinationTypeMap = {
+                      MESSENGER: "MESSENGER",
+                      ON_POST: "ON_POST",
+                      CALL: "CALL_BUTTON",
+                      WEBSITE: "WEBSITE",
+                      APP: "APP",
+                      ON_PAGE: "ON_PAGE",
+                    };
+                    updates.destination_type = destinationTypeMap[updates.engagement_destination] || updates.engagement_destination;
+                  }
+                }
+
+                // ✅ Tự động set traffic_destination cho TRAFFIC objective
+                if (objective === "TRAFFIC") {
+                  if (selectedValue === "CONVERSATIONS") {
+                    // Nếu optimization_goal là CONVERSATIONS, tự động set traffic_destination thành MESSENGER
+                    updates.traffic_destination = "MESSENGER";
+                  }
+                }
+
+                // Apply all updates
+                if (Object.keys(updates).length > 0) {
                   setAdset((prev) => ({
                     ...prev,
-                    destination_type: selectedOpt.destination_type,
+                    ...updates,
                   }));
                 }
               }
@@ -270,7 +352,27 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
                     name={field.name}
                     value={opt.value}
                     checked={value === opt.value}
-                    onChange={(e) => handleChange(e.target.value)}
+                    onChange={(e) => {
+                      handleChange(e.target.value);
+                      // ✅ Auto-set destination_type cho engagement_destination
+                      if (field.name === "engagement_destination") {
+                        const destinationTypeMap = {
+                          MESSENGER: "MESSENGER",
+                          ON_POST: "ON_POST",
+                          CALL: "CALL_BUTTON", // Facebook API yêu cầu CALL_BUTTON
+                          WEBSITE: "WEBSITE",
+                          APP: "APP",
+                          ON_PAGE: "ON_PAGE",
+                        };
+                        setAdset((prev) => ({
+                          ...prev,
+                          engagement_destination: e.target.value, // ✅ Đảm bảo set engagement_destination
+                          destination_type:
+                            destinationTypeMap[e.target.value] ||
+                            e.target.value,
+                        }));
+                      }
+                    }}
                   />
                   <div className="traffic-option-content">
                     {IconComp && <IconComp size={20} />}
@@ -591,6 +693,22 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
         </div>
       );
     }
+    case "location": {
+      // Get ad account ID from various sources (priority order)
+      // 1. From props (selectedAccountId from AdsManagement via CreateAdsWizard)
+      // 2. From adset (external_account_id or account_id)
+      // 3. From localStorage cache (selectedAdAccount)
+      // ✅ Key unique cho mỗi adset để React không reuse component instance
+      const uniqueKey = `${field.name}-${adset._id || adset.id || 'new'}`;
+      return (
+        <HybridLocationSelector
+          key={uniqueKey}
+          value={value}
+          onChange={handleChange}
+          placeholder={field.placeholder}
+        />
+      );
+    }
     case "info": {
       const content =
         typeof field.content === "function"
@@ -612,7 +730,17 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
   }
 }
 const AdsetStepInner = forwardRef(
-  ({ adset, setAdset, objective, mode, facebookPages = [] }, ref) => {
+  (
+    {
+      adset,
+      setAdset,
+      objective,
+      mode,
+      facebookPages = [],
+      selectedAccountId = null,
+    },
+    ref
+  ) => {
     const toast = useToast();
     const schema = SCHEMA_MAP[objective] || SCHEMA_MAP.AWARENESS;
     const [showPageSelect, setShowPageSelect] = useState(false);
@@ -695,28 +823,28 @@ const AdsetStepInner = forwardRef(
       objective === "TRAFFIC" ||
       objective === "APP_PROMOTION";
 
-    // Guard: ensure optimization_goal compatible with current objective
-    useEffect(() => {
-      const goals = getOptimizationGoals(objective);
-      const allowedValues = goals.map((g) => g.value);
-      if (!allowedValues.length) return;
-      if (
-        !adset.optimization_goal ||
-        !allowedValues.includes(adset.optimization_goal)
-      ) {
-        const newGoal = goals[0].value;
-        const newBilling =
-          getCompatibleBillingEvents(objective, newGoal)[0] || "IMPRESSIONS";
-        setAdset((prev) => ({
-          ...prev,
-          optimization_goal: newGoal,
-          billing_event: newBilling,
-        }));
-        toast?.info(
-          "Đã tự động đặt lại mục tiêu hiệu quả phù hợp với mục tiêu chiến dịch."
-        );
-      }
-    }, [objective]);
+    // // Guard: ensure optimization_goal compatible with current objective
+    // useEffect(() => {
+    //   const goals = getOptimizationGoals(objective);
+    //   const allowedValues = goals.map((g) => g.value);
+    //   if (!allowedValues.length) return;
+    //   if (
+    //     !adset.optimization_goal ||
+    //     !allowedValues.includes(adset.optimization_goal)
+    //   ) {
+    //     const newGoal = goals[0].value;
+    //     const newBilling =
+    //       getCompatibleBillingEvents(objective, newGoal)[0] || "IMPRESSIONS";
+    //     setAdset((prev) => ({
+    //       ...prev,
+    //       optimization_goal: newGoal,
+    //       billing_event: newBilling,
+    //     }));
+    //     toast?.info(
+    //       "Đã tự động đặt lại mục tiêu hiệu quả phù hợp với mục tiêu chiến dịch."
+    //     );
+    //   }
+    // }, [objective]);
 
     return (
       <div className="adset-step">
@@ -798,6 +926,11 @@ const AdsetStepInner = forwardRef(
 
           {/* Schema-driven sections */}
           {schema.sections.map((section) => {
+            // ✅ Ẩn section nếu có visibleIf và điều kiện không thỏa mãn
+            if (section.visibleIf && !section.visibleIf(adset)) {
+              return null;
+            }
+
             const IconComp = section.icon ? ICON_MAP[section.icon] : null;
             const isHorizontal = section.layout === "horizontal";
             const visibleFields = (section.fields || []).filter(
@@ -831,6 +964,7 @@ const AdsetStepInner = forwardRef(
                             setAdset={setAdset}
                             objective={objective}
                             mode={mode}
+                            selectedAccountId={selectedAccountId}
                           />
                         </div>
                       )}
@@ -850,6 +984,7 @@ const AdsetStepInner = forwardRef(
                             setAdset={setAdset}
                             objective={objective}
                             mode={mode}
+                            selectedAccountId={selectedAccountId}
                           />
                         </div>
                       )}
@@ -882,6 +1017,7 @@ const AdsetStepInner = forwardRef(
                             setAdset={setAdset}
                             objective={objective}
                             mode={mode}
+                            selectedAccountId={selectedAccountId}
                           />
                         ))}
                       </div>
@@ -895,6 +1031,7 @@ const AdsetStepInner = forwardRef(
                             setAdset={setAdset}
                             objective={objective}
                             mode={mode}
+                            selectedAccountId={selectedAccountId}
                           />
                         ))}
                       </div>
@@ -907,6 +1044,7 @@ const AdsetStepInner = forwardRef(
                           setAdset={setAdset}
                           objective={objective}
                           mode={mode}
+                          selectedAccountId={selectedAccountId}
                         />
                       ))
                     )}

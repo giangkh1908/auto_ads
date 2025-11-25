@@ -8,7 +8,7 @@ import { STORAGE_KEYS } from "../../constants/app.constants";
 import { toast } from "sonner";
 import axiosInstance from "../../utils/axios.js";
 import { getShopCache, saveShopCache } from "../../utils/shopCache";
-import { Store, Plus, Delete, ClipboardList, Replace, Link, Info, UserCheck, UserMinus} from "lucide-react";
+import { Store, Plus, Delete, ClipboardList, Replace, Link, Info, UserCheck, UserMinus, Pause, Play} from "lucide-react";
 // import { formatDistanceToNow, format } from "date-fns";
 // import { vi, enUS } from "date-fns/locale";
 
@@ -30,6 +30,10 @@ const Icon = ({ type }) => {
       return <Replace className="log-icon transfer" />;
     case "CONNECT_FACEBOOK_PAGE":
       return <Link className="log-icon connect" />;
+    case "PAUSE_FACEBOOK_PAGE":
+      return <Pause className="log-icon pause" />;
+    case "RESUME_FACEBOOK_PAGE":
+      return <Play className="log-icon resume" />;
     default:
       return <Info className="log-icon default" />;
   }

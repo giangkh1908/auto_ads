@@ -285,6 +285,7 @@ function Profile() {
                       value={formData.email}
                       onChange={handleInputChange}
                       className="form-input-profile"
+                      readOnly
                     />
                   </div>
                 </div>

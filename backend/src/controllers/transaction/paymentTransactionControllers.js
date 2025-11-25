@@ -1,6 +1,10 @@
 import PaymentTransaction from "../../models/paymentTransaction.model.js";
 import UserPackage from "../../models/userPackage.model.js";
+import User from "../../models/user.model.js";
+import Package from "../../models/package.model.js";
 import mongoose from "mongoose";
+import { sendPackageApprovalEmail } from "../../services/emailService.js";
+import { createInvoice } from "../invoice/invoiceControllers.js";
 
 
 export const createPaymentTransaction = async (req, res) => {
@@ -50,6 +54,7 @@ export const getPaymentTransactions = async (req, res) => {
     const transactions = await PaymentTransaction.find(filter)
       .populate("user_id", "_id full_name email phone facebookId")
       .populate("package_id", "name price planType")
+      .populate("assigned_to", "_id full_name email phone")
       .sort({ created_at: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -79,8 +84,9 @@ export const getPaymentTransactions = async (req, res) => {
 export const getPaymentTransactionById = async (req, res) => {
   try {
     const transaction = await PaymentTransaction.findById(req.params.id)
-      .populate("user_id", "_id name email")
-      .populate("package_id", "name price");
+      .populate("user_id", "_id full_name email phone")
+      .populate("package_id", "name price")
+      .populate("assigned_to", "_id full_name email phone");
 
     if (!transaction) {
       return res.status(404).json({
@@ -142,7 +148,7 @@ export const updatePaymentTransaction = async (req, res) => {
     }
 
     // ✅ Cập nhật status của UserPackage khi approve/reject transaction
-    if (data.status === "success" || data.status === "canceled") {
+    if (data.status === "success" || data.status === "canceled" || data.status === "rejected") {
       try {
         // Tìm UserPackage có user_id và package_id tương ứng
         // - Khi approve: chỉ tìm status = "pending"
@@ -178,13 +184,100 @@ export const updatePaymentTransaction = async (req, res) => {
             userPackageUpdateData.to_date.setDate(userPackageUpdateData.to_date.getDate() + durationDays);
           }
 
-          await UserPackage.findByIdAndUpdate(
+          const updatedUserPackage = await UserPackage.findByIdAndUpdate(
             userPackage._id,
             userPackageUpdateData,
             { new: true }
           );
 
           console.log(`✅ Đã cập nhật UserPackage ${userPackage._id} status từ "${userPackage.status}" thành "${newStatus}"`);
+
+          // Nếu payment thành công, disable tất cả package cũ của user
+          if (data.status === "success") {
+            try {
+              // Tìm tất cả package active khác của user (không phải package mới này)
+              const oldActivePackages = await UserPackage.find({
+                user_id: currentTransaction.user_id,
+                _id: { $ne: userPackage._id }, // Loại trừ package mới
+                status: { $in: ["active", "expiring soon", "new signup"] },
+                deleted_at: null,
+              });
+
+              if (oldActivePackages.length > 0) {
+                // Disable tất cả package cũ
+                await UserPackage.updateMany(
+                  {
+                    user_id: currentTransaction.user_id,
+                    _id: { $ne: userPackage._id },
+                    status: { $in: ["active", "expiring soon", "new signup"] },
+                    deleted_at: null,
+                  },
+                  {
+                    $set: {
+                      status: "canceled",
+                      updated_by: req.user?._id || null,
+                    },
+                  }
+                );
+
+                console.log(`✅ Đã disable ${oldActivePackages.length} package cũ của user ${currentTransaction.user_id}`);
+              }
+
+              // Đồng bộ package cho tất cả shop của owner
+              try {
+                const { syncShopPackagesWithOwner } = await import("../../services/shopPackageSyncService.js");
+                await syncShopPackagesWithOwner(currentTransaction.user_id);
+              } catch (syncError) {
+                console.error("⚠️ Lỗi khi sync shop packages:", syncError);
+                // Không throw error để không ảnh hưởng đến flow chính
+              }
+
+              // Gửi email thông báo khi package được approve
+              try {
+                const user = await User.findById(currentTransaction.user_id).select("email full_name");
+                const packageInfo = await Package.findById(currentTransaction.package_id).select("name price planType pages employees shops features");
+
+                if (user && user.email && packageInfo) {
+                  const duration = currentTransaction.metadata?.duration || "12months";
+                  const packageData = {
+                    packageName: packageInfo.name,
+                    price: packageInfo.price,
+                    duration: duration,
+                    fromDate: updatedUserPackage.from_date || userPackageUpdateData.from_date,
+                    toDate: updatedUserPackage.to_date || userPackageUpdateData.to_date,
+                    pages: updatedUserPackage.pages || userPackage.pages || packageInfo.pages,
+                    employees: updatedUserPackage.employees || userPackage.employees || packageInfo.employees,
+                    shops: updatedUserPackage.shops || userPackage.shops || packageInfo.shops,
+                    features: packageInfo.features || [],
+                  };
+
+                  await sendPackageApprovalEmail(
+                    user.email,
+                    user.full_name || "Khách hàng",
+                    packageData
+                  );
+                  console.log(`✅ Đã gửi email thông báo kích hoạt gói cho ${user.email}`);
+                } else {
+                  console.log(`⚠️ Không thể gửi email: user hoặc package không tìm thấy hoặc user không có email`);
+                }
+              } catch (emailError) {
+                console.error("Lỗi gửi email thông báo kích hoạt gói:", emailError);
+                // Không throw error để không ảnh hưởng đến response
+              }
+
+              // Tạo invoice tự động khi transaction thành công
+              try {
+                const invoice = await createInvoice(req.params.id);
+                console.log(`✅ Đã tạo invoice ${invoice.invoice_number} cho transaction ${req.params.id}`);
+              } catch (invoiceError) {
+                console.error("Lỗi tạo invoice:", invoiceError);
+                // Không throw error để không ảnh hưởng đến response
+              }
+            } catch (disableError) {
+              console.error("Lỗi disable package cũ:", disableError);
+              // Không throw error để không ảnh hưởng đến response
+            }
+          }
         } else {
           console.log(`⚠️ Không tìm thấy UserPackage phù hợp cho user ${currentTransaction.user_id} và package ${currentTransaction.package_id}`);
         }
@@ -219,12 +312,22 @@ export const setPaymentMethod = async (req, res) => {
     const id = req.params.id;
     const objectId = new mongoose.Types.ObjectId(id);
 
+    // Prepare update data
+    const updateData = {
+      method,
+      updated_by: req.user._id,
+    };
+
+    // Nếu method là "manual banking", set expired_date (10 phút từ bây giờ)
+    if (method === "manual banking") {
+      const expiredDate = new Date();
+      expiredDate.setMinutes(expiredDate.getMinutes() + 10);
+      updateData.expired_date = expiredDate;
+    }
+
     const updated = await PaymentTransaction.findByIdAndUpdate(
       objectId,
-      {
-        method,
-        updated_by: req.user._id,
-      },
+      updateData,
       { new: true }
     );
 

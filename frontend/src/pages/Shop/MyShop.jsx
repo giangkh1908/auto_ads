@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router-dom";
-import { Plus, Edit, Play, Pause, Star, MapPin, ArrowRight } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Plus, Edit, Play, Pause, Star, MapPin, ArrowRight, Crown } from "lucide-react";
 import { ROUTES } from "../../constants/app.constants";
 import "./Shop.css";
 import { STORAGE_KEYS } from '../../constants/app.constants';
 import axiosInstance from "../../utils/axios.js";
 import { toast } from "sonner";
-import { clearShopCache, saveShopCache } from "../../utils/shopCache";
+import { clearShopCache, saveShopCache, getShopCache } from "../../utils/shopCache";
+import { useMyPackage } from "../../hooks/useMyPackage";
 
 function MyShop() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { pkg } = useMyPackage();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab] = useState("info");
@@ -54,6 +57,13 @@ function MyShop() {
 
   useEffect(() => {
     loadShops();
+    
+    // Kiểm tra và hiển thị thông báo sau khi reload
+    const successMessage = sessionStorage.getItem('shop_update_success');
+    if (successMessage) {
+      toast.success(successMessage);
+      sessionStorage.removeItem('shop_update_success');
+    }
   }, []);
 
   const loadShops = async () => {
@@ -77,20 +87,42 @@ function MyShop() {
               perm.module === "employee" && perm.actions.includes("view")
           );
 
+          // Backend đã trả về limits, chỉ cần format lại
+          // Nếu chưa có package (Basic), backend sẽ trả về 1/1 employee và 0/0 page
+          const employeeLimit = shop.employee_limit ?? 1;
+          const pageLimit = shop.page_limit ?? 0;
+          // Nếu không có package (Basic), employeeCount tối thiểu là 1 (owner)
+          const isBasic = !shop.package || shop.package === "";
+          const employeeCount = isBasic ? 1 : (shop.employee_count ?? 0);
+          const pageCount = shop.page_count ?? 0;
+
+          const shopCount = shop.shop_count ?? 0;
+          const shopLimit = shop.shop_limit ?? 0;
+
           return {
             id: shop._id,
             shopName: shop.shop_name || "Unnamed Shop",
-            package: shop.package || "Basic",
-            employeeCount: shop.employee_count || 0,
-            pageCount: shop.page_count || 0,
+            package: shop.package && shop.package !== "Basic" ? shop.package : "None",
+            employeeCount,
+            employeeLimit,
+            pageCount,
+            pageLimit,
+            shopCount,
+            shopLimit,
             industry: shop.industry || "Other",
             isCurrent: shop.is_current || false,
             role: shop.user_role.role_name || "Owner",
             email: shop.owner_id?.email || "",
             phone: shop.owner_id?.phone || "",
             expired: shop.expired_at
-              ? new Date(shop.expired_at).toISOString().slice(0, 10)
-              : "N/A",
+              ? (() => {
+                  const date = new Date(shop.expired_at);
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const year = date.getFullYear();
+                  return `${day}-${month}-${year}`;
+                })()
+              : "Không giới hạn",
             status: shop.status || "Active",
             canUpdate,
             canViewEmployee,
@@ -114,11 +146,19 @@ function MyShop() {
 
   //Hành động với page
   const handleAction = (shopId, action) => {
+    if (action === "upgrade") {
+      navigate(ROUTES.SERVICE_PACKAGE);
+      return;
+    }
     console.log(`Action ${action} for shop ${shopId}`);
   };
 
   //Thêm page mới
   const handleAddNewPage = () => {
+    if (!pkg?.package) {
+      toast.error("Tính năng này yêu cầu gói dịch vụ. Vui lòng mua gói để sử dụng.");
+      return;
+    }
     setIsAddOpen(true);
   };
 
@@ -157,10 +197,25 @@ function MyShop() {
 
       <div className="shop-page">
         {/* Tạo page mới */}
-        <div className="btn-add">
-          <button className="btn-add-new-page" onClick={handleAddNewPage}>
+        <div className="btn-add-shop">
+          <div className="shop-usage-info">
+            {/* {currentShop && (
+              <span className="shop-usage-text">
+                Shop Usage: <strong>{currentShop.shopCount || 0}/{currentShop.shopLimit || 0}</strong>
+              </span>
+            )} */}
+          </div>
+          <button 
+            className={`btn-add-new-page ${!pkg?.package ? 'premium-feature' : ''}`}
+            onClick={handleAddNewPage}
+          >
             <Plus size={16} />
             {t('shop.add_new_shop')}
+            {!pkg?.package && (
+              <span className="premium-badge">
+                <Crown size={12} />
+              </span>
+            )}
           </button>
         </div>
 
@@ -197,18 +252,18 @@ function MyShop() {
                       </div>
                       <div className="table-cell" data-label={t('shop.package')}>
                         <span
-                          className={`package-badge package-${shop.package.toLowerCase()}`}
+                          className={`package-badge package-${(shop.package || "None").toLowerCase().replace(/\s+/g, '-')}`}
                         >
-                          {shop.package}
+                          {shop.package || "None"}
                         </span>
                       </div>
                       <div className="table-cell" data-label={t('shop.employee_count')}>
                         <span className="employee-count">
-                          {shop.employeeCount}
+                          {shop.employeeCount}/{shop.employeeLimit}
                         </span>
                       </div>
                       <div className="table-cell" data-label={t('shop.page_count')}>
-                        <span className="page-count-shop">{shop.pageCount}</span>
+                        <span className="page-count-shop">{shop.pageCount}/{shop.pageLimit}</span>
                       </div>
                       <div className="table-cell" data-label={t('shop.role')}>
                         <span className="role-badge">{shop.role}</span>
@@ -262,26 +317,39 @@ function MyShop() {
                                 const res = await axiosInstance.patch(`/api/shops/switch/${shop.id}`);
                                 const data = res.data;
                                 if (data.success) {
+                                  // Lấy shop cũ từ cache trước khi xóa
+                                  const previousShop = getShopCache();
+                                  
                                   // Xóa cache cũ
                                   clearShopCache();
                                   
                                   // Cập nhật localStorage với shop mới
                                   localStorage.setItem("selectedShopId", shop.id);
                                   
+                                  // Lấy package info từ API response nếu có
+                                  // Đảm bảo package là string (name) chứ không phải object
+                                  const packageInfo = data.shop?.package;
+                                  const packageName = typeof packageInfo === 'string' 
+                                    ? (packageInfo && packageInfo !== "Basic" ? packageInfo : "None")
+                                    : (packageInfo?.name && packageInfo.name !== "Basic" ? packageInfo.name : "None");
+                                  
                                   // Tạo object shop để lưu vào cache (format giống Header)
                                   const shopForCache = {
                                     id: shop.id,
                                     shop_name: shop.shopName,
-                                    package: shop.package,
+                                    package: packageName,
                                     role: shop.role,
                                     is_current: true,
                                   };
                                   
                                   // Lưu shop mới vào cache và dispatch event để Header cập nhật
-                                  saveShopCache(shopForCache);
+                                  // Truyền previousShop để kiểm tra và xóa cache ads nếu shop thay đổi
+                                  saveShopCache(shopForCache, previousShop);
                                   
                                   toast.success("Chuyển đổi shop thành công!");
-                                  await loadShops(); // refresh danh sách
+                                  
+                                  // Reload lại trang để cập nhật dữ liệu với shop mới
+                                  window.location.reload();
                                 } else {
                                   toast.error(data.message || "Không thể chuyển đổi shop");
                                 }
@@ -329,7 +397,7 @@ function MyShop() {
       {isAddOpen && (
         <div className="modal-overlay" onClick={() => setIsAddOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header-shop">
               <h3>{t('shop.add_shop')}</h3>
               <button
                 className="modal-close"
@@ -338,7 +406,7 @@ function MyShop() {
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body-shop">
               <div className="form-field">
                 <label htmlFor="add-shopName">{t('shop.shop_name')}</label>
                 <input
@@ -440,7 +508,7 @@ function MyShop() {
       {isUpdateOpen && (
         <div className="modal-overlay" onClick={() => setIsUpdateOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header-shop">
               <h3>{t('shop.update_shop')}</h3>
               <button
                 className="modal-close"
@@ -449,7 +517,7 @@ function MyShop() {
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body-shop">
               <div className="form-field">
                 <label htmlFor="upd-shopName">{t('shop.shop_name')}</label>
                 <input
@@ -525,11 +593,11 @@ function MyShop() {
                     const res = await axiosInstance.put(`/api/shops/${updateForm.id}`, payload);
                     const data = res.data;
                     if (data.success) {
-                      toast.success("Cập nhật shop thành công!");
                       setIsUpdateOpen(false);
-
-                      // 🔁 Refresh danh sách shop
-                      await loadShops();
+                      // Lưu thông báo vào sessionStorage trước khi reload
+                      sessionStorage.setItem('shop_update_success', 'Cập nhật shop thành công!');
+                      // Reload trang để cập nhật tất cả dữ liệu
+                      window.location.reload();
                     } else {
                       toast.error(data.message || "Không thể cập nhật shop");
                     }

@@ -87,6 +87,7 @@
       "account": "Account",
       "from": "From",
       "to": "To",
+      "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
       "search": "Search",
       "refresh": "Refresh",
       "refreshing": "Loading...",

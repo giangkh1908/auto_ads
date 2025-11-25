@@ -17,7 +17,7 @@ export function useFacebookPages() {
         const shop = me?.data?.shop || me?.shop;
         const connectedPages = Array.isArray(shop?.facebook_pages)
           ? shop.facebook_pages
-              .filter((p) => p.connected_status === "connected")
+              .filter((p) => p.connected_status === "connected" && (p.page_status !== "pause"))
               .map((p) => ({
                 id: p.page_id,
                 name: p.page_info?.name || "Facebook Page",

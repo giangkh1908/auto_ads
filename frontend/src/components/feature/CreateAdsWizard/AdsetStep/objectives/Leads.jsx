@@ -4,6 +4,7 @@ const BILLING_EVENT_LABELS = {
   IMPRESSIONS: "Hiển thị (lượt xem quảng cáo)",
   LINK_CLICKS: "Nhấp vào liên kết",
   APP_INSTALLS: "Cài đặt ứng dụng",
+  CONVERSATIONS: "Cuộc trò chuyện",
 };
 
  const LeadsSchema = {
@@ -38,11 +39,17 @@ const BILLING_EVENT_LABELS = {
           label: "Mục tiêu tối ưu",
           options: (objective) => {
             const config = ADSET_CONFIG_BY_OBJECTIVE[objective];
-            return config?.optimization_goals || [];
+            const goals = config?.optimization_goals || [];
+            return [
+              { value: "", label: "~ Chọn mục tiêu ~" },
+              ...goals
+            ];
           },
-          default: "LEAD_GENERATION",
+          default: "",
           validate: (value) => {
-            if (!value) return "Thiếu mục tiêu tối ưu hóa";
+            if (!value || value === "") {
+              return "Vui lòng chọn mục tiêu";
+            }
             return true;
           },
         },
@@ -200,21 +207,35 @@ const BILLING_EVENT_LABELS = {
             ];
             return languages.map(l => ({ value: l.code, label: l.name }));
           },
-          default: "vi",
+          default: "all",
         },
       ],
     },
     {
       id: "location",
-      title: "Vị trí",
+      title: "Vị trí địa lý",
       icon: "MapPin",
       fields: [
         {
-          type: "tags-country",
+          type: "location",
           name: "targeting.locations",
-          label: "Quốc gia",
-          placeholder: "Tìm kiếm vị trí (quốc gia)",
-          default: ["Viet Nam"],
+          placeholder: "Tìm kiếm thành phố, tỉnh thành...",
+          default: {
+            regions: [],
+            cities: [],
+            custom_locations: [],
+            excluded_ids: []
+          },
+          validate: (value) => {
+            if (!value || (!value.regions?.length && !value.cities?.length && !value.custom_locations?.length)) {
+              return "Vui lòng chọn ít nhất 1 vị trí";
+            }
+            const total = (value.regions?.length || 0) + (value.cities?.length || 0);
+            if (total > 250) {
+              return "Tối đa 250 vị trí được cho phép";
+            }
+            return true;
+          }
         },
       ],
     },

@@ -9,7 +9,8 @@ import { ErrorCode, getErrorMessage } from "../../constants/errorCode.js";
 import { SuccessCode, getSuccessMessage } from "../../constants/successCode.js";
 import { StatusEnum } from "../../constants/enum.js";
 import { saveLog } from "../../utils/log.js";
-import UserPackage from "../../models/shops/shopUser.model.js"
+import UserPackage from "../../models/userPackage.model.js";
+import { getUserEntitlements } from "../../services/entitlementService.js";
 
 // Thêm User vào Shop
 export const createShopUser = async (req, res) => {
@@ -40,16 +41,71 @@ export const inviteEmployee = async (req, res) => {
       });
     }
 
+    if (!shop) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: ErrorCode.SHOP_001,
+          message: getErrorMessage(ErrorCode.SHOP_001, 'vi'),
+        },
+      });
+    }
+
+    // Lấy shop owner để kiểm tra package limit
+    const shopOwnerId = shop.owner_id;
+    if (!shopOwnerId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: ErrorCode.SHOP_001,
+          message: getErrorMessage(ErrorCode.SHOP_001, 'vi'),
+        },
+      });
+    }
+
+    // Kiểm tra employee limit của shop owner - đếm riêng cho shop này (bao gồm cả owner)
+    try {
+      const ownerEntitlements = await getUserEntitlements(shopOwnerId.toString());
+      const employeeLimit = ownerEntitlements?.limits?.employees || 1;
+      
+      // Đếm số employee hiện tại trong shop này (bao gồm cả owner)
+      const shopUserCount = await ShopUser.countDocuments({
+        shop_id: shopId,
+        status: "active",
+      });
+      
+      // Kiểm tra xem owner có trong ShopUser chưa, nếu chưa thì +1
+      const ownerInShopUser = await ShopUser.findOne({
+        shop_id: shopId,
+        user_id: shopOwnerId,
+        status: "active",
+      });
+      
+      const currentEmployeeCount = ownerInShopUser ? shopUserCount : shopUserCount + 1;
+
+      // Kiểm tra nếu đã đạt giới hạn
+      if (currentEmployeeCount >= employeeLimit) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: ErrorCode.EMP_008,
+            message: getErrorMessage(ErrorCode.EMP_008, 'vi'),
+          },
+        });
+      }
+    } catch (entitlementError) {
+      console.error("Error checking employee limit:", entitlementError);
+      // Nếu không thể kiểm tra, vẫn cho phép thêm (fallback)
+      // Hoặc có thể return error tùy theo yêu cầu
+    }
+
     // Kiểm tra user tồn tại chưa
     let user = await User.findOne({ email });
 
     if (!user) {
       // Gửi email mời
       await sendInvitationEmail(email);
-      await UserPackage.updateOne(
-        { user_id: ownerId, status: "active" },
-        { $inc: { employees: 1 } }
-      );
+      // Note: Không cần update UserPackage.employees ở đây vì đã được tính trong countUsage
 
       await saveLog({
         user_id: invitedBy,
@@ -551,16 +607,25 @@ export const updateUserStatus = async (req, res) => {
     }
     console.log("newStatus", newStatus);
 
+    // Xác định action và description dựa trên status
+    let logAction = "UPDATE_USER_STATUS";
+    let logDescription = `${currentUser.full_name || currentUser.email} đã ${newStatus} nhân viên "${targetUser.full_name || targetUser.email}" trong cửa hàng "${shop.shop_name}"`;
+    
+    if (newStatus === StatusEnum.REMOVED) {
+      logAction = "REMOVE_EMPLOYEE";
+      logDescription = `${currentUser.full_name || currentUser.email} đã xóa nhân viên "${targetUser.full_name || targetUser.email}" ra khỏi cửa hàng "${shop.shop_name}"`;
+    }
+
     await saveLog({
       user_id: currentUserId,
       user_name: currentUser.full_name || currentUser.email,
       shop_id: shopId,
       shop_name: shop.shop_name,
-      action: "UPDATE_USER_STATUS",
+      action: logAction,
       target_type: "ShopUser",
       target_id: userId,
       target_name: targetUser.full_name || targetUser.email,
-      description: `${currentUser.full_name || currentUser.email} đã ${newStatus} nhân viên "${targetUser.full_name || targetUser.email}" trong cửa hàng "${shop.shop_name}"`,
+      description: logDescription,
       request: req.body,
       response: updated,
       success: true,
@@ -576,6 +641,192 @@ export const updateUserStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("updateUserStatus error:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: ErrorCode.COMMON_999,
+        message: getErrorMessage(ErrorCode.COMMON_999, 'vi'),
+      },
+    });
+  }
+};
+
+// Remove employee hoàn toàn khỏi shop
+export const removeEmployee = async (req, res) => {
+  try {
+    const { shopId, userId } = req.params;
+    const { currentUserId } = req.body;
+    
+    if (!currentUserId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: ErrorCode.AUTH_001,
+          message: getErrorMessage(ErrorCode.AUTH_001, 'vi'),
+        },
+      });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    const shop = await Shop.findById(shopId);
+
+    if (!shop || !currentUser) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: ErrorCode.COMMON_001,
+          message: getErrorMessage(ErrorCode.COMMON_001, 'vi'),
+        },
+      });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: ErrorCode.EMP_001,
+          message: getErrorMessage(ErrorCode.EMP_001, 'vi'),
+        },
+      });
+    }
+
+    // Lấy role của người đang thao tác
+    const actorRole = await UserRole.findOne({
+      shop_id: shopId,
+      user_id: currentUserId,
+    }).populate("role_id", "role_name");
+
+    if (!actorRole) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: ErrorCode.SHOP_001,
+          message: getErrorMessage(ErrorCode.SHOP_001, 'vi'),
+        },
+      });
+    }
+
+    const actorRoleName = actorRole.role_id.role_name;
+
+    // Lấy ShopUser và UserRole của employee bị remove
+    const shopUser = await ShopUser.findOne({
+      shop_id: shopId,
+      user_id: userId,
+    });
+
+    if (!shopUser) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: ErrorCode.EMP_001,
+          message: getErrorMessage(ErrorCode.EMP_001, 'vi'),
+        },
+      });
+    }
+
+    const targetRole = await UserRole.findOne({
+      shop_id: shopId,
+      user_id: userId,
+    }).populate("role_id", "role_name");
+
+    if (!targetRole) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: ErrorCode.ROLE_001,
+          message: getErrorMessage(ErrorCode.ROLE_001, 'vi'),
+        },
+      });
+    }
+
+    const targetRoleName = targetRole.role_id.role_name;
+
+    // Kiểm tra quyền hạn
+    // Shop Owner: có thể xóa Marketing Admin và Marketer
+    // Marketing Admin: có thể xóa Marketing Admin và Marketer (nhưng không thể xóa Shop Owner)
+    const canRemove =
+      (actorRoleName === "Shop Owner" &&
+        ["Marketing Admin", "Marketer"].includes(targetRoleName)) ||
+      (actorRoleName === "Marketing Admin" &&
+        ["Marketing Admin", "Marketer"].includes(targetRoleName));
+
+    if (!canRemove) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: ErrorCode.ROLE_006,
+          message: getErrorMessage(ErrorCode.ROLE_006, 'vi'),
+        },
+      });
+    }
+
+    // Không cho tự xóa chính mình
+    if (userId === currentUserId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: ErrorCode.AUTH_008,
+          message: getErrorMessage(ErrorCode.AUTH_008, 'vi'),
+        },
+      });
+    }
+
+    // Xử lý is_current: Nếu employee đang set shop này là current shop,
+    // cần chuyển sang shop khác hoặc bỏ is_current
+    if (targetRole.is_current) {
+      // Tìm shop khác của user (nếu có) và set làm current
+      const otherUserRole = await UserRole.findOne({
+        user_id: userId,
+        shop_id: { $ne: shopId },
+        revoked_at: null,
+      });
+      
+      if (otherUserRole) {
+        await UserRole.findByIdAndUpdate(otherUserRole._id, {
+          is_current: true,
+        });
+      }
+      // Nếu không có shop nào khác, đơn giản là bỏ is_current
+      // (User sẽ phải chọn shop khác khi login lại)
+    }
+
+    // BƯỚC 1: Xóa UserRole trong shop này (hard delete)
+    await UserRole.findByIdAndDelete(targetRole._id);
+
+    // BƯỚC 2: Xóa ShopUser record
+    await ShopUser.findByIdAndDelete(shopUser._id);
+
+    // Log lại hành động
+    await saveLog({
+      user_id: currentUserId,
+      user_name: currentUser.full_name || currentUser.email,
+      shop_id: shopId,
+      shop_name: shop.shop_name,
+      action: "REMOVE_EMPLOYEE",
+      target_type: "ShopUser",
+      target_id: userId,
+      target_name: targetUser.full_name || targetUser.email,
+      description: `${currentUser.full_name || currentUser.email} đã xóa nhân viên "${targetUser.full_name || targetUser.email}" ra khỏi cửa hàng "${shop.shop_name}"`,
+      request: req.body,
+      response: { removed: true },
+      success: true,
+      source: "manual",
+      ip_address: req.ip,
+    });
+
+    res.status(200).json({
+      success: true,
+      code: SuccessCode.EMP_SUCCESS_004,
+      message: getSuccessMessage(SuccessCode.EMP_SUCCESS_004, 'vi'),
+      data: {
+        removed: true,
+        userId: userId,
+        shopId: shopId,
+      },
+    });
+  } catch (error) {
+    console.error("removeEmployee error:", error);
     res.status(500).json({
       success: false,
       error: {
@@ -661,6 +912,26 @@ export const relinquishOwnership = async (req, res) => {
         { role_id: ownerRole._id }
       ),
     ]);
+
+    // Cập nhật owner_id trong Shop model
+    await Shop.findByIdAndUpdate(
+      shopId,
+      {
+        owner_id: employeeId,
+        updated_by: currentUserId,
+      },
+      { new: true }
+    );
+
+    // Đồng bộ package của shop với package của owner mới
+    try {
+      const { syncSingleShopPackage } = await import("../../services/shopPackageSyncService.js");
+      await syncSingleShopPackage(shopId);
+      console.log(`✅ Đã sync package cho shop ${shopId} sau khi chuyển giao quyền owner`);
+    } catch (syncError) {
+      console.error("⚠️ Lỗi khi sync shop package sau khi chuyển giao quyền:", syncError);
+      // Không throw error để không ảnh hưởng đến flow chính
+    }
 
     await saveLog({
       user_id: currentUserId,

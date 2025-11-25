@@ -33,7 +33,8 @@ import {
 import { saveDraft } from "../../../services/adsWizardService.js";
 import { FB_OBJECTIVE_MAP, ADSET_CONFIG_BY_OBJECTIVE, INITIAL_DATA } from "../../../constants/wizardConstants.js";
 import axiosInstance from "../../../utils/axios.js";
-import { convertCountryCodesToNames, convertLocaleIdToLanguageCode } from "../../../utils/locationUtils.js";
+import { convertLocaleIdToLanguageCode } from "../../../utils/locationUtils.js";
+import { parseGeoLocationsToFrontend } from "../../../utils/locationParseUtils.js";
 
 function CreateAdsWizard({
   onClose,
@@ -184,7 +185,25 @@ function CreateAdsWizard({
       setCampaign(selectedCampaign);
     }
     if (selectedAdset) {
-      setAdset(selectedAdset);
+      // ✅ Đảm bảo mỗi adset có targeting.locations riêng khi load
+      const adsetWithLocations = {
+        ...selectedAdset,
+        targeting: {
+          ...selectedAdset.targeting,
+          // ✅ Nếu chưa có locations hoặc locations không phải object, khởi tạo mới
+          locations: selectedAdset.targeting?.locations && 
+                     typeof selectedAdset.targeting.locations === 'object' &&
+                     !Array.isArray(selectedAdset.targeting.locations)
+            ? JSON.parse(JSON.stringify(selectedAdset.targeting.locations)) // Deep clone
+            : {
+                regions: [],
+                cities: [],
+                custom_locations: [],
+                excluded_ids: []
+              },
+        },
+      };
+      setAdset(adsetWithLocations);
     }
     if (selectedAd) {
       setAd(selectedAd);
@@ -206,6 +225,63 @@ function CreateAdsWizard({
     campaignsList[selectedCampaignIndex]?.adsets?.[selectedAdsetIndex]?.ads
       ?.length,
   ]);
+
+  // ==============================
+  // 🔄 SYNC: Sync adset state về campaignsList ngay khi có thay đổi
+  // ==============================
+  const prevAdsetRef = useRef(null);
+  useEffect(() => {
+    if (campaignsList.length === 0 || selectedCampaignIndex < 0 || selectedAdsetIndex < 0) {
+      prevAdsetRef.current = adset;
+      return;
+    }
+
+    // Chỉ sync nếu adset thực sự thay đổi (tránh infinite loop)
+    const adsetChanged = JSON.stringify(prevAdsetRef.current) !== JSON.stringify(adset);
+    if (!adsetChanged && prevAdsetRef.current !== null) {
+      return;
+    }
+
+    prevAdsetRef.current = adset;
+
+    // Sync adset state về campaignsList
+    setCampaignsList((prev) => {
+      const next = prev.map((camp, cIdx) => {
+        if (cIdx === selectedCampaignIndex) {
+          return {
+            ...camp,
+            adsets: camp.adsets?.map((as, aIdx) => {
+              if (aIdx === selectedAdsetIndex) {
+                // ✅ Deep merge để giữ nguyên các field khác và update adset
+                return {
+                  ...as,
+                  ...adset,
+                  // ✅ Đảm bảo targeting.locations là object riêng (không share reference)
+                  targeting: {
+                    ...as.targeting,
+                    ...adset.targeting,
+                    // ✅ Deep clone locations để tránh reference sharing
+                    locations: adset.targeting?.locations 
+                      ? JSON.parse(JSON.stringify(adset.targeting.locations))
+                      : (as.targeting?.locations || {
+                          regions: [],
+                          cities: [],
+                          custom_locations: [],
+                          excluded_ids: []
+                        }),
+                  },
+                };
+              }
+              return as;
+            }),
+          };
+        }
+        return camp;
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adset, selectedCampaignIndex, selectedAdsetIndex]);
 
   // ==============================
   // 📤 SUBMIT: Sync states → campaignsList trước khi gửi
@@ -473,10 +549,16 @@ function CreateAdsWizard({
           ...INITIAL_DATA.adset,
           _id: firstAdsetId,
           name: adsetName || "Nhóm quảng cáo mới",
-          // Copy targeting từ campaign nếu có
+          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
           targeting: {
             ...INITIAL_DATA.adset.targeting,
-            // Có thể thêm logic copy từ campaign nếu cần
+            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+            locations: {
+              regions: [],
+              cities: [],
+              custom_locations: [],
+              excluded_ids: []
+            },
           },
         };
       } else {
@@ -502,10 +584,8 @@ function CreateAdsWizard({
               : "",
           },
           targeting: {
-            // Map geo_locations.countries từ DB (country codes) sang locations (country names) cho FE
-            locations: adsetData.targeting?.geo_locations?.countries
-              ? convertCountryCodesToNames(adsetData.targeting.geo_locations.countries)
-              : ["Viet Nam"],
+            // ✅ NEW: Parse targeting (prioritizes locations with names, falls back to geo_locations)
+            locations: parseGeoLocationsToFrontend(adsetData.targeting),
             ageMin: adsetData.targeting?.age_min || 18,
             ageMax: adsetData.targeting?.age_max || 65,
             // Map gender và language từ DB
@@ -516,7 +596,7 @@ function CreateAdsWizard({
               : adsetData.targeting?.gender || "all",
             language: adsetData.targeting?.locales?.[0] 
               ? (convertLocaleIdToLanguageCode(adsetData.targeting.locales[0]) || adsetData.targeting.locales[0])
-              : adsetData.targeting?.language || "vi",
+              : adsetData.targeting?.language || "all",
             publisher_platforms: adsetData.targeting?.publisher_platforms || ["facebook"],
             facebook_positions: adsetData.targeting?.facebook_positions || ["feed", "video_feeds", "marketplace", "search"],
             // Preserve other targeting fields
@@ -530,7 +610,9 @@ function CreateAdsWizard({
           billing_event: adsetData.billing_event || "IMPRESSIONS",
           bid_strategy: adsetData.bid_strategy || "LOWEST_COST_WITHOUT_CAP",
           bid_amount: adsetData.bid_amount,
-          traffic_destination: adsetData.traffic_destination || adsetData.destination_type || null,
+          traffic_destination: adsetData.traffic_destination || null,
+          engagement_destination: adsetData.engagement_destination || null,
+          destination_type: adsetData.destination_type || null,
           promoted_object: {
             page_id: adsetData.page_id || campaignData.page_id || null,
             pixel_id: adsetData.targeting?.promoted_object?.pixel_id || null,
@@ -682,6 +764,8 @@ function CreateAdsWizard({
                   setSelectedAdsetIndex={setSelectedAdsetIndex}
                   selectedAdIndex={selectedAdIndex}
                   setSelectedAdIndex={setSelectedAdIndex}
+                  mode={mode}
+                  selectedAccountId={selectedAccountId}
                 />
               )}
 
@@ -715,6 +799,7 @@ function CreateAdsWizard({
                 setAdsetsList={setAdsetsList}
                 facebookPages={facebookPages}
                 campaign={campaign}
+                selectedAccountId={selectedAccountId}
               />
             )}
 

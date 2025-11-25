@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Plus, Edit, Play, Pause, Hand, Flag } from "lucide-react";
+import { Plus, Edit, Play, Pause, Hand, Flag, Crown, Trash } from "lucide-react";
 import { ROUTES } from "../../constants/app.constants";
 import "./Shop.css";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { STORAGE_KEYS } from '../../constants/app.constants';
 import { useParams } from "react-router-dom";
 import axiosInstance from "../../utils/axios.js";
 import { getShopCache, saveShopCache } from "../../utils/shopCache";
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup.jsx";
 import noAvatar from "../../assets/no-avatar.jpg";
+import { useMyPackage } from "../../hooks/useMyPackage";
 
 function Employee() {
   const { t } = useTranslation();
+  const { pkg } = useMyPackage();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchEmail, setSearchEmail] = useState("");
@@ -43,13 +45,11 @@ function Employee() {
     useState(null);
   const [isLoadingRelinquish, setIsLoadingRelinquish] = useState(false);
 
-  // State cho popup xác nhận thay đổi role
-  const [isRoleChangeOpen, setIsRoleChangeOpen] = useState(false);
-  const [selectedEmployeeForRoleChange, setSelectedEmployeeForRoleChange] =
+  // State cho popup xác nhận xóa employee
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
+  const [selectedEmployeeForRemove, setSelectedEmployeeForRemove] =
     useState(null);
-  const [newRoleName, setNewRoleName] = useState("");
-  const [oldRoleName, setOldRoleName] = useState("");
-  const [isLoadingRoleChange, setIsLoadingRoleChange] = useState(false);
+  const [isLoadingRemove, setIsLoadingRemove] = useState(false);
 
   // Lấy current shop, kiểm tra quyền truy cập và user role (gộp để tránh gọi API trùng lặp)
   useEffect(() => {
@@ -182,25 +182,19 @@ function Employee() {
     loadEmployees();
   }, [actualShopId]);
 
-  const handleRoleChange = (userId, newRoleName) => {
+  // Thay đổi role trực tiếp qua dropdown
+  const handleRoleChange = async (userId, newRoleName) => {
     if (!actualShopId) return;
 
     // Tìm employee để lấy thông tin
     const employee = employees.find((emp) => emp.id === userId);
     if (!employee) return;
 
-    // Lưu thông tin để hiển thị trong popup
-    setSelectedEmployeeForRoleChange(employee);
-    setOldRoleName(employee.role);
-    setNewRoleName(newRoleName);
-    setIsRoleChangeOpen(true);
-  };
+    // Nếu role không thay đổi thì không làm gì
+    if (newRoleName === employee.role) return;
 
-  // Xác nhận thay đổi role
-  const handleConfirmRoleChange = async () => {
-    if (!selectedEmployeeForRoleChange || !actualShopId || !newRoleName) return;
+    const oldRoleName = employee.role;
 
-    setIsLoadingRoleChange(true);
     try {
       const roleMap = {
         "Shop Owner": "68ff6cab6ef1d167ed39c6fa",
@@ -210,7 +204,7 @@ function Employee() {
       const newRoleId = roleMap[newRoleName];
 
       const res = await axiosInstance.put(`/api/shop-users/${actualShopId}`, {
-        userId: selectedEmployeeForRoleChange.id,
+        userId: userId,
         newRoleId,
         currentUserId,
       });
@@ -219,7 +213,7 @@ function Employee() {
       // Kiểm tra thành công: có success: true hoặc status 200 và có message
       if (data.success === true || (res.status === 200 && data.message)) {
         // Nếu thay đổi role của chính mình → cập nhật cache
-        if (selectedEmployeeForRoleChange.id === currentUserId) {
+        if (userId === currentUserId) {
           const cachedShop = getShopCache();
           if (cachedShop && cachedShop.id === actualShopId) {
             saveShopCache({
@@ -230,26 +224,27 @@ function Employee() {
           }
         }
 
-        // Đóng popup ngay lập tức
-        setIsRoleChangeOpen(false);
-        setIsLoadingRoleChange(false);
-        setSelectedEmployeeForRoleChange(null);
-        setNewRoleName("");
-        setOldRoleName("");
+        // Cập nhật state ngay lập tức
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.id === userId ? { ...emp, role: newRoleName } : emp
+          )
+        );
 
         // Hiển thị toast success
         toast.success(data.message || "Cập nhật vai trò thành công!");
-
-        // Reload trang sau một khoảng thời gian ngắn để đảm bảo toast hiển thị
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       } else {
-        // Xử lý lỗi từ API
+        // Xử lý lỗi từ API - reset về role cũ
         const errorMessage =
           data.error?.message || data.message || "Không thể cập nhật vai trò";
         toast.error(errorMessage);
-        setIsLoadingRoleChange(false);
+        
+        // Reset dropdown về role cũ
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.id === userId ? { ...emp, role: oldRoleName } : emp
+          )
+        );
       }
     } catch (err) {
       console.error("Update role error:", err);
@@ -258,7 +253,13 @@ function Employee() {
         err.response?.data?.message ||
         "Lỗi khi cập nhật vai trò";
       toast.error(errorMessage);
-      setIsLoadingRoleChange(false);
+      
+      // Reset dropdown về role cũ
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === userId ? { ...emp, role: oldRoleName } : emp
+        )
+      );
     }
   };
 
@@ -309,6 +310,26 @@ function Employee() {
     }
   };
 
+  // Helper function để kiểm tra quyền xóa employee
+  const canRemoveEmployee = (employeeRole, currentUserRole) => {
+    if (!currentUserRole) return false;
+    
+    // Marketer không thể xóa ai cả
+    if (currentUserRole === "Marketer") return false;
+    
+    // Marketing Admin có thể xóa Marketing Admin và Marketer (nhưng không thể xóa Shop Owner)
+    if (currentUserRole === "Marketing Admin") {
+      return ["Marketing Admin", "Marketer"].includes(employeeRole);
+    }
+    
+    // Shop Owner có thể xóa tất cả trừ Shop Owner
+    if (currentUserRole === "Shop Owner") {
+      return employeeRole !== "Shop Owner";
+    }
+    
+    return false;
+  };
+
   //Hành động với page
   const handleAction = async (userId, action) => {
     try {
@@ -319,10 +340,18 @@ function Employee() {
         setIsRelinquishOpen(true);
         return;
       }
+      
+      if (action === "remove") {
+        // Tìm employee để lấy thông tin hiển thị trong popup
+        const employee = employees.find((emp) => emp.id === userId);
+        setSelectedEmployeeForRemove(employee);
+        setIsRemoveOpen(true);
+        return;
+      }
+      
       let newStatus = "";
       if (action === "activate") newStatus = "active";
       else if (action === "deactivate") newStatus = "inactive";
-      else if (action === "remove") newStatus = "removed";
 
       const res = await axiosInstance.put(
         `/api/shop-users/status/${actualShopId}`,
@@ -398,7 +427,21 @@ function Employee() {
   };
 
   //Thêm page mới
-  const handleAddNewPage = () => {
+  const handleAddNewEmployee = () => {
+    if (!pkg?.package) {
+      toast.error("Tính năng này yêu cầu gói dịch vụ. Vui lòng mua gói để sử dụng.");
+      return;
+    }
+
+    // Kiểm tra employee limit
+    const employeeLimit = pkg?.limits?.employees || 1;
+    const currentEmployeeCount = pkg?.usage?.employees || 0;
+    
+    if (currentEmployeeCount >= employeeLimit) {
+      toast.error(`Đã đạt giới hạn số lượng nhân viên (${currentEmployeeCount}/${employeeLimit}). Vui lòng nâng cấp gói dịch vụ để thêm nhân viên.`);
+      return;
+    }
+
     setIsInviteOpen(true);
   };
 
@@ -457,6 +500,73 @@ function Employee() {
         "Lỗi khi chuyển giao quyền";
       toast.error(errorMessage);
       setIsLoadingRelinquish(false);
+    }
+  };
+
+  // Xác nhận xóa employee
+  const handleConfirmRemove = async () => {
+    if (!selectedEmployeeForRemove || !actualShopId) return;
+
+    setIsLoadingRemove(true);
+    try {
+      // Gọi API DELETE mới để xóa hoàn toàn employee khỏi shop
+      const res = await axiosInstance.delete(
+        `/api/shop-users/${actualShopId}/employee/${selectedEmployeeForRemove.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+          },
+          data: {
+            currentUserId,
+          },
+        }
+      );
+
+      const data = res.data;
+
+      if (data.success) {
+        // Đóng popup ngay lập tức
+        setIsRemoveOpen(false);
+        setIsLoadingRemove(false);
+        setSelectedEmployeeForRemove(null);
+
+        // Hiển thị toast success
+        toast.success(data.message || "Đã xóa nhân viên thành công!");
+
+        // Reload lại danh sách employees để đảm bảo đồng bộ với backend
+        // (Backend đã xóa hoàn toàn ShopUser và UserRole)
+        const reloadRes = await axiosInstance.get(`/api/shop-users/${actualShopId}`);
+        const reloadData = reloadRes.data;
+        
+        if (reloadData.success) {
+          const safeEmployees = reloadData.data.map((emp) => ({
+            id: emp.user_id,
+            name: emp.full_name || "Unknown",
+            email: emp.email || "No email",
+            avatar: emp.avatar || null,
+            role: emp.role_name || "N/A",
+            status: emp.status || "Inactive",
+            page: emp.page || 0,
+          }));
+          setEmployees(safeEmployees);
+        }
+      } else {
+        // Xử lý lỗi từ API
+        const errorMessage =
+          data.error?.message ||
+          data.message ||
+          "Không thể xóa nhân viên";
+        toast.error(errorMessage);
+        setIsLoadingRemove(false);
+      }
+    } catch (error) {
+      console.error("Remove employee error:", error);
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        "Lỗi khi xóa nhân viên";
+      toast.error(errorMessage);
+      setIsLoadingRemove(false);
     }
   };
 
@@ -575,10 +685,27 @@ function Employee() {
             </select>
           </div>
 
-          <button className="btn-add-new-page" onClick={handleAddNewPage}>
-            <Plus size={16} />
-            {t('shop.add_new_employee')}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Hiển thị usage nếu có package */}
+            {pkg?.package && (
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                Nhân viên: {pkg?.usage?.employees || 0}/{pkg?.limits?.employees || 1}
+              </span>
+            )}
+            <button 
+              className={`btn-add-new-page ${!pkg?.package ? 'premium-feature' : ''} ${pkg?.package && (pkg?.usage?.employees || 0) >= (pkg?.limits?.employees || 1) ? 'disabled' : ''}`}
+              onClick={handleAddNewEmployee}
+              title={pkg?.package && (pkg?.usage?.employees || 0) >= (pkg?.limits?.employees || 1) ? `Đã đạt giới hạn nhân viên (${pkg?.usage?.employees || 0}/${pkg?.limits?.employees || 1})` : (!pkg?.package ? 'Tính năng này yêu cầu gói dịch vụ' : '')}
+            >
+              <Plus size={16} />
+              {t('shop.add_new_employee')}
+              {!pkg?.package && (
+                <span className="premium-badge">
+                  <Crown size={12} />
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Table  */}
@@ -648,25 +775,20 @@ function Employee() {
                       </button>
                     </div>
                     <div className="table-cell" data-label={t('shop.role')}>
-                      <select
-                        className="role-select"
-                        value={
-                          isRoleChangeOpen &&
-                          selectedEmployeeForRoleChange?.id === employee.id
-                            ? oldRoleName
-                            : employee.role
-                        }
-                        onChange={(e) => {
-                          // Nếu role không thay đổi thì không làm gì
-                          if (e.target.value === employee.role) return;
-                          handleRoleChange(employee.id, e.target.value);
-                        }}
-                        disabled={employee.role === "Shop Owner"} // không cho sửa owner
-                      >
-                        <option value="Shop Owner">Shop Owner</option>
-                        <option value="Marketing Admin">Marketing Admin</option>
-                        <option value="Marketer">Marketer</option>
-                      </select>
+                      {employee.role === "Shop Owner" ? (
+                        <span className="role-badge">{employee.role}</span>
+                      ) : (
+                        <select
+                          className="role-select"
+                          value={employee.role}
+                          onChange={(e) => {
+                            handleRoleChange(employee.id, e.target.value);
+                          }}
+                        >
+                          <option value="Marketing Admin">Marketing Admin</option>
+                          <option value="Marketer">Marketer</option>
+                        </select>
+                      )}
                     </div>
                     {/* <div className="table-cell" data-label={t("shop.status")}>
                       <span
@@ -678,7 +800,7 @@ function Employee() {
                     <div className="table-cell" data-label={t("shop.action")}>
                       <div className="action-buttons">
                         {/* Chỉ hiển thị button activate nếu status không phải active */}
-                        {employee.status?.toLowerCase() !== "active" && (
+                        {/* {employee.status?.toLowerCase() !== "active" && (
                           <button
                             className="shop-action-btn shop-activate-btn"
                             onClick={() =>
@@ -689,9 +811,9 @@ function Employee() {
                           >
                             <Play size={14} />
                           </button>
-                        )}
+                        )} */}
                         {/* Chỉ hiển thị button deactivate nếu status là active */}
-                        {employee.status?.toLowerCase() === "active" && (
+                        {/* {employee.status?.toLowerCase() === "active" && (
                           <button
                             className="shop-action-btn shop-deactivate-btn"
                             onClick={() =>
@@ -702,7 +824,7 @@ function Employee() {
                           >
                             <Pause size={14} />
                           </button>
-                        )}
+                        )} */}
                         {/* Button relinquish chỉ hiển thị cho Shop Owner và chỉ khi employee không phải Shop Owner */}
                         {currentUserRole === "Shop Owner" &&
                           employee.role !== "Shop Owner" && (
@@ -715,7 +837,21 @@ function Employee() {
                             >
                               <Hand size={14} />
                             </button>
-                          )}
+                            )}
+                        
+                        {/* Button remove - chỉ hiển thị khi có quyền xóa */}
+                        {canRemoveEmployee(employee.role, currentUserRole) && (
+                          <button
+                            className="shop-action-btn shop-remove-btn"
+                            onClick={() =>
+                              handleAction(employee.id, "remove")
+                            }
+                            title={t("shop.remove")}
+                            disabled={employee.role === "Shop Owner"}
+                          >
+                            <Trash size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -809,26 +945,24 @@ function Employee() {
         isLoading={isLoadingRelinquish}
       />
 
-      {/* Popup xác nhận thay đổi role */}
+      {/* Popup xác nhận xóa employee */}
       <ConfirmationPopup
-        isOpen={isRoleChangeOpen}
+        isOpen={isRemoveOpen}
         onClose={() => {
-          setIsRoleChangeOpen(false);
-          setSelectedEmployeeForRoleChange(null);
-          setNewRoleName("");
-          setOldRoleName("");
+          setIsRemoveOpen(false);
+          setSelectedEmployeeForRemove(null);
         }}
-        onConfirm={handleConfirmRoleChange}
-        title="Xác nhận thay đổi vai trò"
+        onConfirm={handleConfirmRemove}
+        title="Xác nhận xóa nhân viên"
         message={
-          selectedEmployeeForRoleChange
-            ? `Bạn có chắc chắn muốn thay đổi vai trò của "${selectedEmployeeForRoleChange.name}" (${selectedEmployeeForRoleChange.email}) từ "${oldRoleName}" sang "${newRoleName}"?`
-            : "Bạn có chắc chắn muốn thay đổi vai trò?"
+          selectedEmployeeForRemove
+            ? `Bạn có chắc chắn muốn xóa nhân viên "${selectedEmployeeForRemove.name}" (${selectedEmployeeForRemove.email}) ra khỏi cửa hàng? Hành động này không thể hoàn tác.`
+            : "Bạn có chắc chắn muốn xóa nhân viên này?"
         }
-        confirmText="Xác nhận thay đổi"
+        confirmText="Xác nhận xóa"
         cancelText="Hủy"
-        type="archive"
-        isLoading={isLoadingRoleChange}
+        type="delete"
+        isLoading={isLoadingRemove}
       />
     </div>
   );

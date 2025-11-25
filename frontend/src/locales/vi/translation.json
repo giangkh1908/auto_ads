@@ -57,7 +57,19 @@
        "reset_token_expired": "Liên kết đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.",
        "reset_token_used": "Liên kết đặt lại mật khẩu đã được sử dụng. Vui lòng yêu cầu đặt lại mật khẩu mới nếu cần.",
        "reset_token_invalid": "Liên kết đặt lại mật khẩu không hợp lệ.",
-       "enter_new_password": "Nhập mật khẩu mới cho tài khoản của bạn"
+       "enter_new_password": "Nhập mật khẩu mới cho tài khoản của bạn",
+       "account_inactive_message": "Tài khoản của bạn đã bị vô hiệu hoá",
+       "account_banned_message": "Tài khoản của bạn đã bị cấm",
+       "contact_admin_if_error": "Vui lòng liên hệ admin nếu bạn cho đó là lỗi",
+       "contact_admin_button": "Liên hệ Admin",
+       "contact_admin_title": "Liên hệ Admin",
+       "contact_admin_email_label": "Email của bạn",
+       "contact_admin_subject_label": "Tiêu đề",
+       "contact_admin_message_label": "Nội dung",
+       "contact_admin_submit_button": "Gửi",
+       "contact_admin_cancel_button": "Hủy",
+       "contact_admin_success": "Đã gửi yêu cầu hỗ trợ thành công!",
+       "contact_admin_error": "Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại."
      },
      "validation": {
        "email_required": "Email là bắt buộc",
@@ -88,7 +100,7 @@
       "registration_title": "ĐĂNG KÝ TƯ VẤN KỊCH BẢN CHATBOT BÁN HÀNG",
       "registration_subtitle": "Tư vấn miễn phí về kịch bản chatbot phù hợp với doanh nghiệp của bạn",
       "email_placeholder": "Nhập email của bạn",
-      "name_placeholder": "Họ tên của bạn",
+      "name_placeholder": "Tên",
       "phone_placeholder": "Số điện thoại",
       "contact_me": "LIÊN HỆ CHO TÔI",
       "call_me": "GỌI CHO TÔI",
@@ -151,9 +163,13 @@
       "rename_page": "Đổi tên Page",
       "all": "Tất cả",
       "active": "Hoạt động",
+      "pause": "TẠM DỪNG",
       "inactive": "Không hoạt động",
       "connect_new_page": "Kết nối Page mới",
-      "search_placeholder": "Tìm kiếm..."
+      "search_placeholder": "Tìm kiếm...",
+      "resume_page": "Kích hoạt lại",
+      "refresh_success": "Đã làm mới danh sách",
+      "refresh_error": "Không thể làm mới dữ liệu"
     },
      "account_management": {
        "title": "Tài khoản quảng cáo",
@@ -197,7 +213,9 @@
        "activate": "Kích hoạt",
        "deactivate": "Vô hiệu hóa",
        "archive": "Lưu trữ",
-       "disconnect": "Gỡ kết nối"
+       "disconnect": "Gỡ kết nối",
+       "sync_success": "Đồng bộ dữ liệu thành công!",
+       "sync_error": "Lỗi khi đồng bộ dữ liệu"
      },
     "ads_management": {
       "select_account": "Chọn tài khoản quảng cáo",
@@ -336,10 +354,10 @@
      "profile": {
        "update_profile": "Cập nhật hồ sơ",
        "change_password": "Đổi mật khẩu",
-       "full_name": "Họ tên của bạn",
+       "full_name": "Tên",
        "username": "Username",
        "email": "Email",
-       "phone": "Số điện thoại",
+       "phone": "Điện thoại",
        "country": "Quốc gia",
        "select_country": "-- Chọn quốc gia --",
        "address": "Địa chỉ",
@@ -404,9 +422,36 @@
        "food": "Thực phẩm",
        "tech": "Công nghệ",
        "beauty": "Mỹ phẩm",
-       "history_content": "Nội dung của tab Lịch sử đang được phát triển..."
-     },
-     "footer": {
+      "history_content": "Nội dung của tab Lịch sử đang được phát triển..."
+    },
+    "servicePackage": {
+      "title": "BẢNG GIÁ PHẦN MỀM AAMS",
+      "subtitle": "AAMS 0 Miễn Phí Trọn Đời! Bạn hãy trả tiền rồi sẽ thấy hiệu quả!",
+      "tabs": {
+        "3months": "3 Tháng",
+        "12months": "1 Năm"
+      },
+      "price": {
+        "perMonth": "/ Tháng",
+        "perYear": "/ Năm"
+      },
+      "stats": {
+        "pages": "Pages",
+        "employees": "Nhân viên",
+        "shops": "Shop"
+      },
+      "buttons": {
+        "buyNow": "Mua Ngay",
+        "inUse": "Đang sử dụng"
+      },
+      "messages": {
+        "loadError": "Không thể tải danh sách packages",
+        "loadErrorGeneric": "Lỗi khi tải danh sách packages",
+        "loginRequired": "Vui lòng đăng nhập để mua gói dịch vụ",
+        "alreadyUsing": "Bạn đang sử dụng gói này"
+      }
+    },
+    "footer": {
        "brand": "fchat",
        "address": "Tầng 2, Số 247, P.Cầu Giấy, TP.Hà Nội",
        "support": "Hỗ trợ: 089 898 6008",
@@ -431,7 +476,117 @@
        "google_play": "Google Play",
        "app_store": "App Store",
        "connect_fchat": "Kết nối Fchat",
-       "announced": "ĐÃ THÔNG BÁO",
-       "meta_partner": "Meta Business Partner"
-     }
+      "announced": "ĐÃ THÔNG BÁO",
+      "meta_partner": "Meta Business Partner"
+    },
+    "order": {
+      "currentPackage": "Đang dùng",
+      "customers": "Khách",
+      "pages": "pages",
+      "duration": "Thời hạn",
+      "title": "ĐƠN HÀNG CỦA BẠN",
+      "labels": {
+        "packageType": "Gói dịch vụ",
+        "unitPrice": "Đơn giá",
+        "packageDuration": "Thời hạn gói",
+        "total": "TỔNG TIỀN",
+        "employees": "Nhân viên"
+      },
+      "packageTypes": {
+        "chatbot": "CHATBOT",
+        "chatbotAi": "CHATBOT AI"
+      },
+      "durations": {
+        "3months": "3 tháng",
+        "6months": "6 tháng",
+        "12months": "1 năm"
+      },
+      "price": {
+        "perMonth": "/ tháng"
+      },
+      "discount": {
+        "placeholder": "Mã giảm giá",
+        "apply": "Áp dụng"
+      },
+      "vat": {
+        "label": "Xuất hóa đơn VAT",
+        "taxCode": "Mã số thuế",
+        "taxCodePlaceholder": "Nhập mã số thuế",
+        "companyName": "Tên đơn vị",
+        "companyNamePlaceholder": "Nhập tên đơn vị"
+      },
+      "buttons": {
+        "upgrade": "NÂNG CẤP NGAY"
+      },
+      "messages": {
+        "loadError": "Không thể tải danh sách packages",
+        "createError": "Không thể tạo đơn hàng!",
+        "createErrorGeneric": "Lỗi tạo đơn hàng"
+      }
+    },
+    "checkout": {
+      "title": "THÔNG TIN ĐƠN HÀNG",
+      "orderId": "Mã đơn:",
+      "total": "Tổng tiền:",
+      "paymentTitle": "Phương thức thanh toán",
+      "methods": {
+        "bank": {
+          "name": "CHUYỂN KHOẢN NGÂN HÀNG",
+          "description": "Vui lòng chuyển khoản đúng cú pháp nội dung để được kích hoạt đơn hàng tự động"
+        },
+        "card": {
+          "name": "Thẻ Visa / Master Việt Nam",
+          "description": "Hỗ trợ các loại thẻ Visa mở tại Việt Nam"
+        },
+        "momo": {
+          "name": "VÍ ĐIỆN TỬ MOMO",
+          "description": "Bạn cần có app Momo"
+        },
+        "paypal": {
+          "name": "THANH TOÁN QUA PAYPAL",
+          "description": "Bạn cần có tài khoản ví điện tử Paypal"
+        },
+        "service": {
+          "name": "VÍ DỊCH VỤ",
+          "description": "THANH TOÁN QUA VÍ DỊCH VỤ"
+        }
+      },
+      "buttons": {
+        "pay": "THANH TOÁN"
+      },
+      "messages": {
+        "methodInDevelopment": "Phương thức này đang được phát triển!",
+        "paymentError": "Có lỗi xảy ra khi xử lý thanh toán!"
+      }
+    },
+    "bank": {
+      "title": "Đặt hàng thành công",
+      "timer": "Thời gian còn:",
+      "timerUnit": "phút",
+      "instruction": "Vui lòng chuyển khoản theo thông tin:",
+      "labels": {
+        "bankName": "Ngân hàng",
+        "accountNumber": "Số tài khoản",
+        "accountName": "Tên tài khoản",
+        "content": "Nội dung",
+        "amount": "Số tiền"
+      },
+      "buttons": {
+        "copy": "Copy",
+        "confirm": "TÔI ĐÃ CHUYỂN KHOẢN"
+      },
+      "qr": {
+        "title": "Hoặc quét mã QR để thanh toán"
+      },
+      "confirm": {
+        "text": "Sau khi chuyển khoản thành công,<br />bạn bấm vào nút bên dưới"
+      },
+      "messages": {
+        "success": "Hãy chờ một chút, yêu cầu đã được gửi đi. Chúng tôi sẽ xác nhận thanh toán trong ít phút.",
+        "transactionNotFound": "Không tìm thấy giao dịch. Vui lòng thử lại.",
+        "sessionExpired": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
+        "error": "Có lỗi xảy ra. Vui lòng thử lại sau.",
+        "timeout": "Đơn hàng đã bị hủy do hết thời gian thanh toán!"
+      }
+    }
   }

@@ -16,6 +16,8 @@ export const ErrorCode = Object.freeze ({
     AUTH_007: 'AUTH_007', // Not verified
     AUTH_008: 'AUTH_008', // Permission denied
     AUTH_009: 'AUTH_009', // Role not allowed for this action
+    AUTH_010: 'AUTH_010', // Account inactive
+    AUTH_011: 'AUTH_011', // Account banned
 
     // ==================== USER ROLE ====================
     ROLE_001: 'ROLE_001', // Role not found
@@ -33,6 +35,7 @@ export const ErrorCode = Object.freeze ({
     EMP_005: 'EMP_005', // Employee not in your shop
     EMP_006: 'EMP_006', // Invite expired
     EMP_007: 'EMP_007', // Invite already accepted
+    EMP_008: 'EMP_008', // Reach employee limit
 
     // ==================== SHOP ====================
     SHOP_001: 'SHOP_001', // Shop not found
@@ -128,6 +131,8 @@ export const ErrorMessage = Object.freeze ({
     [ErrorCode.AUTH_007]: { vi: 'Tài khoản chưa được xác minh', en: 'Not verified' },
     [ErrorCode.AUTH_008]: { vi: 'Bạn không có quyền thực hiện hành động này', en: 'Permission denied' },
     [ErrorCode.AUTH_009]: { vi: 'Vai trò không được phép', en: 'Role not allowed' },
+    [ErrorCode.AUTH_010]: { vi: 'Tài khoản của bạn đã bị vô hiệu hoá', en: 'Your account has been deactivated' },
+    [ErrorCode.AUTH_011]: { vi: 'Tài khoản của bạn đã bị cấm', en: 'Your account has been banned' },
 
     // USER ROLE
     [ErrorCode.ROLE_001]: { vi: 'Vai trò không tồn tại', en: 'Role not found' },
@@ -145,6 +150,7 @@ export const ErrorMessage = Object.freeze ({
     [ErrorCode.EMP_005]: { vi: 'Nhân viên không thuộc cửa hàng của bạn', en: 'Employee not in your shop' },
     [ErrorCode.EMP_006]: { vi: 'Lời mời đã hết hạn', en: 'Invite expired' },
     [ErrorCode.EMP_007]: { vi: 'Lời mời đã được chấp nhận', en: 'Invite already accepted' },
+    [ErrorCode.EMP_008]: { vi: 'Đã đạt giới hạn số lượng nhân viên. Vui lòng nâng cấp gói dịch vụ để thêm nhân viên.', en: 'Reach employee limit. Please upgrade your package to add more employees.' },
 
     // SHOP
     [ErrorCode.SHOP_001]: { vi: 'Cửa hàng không tồn tại', en: 'Shop not found' },

@@ -11,11 +11,13 @@ import {
   getInternalStaff,
 } from "../controllers/userControllers.js";
 import { authenticate, authorize } from "../middlewares/auth.middleware.js";
+import { adminActionLogger } from "../middlewares/adminActionLogger.middleware.js";
 
 const router = express.Router();
 
 // 🛡️ Yêu cầu xác thực + quyền quản lý user
 router.use(authenticate);
+router.use(adminActionLogger); // Log admin actions
 
 // 📋 CRUD user
 router.get("/", authorize("user", "view"), getUsers);

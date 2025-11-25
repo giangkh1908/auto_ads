@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import "./Control.css";
 import { INITIAL_DATA } from "../../../../constants/wizardConstants.js";
+import { deleteAdSet, deleteAd as deleteAdAPI } from "../../../../services/adService.js";
+import { useToast } from "../../../../hooks/useToast.js";
 
 function Control({
   wizardStep,
@@ -26,7 +28,9 @@ function Control({
   setSelectedAdsetIndex,
   selectedAdIndex,
   setSelectedAdIndex,
+  mode = "create",
 }) {
+  const toast = useToast();
   const [expandedItems, setExpandedItems] = useState({
     campaigns: {},
     adsets: {},
@@ -130,6 +134,17 @@ function Control({
           id: Date.now() + 1,
           _id: firstAdsetId, // ✅ Set _id cho adset
           name: "Nhóm quảng cáo mới",
+          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+          targeting: {
+            ...INITIAL_DATA.adset.targeting,
+            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+            locations: {
+              regions: [],
+              cities: [],
+              custom_locations: [],
+              excluded_ids: []
+            },
+          },
           ads: [
             {
               ...INITIAL_DATA.ad,
@@ -193,6 +208,17 @@ function Control({
           id: Date.now(),
           _id: newAdsetId,
           name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
+          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+          targeting: {
+            ...INITIAL_DATA.adset.targeting,
+            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+            locations: {
+              regions: [],
+              cities: [],
+              custom_locations: [],
+              excluded_ids: []
+            },
+          },
           // ✅ Copy Facebook Page từ adset đầu tiên hoặc campaign
           ...(sourceFacebookPageId && {
             facebookPageId: sourceFacebookPageId,
@@ -221,10 +247,31 @@ function Control({
     };
 
   // Delete adset
-  const deleteAdset = (campaignIndex, adsetIndex) => {
+  const deleteAdset = async (campaignIndex, adsetIndex) => {
     const currentAdsets = campaignsList[campaignIndex]?.adsets || [];
     if (currentAdsets.length <= 1) return;
 
+    const adsetToDelete = currentAdsets[adsetIndex];
+    const adsetId = adsetToDelete._id || adsetToDelete.id;
+    const hasExternalId = !!adsetToDelete.external_id;
+    const isEditMode = mode === "edit" || mode === "update";
+
+    // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
+    if (isEditMode && adsetId) {
+      try {
+        toast.info("Đang xóa nhóm quảng cáo...");
+        await deleteAdSet(adsetId);
+        toast.success(hasExternalId 
+          ? "Đã xóa nhóm quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu" 
+          : "Đã xóa nhóm quảng cáo trong cơ sở dữ liệu");
+      } catch (error) {
+        console.error("Error deleting adset:", error);
+        toast.error(error?.response?.data?.message || "Lỗi khi xóa nhóm quảng cáo");
+        return; // Không xóa khỏi UI nếu API thất bại
+      }
+    }
+
+    // ✅ Xóa khỏi campaignsList
     setCampaignsList((prev) => {
       const next = [...prev];
       const currentCampaign = next[campaignIndex];
@@ -273,11 +320,32 @@ function Control({
   };
 
   // Delete ad
-  const deleteAd = (campaignIndex, adsetIndex, adIndex) => {
+  const deleteAd = async (campaignIndex, adsetIndex, adIndex) => {
     const currentAds =
       campaignsList[campaignIndex]?.adsets?.[adsetIndex]?.ads || [];
     if (currentAds.length <= 1) return;
 
+    const adToDelete = currentAds[adIndex];
+    const adId = adToDelete._id || adToDelete.id;
+    const hasExternalId = !!adToDelete.external_id;
+    const isEditMode = mode === "edit" || mode === "update";
+
+    // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
+    if (isEditMode && adId) {
+      try {
+        toast.info("Đang xóa ...");
+        await deleteAdAPI(adId);
+        toast.success(hasExternalId 
+          ? "Đã xóa" 
+          : "Đã xóa");
+      } catch (error) {
+        console.error("Error deleting ad:", error);
+        toast.error(error?.response?.data?.message || "Lỗi khi xóa quảng cáo");
+        return; // Không xóa khỏi UI nếu API thất bại
+      }
+    }
+
+    // ✅ Xóa khỏi campaignsList
     setCampaignsList((prev) => {
       const next = [...prev];
       const currentCampaign = next[campaignIndex];
@@ -391,17 +459,26 @@ function Control({
 
                 {/* Adsets */}
                 {isExpanded &&
-                  (campaign.adsets || []).map((adset, adsetIndex) => {
-                    const isAdsetExpanded =
-                      expandedItems.adsets[`${campaignIndex}-${adsetIndex}`];
-                    const isAdsetSelected =
-                      selectedCampaignIndex === campaignIndex &&
-                      selectedAdsetIndex === adsetIndex;
-                    const canDeleteAdset = (campaign.adsets || []).length > 1;
+                  (campaign.adsets || [])
+                    .filter((adset) => adset.status !== "DELETED")
+                    .map((adset, adsetIndex) => {
+                      // ✅ Tính lại index sau khi filter để đảm bảo đúng với campaignsList
+                      const originalAdsetIndex = campaign.adsets.findIndex(
+                        (a) => (a._id || a.id) === (adset._id || adset.id)
+                      );
+                      const isAdsetExpanded =
+                        expandedItems.adsets[`${campaignIndex}-${originalAdsetIndex}`];
+                      const isAdsetSelected =
+                        selectedCampaignIndex === campaignIndex &&
+                        selectedAdsetIndex === originalAdsetIndex;
+                      const activeAdsets = (campaign.adsets || []).filter(
+                        (a) => a.status !== "DELETED"
+                      );
+                      const canDeleteAdset = activeAdsets.length > 1;
 
                     return (
                       <div
-                        key={adset.id || adsetIndex}
+                        key={adset._id || adset.id || `adset-${campaignIndex}-${originalAdsetIndex}`}
                         className="hierarchy-group adset-group"
                       >
                         {/* Adset Item */}
@@ -410,7 +487,7 @@ function Control({
                             wizardStep === 2 && isAdsetSelected ? "current" : ""
                           } ${isAdsetSelected ? "selected" : ""}`}
                           onClick={() =>
-                            handleStepClick(2, campaignIndex, adsetIndex, 0)
+                            handleStepClick(2, campaignIndex, originalAdsetIndex, 0)
                           }
                         >
                           <div className="hierarchy-icon">
@@ -420,7 +497,7 @@ function Control({
                                 e.stopPropagation();
                                 toggleExpanded(
                                   "adsets",
-                                  `${campaignIndex}-${adsetIndex}`
+                                  `${campaignIndex}-${originalAdsetIndex}`
                                 );
                               }}
                               title={isAdsetExpanded ? "Thu gọn" : "Mở rộng"}
@@ -446,7 +523,7 @@ function Control({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleDropdown(
-                                    `adset-${campaignIndex}-${adsetIndex}`
+                                    `adset-${campaignIndex}-${originalAdsetIndex}`
                                   );
                                 }}
                                 title="Thêm tùy chọn"
@@ -454,7 +531,7 @@ function Control({
                                 <MoreVertical size={16} />
                               </button>
                               {openDropdowns[
-                                `adset-${campaignIndex}-${adsetIndex}`
+                                `adset-${campaignIndex}-${originalAdsetIndex}`
                               ] && (
                                 <div className="dropdown-content">
                                   <button
@@ -473,7 +550,7 @@ function Control({
                                       className="dropdown-item delete-item"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        deleteAdset(campaignIndex, adsetIndex);
+                                        deleteAdset(campaignIndex, originalAdsetIndex);
                                         setOpenDropdowns({});
                                       }}
                                     >
@@ -492,16 +569,25 @@ function Control({
 
                         {/* Ads */}
                         {isAdsetExpanded &&
-                          (adset.ads || []).map((ad, adIndex) => {
-                            const isAdSelected =
-                              selectedCampaignIndex === campaignIndex &&
-                              selectedAdsetIndex === adsetIndex &&
-                              selectedAdIndex === adIndex;
-                            const canDeleteAd = (adset.ads || []).length > 1;
+                          (adset.ads || [])
+                            .filter((ad) => ad.status !== "DELETED")
+                            .map((ad) => {
+                              // ✅ Tính lại index sau khi filter để đảm bảo đúng với adset.ads
+                              const originalAdIndex = adset.ads.findIndex(
+                                (a) => (a._id || a.id) === (ad._id || ad.id)
+                              );
+                              const isAdSelected =
+                                selectedCampaignIndex === campaignIndex &&
+                                selectedAdsetIndex === originalAdsetIndex &&
+                                selectedAdIndex === originalAdIndex;
+                              const activeAds = (adset.ads || []).filter(
+                                (a) => a.status !== "DELETED"
+                              );
+                              const canDeleteAd = activeAds.length > 1;
 
                             return (
                               <div
-                                key={ad.id || adIndex}
+                                key={ad._id || ad.id || `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`}
                                 className="hierarchy-group ad-group"
                               >
                                 {/* Ad Item */}
@@ -515,8 +601,8 @@ function Control({
                                     handleStepClick(
                                       3,
                                       campaignIndex,
-                                      adsetIndex,
-                                      adIndex
+                                      originalAdsetIndex,
+                                      originalAdIndex
                                     )
                                   }
                                 >
@@ -537,17 +623,17 @@ function Control({
                                         className="more-btn"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          toggleDropdown(
-                                            `ad-${campaignIndex}-${adsetIndex}-${adIndex}`
-                                          );
+                                    toggleDropdown(
+                                      `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
+                                    );
                                         }}
                                         title="Thêm tùy chọn"
                                       >
                                         <MoreVertical size={16} />
                                       </button>
-                                      {openDropdowns[
-                                        `ad-${campaignIndex}-${adsetIndex}-${adIndex}`
-                                      ] && (
+                              {openDropdowns[
+                                `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
+                              ] && (
                                         <div className="dropdown-content">
                                           <button
                                             className="dropdown-item"
@@ -567,8 +653,8 @@ function Control({
                                                 e.stopPropagation();
                                                 deleteAd(
                                                   campaignIndex,
-                                                  adsetIndex,
-                                                  adIndex
+                                                  originalAdsetIndex,
+                                                  originalAdIndex
                                                 );
                                                 setOpenDropdowns({});
                                               }}

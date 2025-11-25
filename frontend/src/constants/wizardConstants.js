@@ -98,7 +98,13 @@ export const INITIAL_ADSET_STATE = {
   end_time: null,
   targeting: {
     geo_locations: {
-      countries: ["VN"],
+      countries: ["VN"], // Giữ default country
+    },
+    locations: {
+      regions: [],
+      cities: [],
+      custom_locations: [],
+      excluded_ids: [],
     },
     age_min: 18,
     age_max: 65,
@@ -252,33 +258,42 @@ export const ADSET_CONFIG_BY_OBJECTIVE = {
   // ODAX: AWARENESS → AD_RECALL_LIFT, REACH, IMPRESSIONS, THRUPLAY, TWO_SECOND_CONTINUOUS_VIDEO_VIEWS
   AWARENESS: {
     optimization_goals: [
-      { 
-        value: "AD_RECALL_LIFT", 
-        label: "🧠 Mức độ ghi nhớ quảng cáo", 
-        description: "📸 Ảnh/Video → Tăng khả năng ghi nhớ thương hiệu",
+      {
+        value: "AD_RECALL_LIFT",
+        label: "Mức độ ghi nhớ quảng cáo",
+        description: "Quảng cáo giúp khách nhớ đến thương hiệu của bạn sau khi xem hình/ảnh hoặc video.",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
-      { 
-        value: "REACH", 
-        label: "👥 Tiếp cận", 
-        description: "📸 Ảnh/Video → Tối đa số người thấy quảng cáo",
+      {
+        value: "REACH",
+        label: "Tối đa người tiếp cận",
+        description: "Hiển thị quảng cáo cho số lượng người nhiều nhất có thể bằng ảnh/video",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
-      { 
-        value: "THRUPLAY", 
-        label: "🎬 Lượt xem video (ThruPlay)", 
-        description: "🎥 BẮT BUỘC VIDEO → Tối ưu người xem hết video",
+      {
+        value: "IMPRESSIONS",
+        label: "Tối đa hóa số lượt hiển thị",
+        description:
+          "Gia tăng tổng số lần quảng cáo xuất hiện cho đối tượng mục tiêu.",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
-      { 
-        value: "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS", 
-        label: "⏱️ Xem video 2s liên tục", 
-        description: "🎥 BẮT BUỘC VIDEO → Tối ưu xem ít nhất 2 giây",
+      {
+        value: "THRUPLAY",
+        label: "Lượt xem video đầy đủ",
+        description:
+          "Tối ưu cho người xem hết video quảng cáo (thường là 15 giây hoặc toàn bộ)",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
+      },
+      {
+        value: "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS",
+        label: "Xem video tối thiểu 2 giây",
+        description: "Đảm bảo quảng cáo video được xem ít nhất 2 giây liên tục",
+        billing_events: ["IMPRESSIONS"],
+        promoted_object: { page_id: null },
       },
     ],
     billing_events: ["IMPRESSIONS"],
@@ -287,34 +302,48 @@ export const ADSET_CONFIG_BY_OBJECTIVE = {
   // Theo bảng: destination_type không bắt buộc, promoted_object: application_id, object_store_url (cho app)
   TRAFFIC: {
     optimization_goals: [
-      { 
-        value: "LINK_CLICKS", 
-        label: "🔗 Lượt nhấp liên kết", 
-        description: "📸 Ảnh/Video → Tăng traffic đến website/app",
+      {
+        value: "LINK_CLICKS",
+        label: "Tối đa hóa số lượt nhấp liên kết",
+        description: "Tăng số lượt bấm vào website hoặc ứng dụng từ quảng cáo",
         billing_events: ["IMPRESSIONS", "LINK_CLICKS"],
-        promoted_object: { application_id: null, object_store_url: null }
+        promoted_object: { application_id: null, object_store_url: null },
       },
-      { 
-        value: "LANDING_PAGE_VIEWS", 
-        label: "📄 Lượt xem trang đích", 
-        description: "📸 Ảnh/Video → Tối ưu người xem landing page",
+      {
+        value: "LANDING_PAGE_VIEWS",
+        label: "Xem trang đích",
+        description: "Tối ưu quảng cáo để khách thật sự vào xem trang đích (website/app)",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: {}
+        promoted_object: {},
       },
-      { 
-        value: "REACH", 
-        label: "👥 Tiếp cận", 
-        description: "📸 Ảnh/Video → Tối đa số người thấy",
+      {
+        value: "REACH",
+        label: "Tối đa hóa số người tiếp cận hàng ngày",
+        description: "Tăng số lượng người nhìn thấy quảng cáo hàng ngày",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { application_id: null, object_store_url: null }
+        promoted_object: { application_id: null, object_store_url: null },
       },
-      { 
-        value: "REACH", 
-        label: "👥 Tiếp cận bài viết", 
-        description: "📸 Ảnh/Video → Tối đa số người thấy",
-        billing_events: ["IMPRESSIONS"], 
-        destination_type: "ON_POST",
-        promoted_object: {}
+      // {
+      //   value: "REACH",
+      //   label: "Tiếp cận bài viết",
+      //   description: "Đưa quảng cáo bài viết đến nhiều người nhất",
+      //   billing_events: ["IMPRESSIONS"],
+      //   destination_type: "ON_POST",
+      //   promoted_object: {},
+      // },
+      {
+        value: "CONVERSATIONS",
+        label: "Tối đa hóa số cuộc trò chuyện",
+        description: "Tăng số lượng người phản hồi quảng cáo.",
+        billing_events: ["IMPRESSIONS"],
+        promoted_object: {},
+      },
+      {
+        value: "IMPRESSIONS",
+        label: "Tối đa hóa số lượt hiển thị",
+        description: "Gia tăng tổng số lần quảng cáo xuất hiện cho đối tượng mục tiêu.",
+        billing_events: ["IMPRESSIONS"],
+        promoted_object: {},
       },
     ],
     billing_events: ["IMPRESSIONS", "LINK_CLICKS"],
@@ -324,170 +353,192 @@ export const ADSET_CONFIG_BY_OBJECTIVE = {
   ENGAGEMENT: {
     optimization_goals: [
       // ON_POST: Tương tác với bài viết
-      // { 
-      //   value: "POST_ENGAGEMENT", 
-      //   label: "💬 Tương tác bài viết", 
+      // {
+      //   value: "POST_ENGAGEMENT",
+      //   label: "💬 Tương tác bài viết",
       //   description: "📸 Ảnh/Video → Tăng like, comment, share",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_POST",
       //   promoted_object: {}
       // },
-      { 
-        value: "REACH", 
-        label: "👥 Tiếp cận", 
-        description: "📸 Ảnh/Video → Tối đa số người thấy",
-        billing_events: ["IMPRESSIONS"], 
-        destination_type: "ON_POST",
-        promoted_object: {}
-      },
-      // { 
-      //   value: "IMPRESSIONS", 
-      //   label: "📊 Số lần hiển thị", 
+      // {
+      //   value: "REACH",
+      //   label: "👥 Tiếp cận",
+      //   description: "📸 Ảnh/Video → Tối đa số người thấy",
+      //   billing_events: ["IMPRESSIONS"],
+      //   destination_type: "ON_POST",
+      //   promoted_object: {},
+      // },
+      // {
+      //   value: "IMPRESSIONS",
+      //   label: "📊 Số lần hiển thị",
       //   description: "📸 Ảnh/Video → Tối đa lượt hiển thị",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_POST",
       //   promoted_object: {}
       // },
       // ON_PAGE: Lượt thích trang
-      { 
-        value: "PAGE_LIKES", 
-        label: "👍 Lượt thích trang", 
-        description: "📸 Ảnh/Video → Tăng follower trang Facebook",
-        billing_events: ["IMPRESSIONS"], 
-        destination_type: "ON_PAGE",
-        promoted_object: { page_id: null }
-      },
+      // {
+      //   value: "PAGE_LIKES",
+      //   label: "👍 Lượt thích trang",
+      //   description: "📸 Ảnh/Video → Tăng follower trang Facebook",
+      //   billing_events: ["IMPRESSIONS"],
+      //   destination_type: "ON_PAGE",
+      //   promoted_object: { page_id: null },
+      // },
       // ON_EVENT: Phản hồi sự kiện
-      { 
-        value: "EVENT_RESPONSES", 
-        label: "📅 Phản hồi sự kiện", 
-        description: "📸 Ảnh/Video → Tăng người quan tâm/tham gia sự kiện",
-        billing_events: ["IMPRESSIONS"], 
-        destination_type: "ON_EVENT",
-        promoted_object: {}
-      },
-      // { 
-      //   value: "POST_ENGAGEMENT", 
-      //   label: "💬 Tương tác bài viết (Event)", 
+      // {
+      //   value: "EVENT_RESPONSES",
+      //   label: "📅 Phản hồi sự kiện",
+      //   description: "📸 Ảnh/Video → Tăng người quan tâm/tham gia sự kiện",
+      //   billing_events: ["IMPRESSIONS"],
+      //   destination_type: "ON_EVENT",
+      //   promoted_object: {},
+      // },
+      // {
+      //   value: "POST_ENGAGEMENT",
+      //   label: "💬 Tương tác bài viết (Event)",
       //   description: "📸 Ảnh/Video → Tương tác với bài viết sự kiện",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_EVENT",
       //   promoted_object: {}
       // },
-      // { 
-      //   value: "REACH", 
-      //   label: "👥 Tiếp cận sự kiện", 
+      // {
+      //   value: "REACH",
+      //   label: "👥 Tiếp cận sự kiện",
       //   description: "📸 Ảnh/Video → Tiếp cận người quan tâm sự kiện",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_EVENT",
       //   promoted_object: {}
       // },
       // ON_VIDEO: Lượt xem video
-      // { 
-      //   value: "THRUPLAY", 
-      //   label: "🎬 Lượt xem video (ThruPlay)", 
+      // {
+      //   value: "THRUPLAY",
+      //   label: "🎬 Lượt xem video (ThruPlay)",
       //   description: "🎥 BẮT BUỘC VIDEO → Tối ưu người xem hết video",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_VIDEO",
       //   promoted_object: {}
       // },
-      // { 
-      //   value: "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS", 
-      //   label: "⏱️ Xem video 2s liên tục", 
+      // {
+      //   value: "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS",
+      //   label: "⏱️ Xem video 2s liên tục",
       //   description: "🎥 BẮT BUỘC VIDEO → Tối ưu xem ít nhất 2 giây",
-      //   billing_events: ["IMPRESSIONS"], 
+      //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "ON_VIDEO",
       //   promoted_object: {}
       // },
       // MESSENGER: Tin nhắn
-      { 
-        value: "CONVERSATIONS", 
-        label: "💬 Hội thoại (Messenger)", 
-        description: "📸 Ảnh/Video → Bắt đầu hội thoại Messenger",
-        billing_events: ["IMPRESSIONS"], 
+      {
+        value: "CONVERSATIONS",
+        label: "Tối đa hóa số cuộc trò chuyện",
+        description: "Tăng số người bắt đầu chat với page qua Messenger",
+        billing_events: ["IMPRESSIONS"],
         destination_type: "MESSENGER",
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
-      { 
-        value: "LINK_CLICKS", 
-        label: "🔗 Lượt nhấp liên kết (Messenger)", 
-        description: "📸 Ảnh/Video → Nhấp vào link trong Messenger",
-        billing_events: ["IMPRESSIONS"], 
+      {
+        value: "LINK_CLICKS",
+        label: "Tối đa hóa số lượt nhấp liên kết",
+        description: "Tăng lượt click vào link trong tin nhắn",
+        billing_events: ["IMPRESSIONS"],
         destination_type: "MESSENGER",
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
+      {
+        value: "MESSAGING_PURCHASE_CONVERSION",
+        label: "Tối đa hóa số lượt mua qua tin nhắn",
+        description: "Tăng số lượt mua hàng qua tin nhắn.",
+        billing_events: ["IMPRESSIONS"],
+        destination_type: "MESSENGER",
+        promoted_object: { page_id: null },
+      }
     ],
-    billing_events: ["IMPRESSIONS"],
+    // billing_events: ["IMPRESSIONS","LINK_CLICKS"],
   },
   // ODAX: LEADS → LEAD_GENERATION, QUALITY_LEAD, CONVERSATIONS, OFFSITE_CONVERSIONS, etc.
   // Theo bảng: destination_type ON_AD, promoted_object: page_id, pixel_id, custom_event_type
   LEADS: {
     optimization_goals: [
       // ON_AD: Lead form trên quảng cáo
-      { 
-        value: "LEAD_GENERATION", 
-        label: "📋 Thu thập khách hàng tiềm năng", 
-        description: "📸 Ảnh/Video → Form lead trên quảng cáo",
+      {
+        value: "LEAD_GENERATION",
+        label: "Thu thập khách hàng tiềm năng",
+        description: "Tăng số lượt khách hàng tiềm năng đăng ký qua form lead",
         billing_events: ["IMPRESSIONS"],
         destination_type: "ON_AD",
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
-      { 
-        value: "QUALITY_LEAD", 
-        label: "⭐ Khách hàng tiềm năng chất lượng", 
-        description: "📸 Ảnh/Video → Tối ưu lead chất lượng cao",
-        billing_events: ["IMPRESSIONS"],
-        destination_type: "ON_AD",
-        promoted_object: { page_id: null }
-      },
+      // {
+      //   value: "QUALITY_LEAD",
+      //   label: "⭐ Khách hàng tiềm năng chất lượng",
+      //   description: "📸 Ảnh/Video → Tối ưu lead chất lượng cao",
+      //   billing_events: ["IMPRESSIONS"],
+      //   destination_type: "ON_AD",
+      //   promoted_object: { page_id: null },
+      // },
       // Messenger: Lead từ Messenger
-      // { 
-      //   value: "LEAD_GENERATION", 
-      //   label: "💬 Lead từ Messenger", 
+      // {
+      //   value: "LEAD_GENERATION",
+      //   label: "💬 Lead từ Messenger",
       //   description: "📸 Ảnh/Video → Thu thập lead qua Messenger",
       //   billing_events: ["IMPRESSIONS"],
       //   destination_type: "MESSENGER",
       //   promoted_object: { page_id: null }
       // },
       // Phone Call
-      // { 
-      //   value: "QUALITY_CALL", 
-      //   label: "📞 Cuộc gọi chất lượng", 
+      // {
+      //   value: "QUALITY_CALL",
+      //   label: "📞 Cuộc gọi chất lượng",
       //   description: "📸 Ảnh/Video → Tối ưu số lượng cuộc gọi",
       //   billing_events: ["IMPRESSIONS"],
       //   promoted_object: { page_id: null }
       // },
       // Conversion events (pixel/app)
-      { 
-        value: "OFFSITE_CONVERSIONS", 
-        label: "🔄 Chuyển đổi ngoài site", 
-        description: "📸 Ảnh/Video → Tối ưu conversion events",
+      {
+        value: "OFFSITE_CONVERSIONS",
+        label: "Chuyển đổi ngoài trang web",
+        description: "Tăng số lượt chuyển đổi ngoài trang web",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { pixel_id: null, custom_event_type: null, application_id: null, object_store_url: null }
-      //Khi tối ưu hóa cho chuyển đổi ngoài trang web, bạn cần cung cấp đối tượng được quảng cáo có (a) pixel_id hoặc (b) cả application_id và event_type  
+        promoted_object: {
+          pixel_id: null,
+          custom_event_type: null,
+          application_id: null,
+          object_store_url: null,
+        },
+        //Khi tối ưu hóa cho chuyển đổi ngoài trang web, bạn cần cung cấp đối tượng được quảng cáo có (a) pixel_id hoặc (b) cả application_id và event_type
       },
-      { 
-        value: "LINK_CLICKS", 
-        label: "🔗 Lượt nhấp liên kết", 
-        description: "📸 Ảnh/Video → Tăng traffic đến landing page",
+      {
+        value: "LINK_CLICKS",
+        label: "Lượt nhấp liên kết",
+        description: "Tăng lưu lượng truy cập tới liên kết",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { pixel_id: null, custom_event_type: null, application_id: null, object_store_url: null }
+        promoted_object: {
+          pixel_id: null,
+          custom_event_type: null,
+          application_id: null,
+          object_store_url: null,
+        },
       },
-      { 
-        value: "REACH", 
-        label: "👥 Tiếp cận", 
-        description: "📸 Ảnh/Video → Tối đa số người thấy",
+      {
+        value: "REACH",
+        label: "Tiếp cận",
+        description: "Tăng số lượt người thấy quảng cáo",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { pixel_id: null, custom_event_type: null, application_id: null, object_store_url: null }
+        promoted_object: {
+          pixel_id: null,
+          custom_event_type: null,
+          application_id: null,
+          object_store_url: null,
+        },
       },
-      { 
-        value: "LANDING_PAGE_VIEWS", 
-        label: "📄 Lượt xem trang đích", 
-        description: "📸 Ảnh/Video → Tối ưu người xem landing page",
+      {
+        value: "LANDING_PAGE_VIEWS",
+        label: "Lượt xem trang đích",
+        description: "Tăng số lượt người xem trang đích",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { pixel_id: null, custom_event_type: null }
+        promoted_object: { pixel_id: null, custom_event_type: null },
       },
-      
     ],
     billing_events: ["IMPRESSIONS"],
   },
@@ -496,30 +547,39 @@ export const ADSET_CONFIG_BY_OBJECTIVE = {
   SALES: {
     optimization_goals: [
       // WEBSITE: Conversion events
-      { 
-        value: "OFFSITE_CONVERSIONS", 
-        label: "🔄 Chuyển đổi ngoài site", 
-        description: "📸 Ảnh/Video → Tối ưu mua hàng/conversion",
+      {
+        value: "OFFSITE_CONVERSIONS",
+        label: "Chuyển đổi ngoài trang web",
+        description: "Tăng số lượt chuyển đổi ngoài trang web",
         billing_events: ["IMPRESSIONS"],
         destination_type: "WEBSITE",
-        promoted_object: { pixel_id: null, custom_event_type: "PURCHASE", application_id: null, object_store_url: null }
+        promoted_object: {
+          pixel_id: null,
+          custom_event_type: "PURCHASE",
+          application_id: null,
+          object_store_url: null,
+        },
       },
       // MESSENGER: Conversations
-      { 
-        value: "CONVERSATIONS", 
-        label: "💬 Hội thoại (Messenger)", 
-        description: "📸 Ảnh/Video → Bắt đầu hội thoại mua hàng",
+      {
+        value: "CONVERSATIONS",
+        label: "Hội thoại (Messenger)",
+        description: "Tăng số lượt người bắt đầu chat với page qua Messenger",
         billing_events: ["IMPRESSIONS"],
         destination_type: "MESSENGER",
-        promoted_object: { page_id: null, pixel_id: null, custom_event_type: null }
+        promoted_object: {
+          page_id: null,
+          pixel_id: null,
+          custom_event_type: null,
+        },
       },
       // Phone Call
-      { 
-        value: "QUALITY_CALL", 
-        label: "📞 Cuộc gọi chất lượng", 
-        description: "📸 Ảnh/Video → Tối ưu số lượng cuộc gọi",
+      {
+        value: "QUALITY_CALL",
+        label: "Cuộc gọi chất lượng",
+        description: "Tăng số lượt cuộc gọi chất lượng",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { page_id: null }
+        promoted_object: { page_id: null },
       },
     ],
     billing_events: ["IMPRESSIONS"],
@@ -528,26 +588,26 @@ export const ADSET_CONFIG_BY_OBJECTIVE = {
   // Theo bảng: promoted_object: application_id, object_store_url
   APP_PROMOTION: {
     optimization_goals: [
-      { 
-        value: "LINK_CLICKS", 
-        label: "🔗 Lượt nhấp liên kết", 
-        description: "📸 Ảnh/Video → Tăng traffic đến app store",
+      {
+        value: "LINK_CLICKS",
+        label: "Lượt nhấp liên kết",
+        description: "Tăng lưu lượng truy cập tới App Store",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { application_id: null, object_store_url: null }
+        promoted_object: { application_id: null, object_store_url: null },
       },
-      { 
-        value: "OFFSITE_CONVERSIONS", 
-        label: "🔄 Chuyển đổi ngoài site", 
-        description: "📸 Ảnh/Video → Tối ưu app events",
+      {
+        value: "OFFSITE_CONVERSIONS",
+        label: "Chuyển đổi ngoài trang web",
+        description: "Tăng số lượt chuyển đổi ngoài trang web",
         billing_events: ["IMPRESSIONS"],
-        promoted_object: { application_id: null, object_store_url: null }
+        promoted_object: { application_id: null, object_store_url: null },
       },
-      { 
-        value: "APP_INSTALLS", 
-        label: "📱 Lượt cài đặt ứng dụng", 
-        description: "📸 Ảnh/Video → Tối ưu số lượt cài app",
+      {
+        value: "APP_INSTALLS",
+        label: "Lượt cài đặt ứng dụng",
+        description: "Tăng số lượt cài đặt ứng dụng",
         billing_events: ["IMPRESSIONS", "APP_INSTALLS"],
-        promoted_object: { application_id: null, object_store_url: null }
+        promoted_object: { application_id: null, object_store_url: null },
       },
     ],
     billing_events: ["IMPRESSIONS", "APP_INSTALLS"],

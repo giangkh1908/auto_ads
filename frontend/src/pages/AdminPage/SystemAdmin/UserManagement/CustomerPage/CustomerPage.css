@@ -138,7 +138,7 @@
 
 .amu-customer .amu-row {
   display: grid;
-  grid-template-columns: 1fr 0.6fr 1.1fr 0.5fr 102px 102px 95px 120px;
+  grid-template-columns: 0.8fr 0.5fr 0.6fr 0.6fr 0.5fr;
   /* align-items: stretch; */
   border-bottom: 1px solid #f1f5f9;
 }

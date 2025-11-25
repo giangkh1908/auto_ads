@@ -17,5 +17,15 @@
       "email_invalid": "Email không hợp lệ",
       "password_min": "Mật khẩu phải có ít nhất 6 ký tự",
       "password_mismatch": "Mật khẩu không khớp"
+    },
+    "noteEditor": {
+      "save": "Lưu",
+      "saving": "Đang lưu...",
+      "cancel": "Hủy",
+      "clickToEdit": "Click để chỉnh sửa",
+      "saveSuccess": "Lưu ghi chú thành công",
+      "saveError": "Không thể lưu ghi chú",
+      "saveErrorGeneric": "Có lỗi xảy ra khi lưu ghi chú",
+      "missingInfo": "Thiếu thông tin để lưu note"
     }
   }

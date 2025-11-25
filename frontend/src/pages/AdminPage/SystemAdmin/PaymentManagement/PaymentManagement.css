@@ -145,7 +145,7 @@
 
 .payment-mgmt-row {
   display: grid;
-  grid-template-columns: 0.88fr 1.2fr 1fr 1.3fr 1.3fr 0.9fr 1fr 0.8fr 1.2fr 1fr 1fr 1.5fr;
+  grid-template-columns: 1fr 1.2fr 0.8fr 1.4fr 1.1fr 0.8fr 0.9fr 0.7fr 0.8fr 0.9fr 0.8fr;
   align-items: stretch;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -223,6 +223,7 @@
 
 .payment-mgmt-col-method {
   color: #111827;
+  text-align: center;
   justify-content: center;
 }
 
@@ -233,6 +234,7 @@
 
 .payment-mgmt-col-status {
   justify-content: center;
+  text-align: center;
 }
 
 .payment-mgmt-col-action {
@@ -268,6 +270,7 @@
   color: #b91c1c;
 }
 
+.payment-mgmt-badge-canceled,
 .payment-mgmt-badge-cancelled {
   background: #f3f4f6;
   color: #6b7280;
@@ -276,6 +279,11 @@
 .payment-mgmt-badge-rejected {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.payment-mgmt-badge-initializing {
+  background: #cfe2ff;
+  color: #084298;
 }
 
 /* Action Buttons */
@@ -339,20 +347,18 @@
   border-color: #2563eb;
 }
 
-/* Responsive */
-@media (max-width: 1400px) {
-  .payment-mgmt-row {
-    grid-template-columns: 0.7fr 1fr 0.8fr 1.1fr 1.3fr 0.9fr 0.9fr 0.8fr 1.3fr 0.9fr 1fr 1.3fr;
-  }
-}
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
 
-@media (max-width: 1280px) {
+/* Laptop/Desktop nhỏ (1025px - 1279px) */
+@media (max-width: 1279px) {
   .payment-mgmt {
     padding: 16px;
   }
 
   .payment-mgmt-row {
-    grid-template-columns: 0.6fr 1fr 0.7fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 1.2fr 0.8fr 0.9fr 1.2fr;
+    grid-template-columns: 0.6fr 1fr 0.7fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 1.2fr 0.8fr 0.9fr;
   }
 
   .payment-mgmt-search {
@@ -360,18 +366,23 @@
   }
 }
 
-@media (max-width: 992px) {
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
   .payment-mgmt {
     padding: 12px;
+    margin-top: 58px;
   }
 
   .payment-mgmt-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .payment-mgmt-toolbar-left {
     width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .payment-mgmt-toolbar-right {
@@ -420,5 +431,91 @@
   .payment-mgmt-col-action,
   .payment-mgmt-col-note {
     grid-column: 1 / -1;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .payment-mgmt {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .payment-mgmt-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .payment-mgmt-toolbar-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .payment-mgmt-search,
+  .payment-mgmt-date-range {
+    width: 100%;
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .payment-mgmt-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .payment-mgmt-col {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .payment-mgmt-col::before {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .payment-mgmt-action-group {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .payment-mgmt-action-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .payment-mgmt {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .payment-mgmt-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .payment-mgmt-search,
+  .payment-mgmt-date-range {
+    font-size: 12px;
+    padding: 7px 8px;
+  }
+
+  .payment-mgmt-col {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .payment-mgmt-col::before {
+    font-size: 11px;
+  }
+
+  .payment-mgmt-action-btn {
+    padding: 7px 10px;
+    font-size: 11px;
   }
 }

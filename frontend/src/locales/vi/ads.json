@@ -87,6 +87,7 @@
       "account": "Tài khoản",
       "from": "Từ",
       "to": "Đến",
+      "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
       "search": "Tìm",
       "refresh": "Làm mới",
       "refreshing": "Đang tải...",

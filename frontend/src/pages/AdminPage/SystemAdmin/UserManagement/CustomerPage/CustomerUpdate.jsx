@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import "./CustomerPage.css";
 import axiosInstance from "../../../../../utils/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import NoteEditor from "../../../../../components/common/NoteEditor/NoteEditor";
 
 export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSuccess }) {
+  const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -16,8 +18,9 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
     full_name: "",
     email: "",
     phone: "",
-    status: "active",
+    country: "",
   });
+  const [servicePackage, setServicePackage] = useState("-");
 
   // Lock background scroll while modal is open
   useEffect(() => {
@@ -38,8 +41,9 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
         full_name: "",
         email: "",
         phone: "",
-        status: "active",
+        country: "",
       });
+      setServicePackage("-");
       setNote("");
       setNoteId(null);
       setError(null);
@@ -64,8 +68,25 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
             full_name: user.full_name || "",
             email: user.email || "",
             phone: user.phone || "",
-            status: user.status || "active",
+            country: user.country || "",
           });
+
+          // Fetch user packages để lấy ServicePackage
+          try {
+            const packageResponse = await axiosInstance.get(
+              `/api/user-package?user_id=${userId}&status=active`
+            );
+            if (packageResponse.data.success && packageResponse.data.data?.length > 0) {
+              const activePackage = packageResponse.data.data[0];
+              const packageName = activePackage.package_id?.name || "Chưa nâng cấp";
+              setServicePackage(packageName);
+            } else {
+              setServicePackage("Chưa nâng cấp");
+            }
+          } catch (packageErr) {
+            console.log("No package found or error fetching package:", packageErr);
+            setServicePackage("Chưa nâng cấp");
+          }
 
           // Fetch note
           try {
@@ -86,18 +107,18 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
             setNoteId(null);
           }
         } else {
-          setError("Không thể tải thông tin user");
+          setError(t("customerUpdate.messages.loadError"));
         }
       } catch (err) {
         console.error("Error fetching user details:", err);
-        setError(err.response?.data?.message || "Có lỗi xảy ra khi tải thông tin user");
+        setError(err.response?.data?.message || t("customerUpdate.messages.loadErrorGeneric"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserDetails();
-  }, [isOpen, userId]);
+  }, [isOpen, userId, t]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -118,22 +139,22 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,
-        status: formData.status,
+        country: formData.country,
       });
 
       if (response.data.success) {
-        toast.success("Cập nhật thông tin user thành công!");
+        toast.success(t("customerUpdate.messages.updateSuccess"));
         if (onUpdateSuccess) {
           onUpdateSuccess(response.data.data);
         }
         onClose();
       } else {
-        throw new Error(response.data.message || "Có lỗi xảy ra khi cập nhật");
+        throw new Error(response.data.message || t("customerUpdate.messages.updateError"));
       }
     } catch (err) {
       console.error("Error updating user:", err);
       const errorMessage =
-        err.response?.data?.message || err.message || "Có lỗi xảy ra khi cập nhật user";
+        err.response?.data?.message || err.message || t("customerUpdate.messages.updateErrorGeneric");
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -147,7 +168,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
     <div className="amu-customer-update-overlay" onClick={onClose}>
       <div className="amu-customer-update-modal" onClick={(e) => e.stopPropagation()}>
         <div className="amu-customer-update-header">
-          <h3 className="amu-customer-update-title">User Details</h3>
+          <h3 className="amu-customer-update-title">{t("customerUpdate.title")}</h3>
           <button className="amu-customer-update-close-btn" onClick={onClose}>
             <X size={20} />
           </button>
@@ -157,7 +178,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
           {loading ? (
             <div className="amu-customer-update-loading">
               <Loader2 size={24} className="spinner" />
-              <p>Đang tải thông tin...</p>
+              <p>{t("customerUpdate.loading")}</p>
             </div>
           ) : error && !formData.full_name ? (
             <div className="amu-customer-update-error">{error}</div>
@@ -169,7 +190,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
 
               <div className="amu-customer-update-field">
                 <label htmlFor="full_name" className="amu-customer-update-label">
-                  Full Name <span className="required">*</span>
+                  {t("customerUpdate.fullName")} <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -179,13 +200,29 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
                   value={formData.full_name}
                   onChange={handleChange}
                   required
-                  placeholder="Enter full name"
+                  placeholder={t("customerUpdate.fullNamePlaceholder")}
+                />
+              </div>
+
+              <div className="amu-customer-update-field">
+                <label htmlFor="userId" className="amu-customer-update-label">
+                  {t("customerUpdate.userId")}
+                </label>
+                <input
+                  type="text"
+                  id="userId"
+                  name="userId"
+                  className="amu-customer-update-input"
+                  value={userId || ""}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: "#f5f5f5", cursor: "not-allowed" }}
                 />
               </div>
 
               <div className="amu-customer-update-field">
                 <label htmlFor="email" className="amu-customer-update-label">
-                  Email <span className="required">*</span>
+                  {t("customerUpdate.email")} <span className="required">*</span>
                 </label>
                 <input
                   type="email"
@@ -195,13 +232,13 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="Enter email address"
+                  placeholder={t("customerUpdate.emailPlaceholder")}
                 />
               </div>
 
               <div className="amu-customer-update-field">
                 <label htmlFor="phone" className="amu-customer-update-label">
-                  Phone Number
+                  {t("customerUpdate.phone")}
                 </label>
                 <input
                   type="tel"
@@ -210,31 +247,45 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
                   className="amu-customer-update-input"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="Enter phone number"
+                  placeholder={t("customerUpdate.phonePlaceholder")}
                 />
               </div>
 
               <div className="amu-customer-update-field">
-                <label htmlFor="status" className="amu-customer-update-label">
-                  Status <span className="required">*</span>
+                <label htmlFor="country" className="amu-customer-update-label">
+                  {t("customerUpdate.country")}
                 </label>
-                <select
-                  id="status"
-                  name="status"
-                  className="amu-customer-update-select"
-                  value={formData.status}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="banned">Banned</option>
-                  <option value="pending">Pending</option>
-                </select>
+                <input
+                  type="text"
+                  id="country"
+                  name="country"
+                  className="amu-customer-update-input"
+                  value={formData.country}
+                  placeholder={t("customerUpdate.countryPlaceholder")}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: "#f5f5f5", cursor: "not-allowed" }}
+                />
               </div>
 
               <div className="amu-customer-update-field">
-                <label className="amu-customer-update-label">Note</label>
+                <label htmlFor="servicePackage" className="amu-customer-update-label">
+                  {t("customerUpdate.servicePackage")}
+                </label>
+                <input
+                  type="text"
+                  id="servicePackage"
+                  name="servicePackage"
+                  className="amu-customer-update-input"
+                  value={servicePackage}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: "#f5f5f5", cursor: "not-allowed" }}
+                />
+              </div>
+
+              <div className="amu-customer-update-field">
+                <label className="amu-customer-update-label">{t("customerUpdate.note")}</label>
                 <NoteEditor
                   targetType="User"
                   targetId={userId}
@@ -254,7 +305,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
                   onClick={onClose}
                   disabled={saving}
                 >
-                  Cancel
+                  {t("customerUpdate.cancel")}
                 </button>
                 <button
                   type="submit"
@@ -264,12 +315,12 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
                   {saving ? (
                     <>
                       <Loader2 size={16} className="spinner" />
-                      Saving...
+                      {t("customerUpdate.saving")}
                     </>
                   ) : (
                     <>
                       <Save size={16} />
-                      Save Changes
+                      {t("customerUpdate.saveChanges")}
                     </>
                   )}
                 </button>

@@ -8,7 +8,8 @@ import {
     updateUserStatus,
     relinquishOwnership,
     inviteEmployee,
-    deleteShopUser
+    deleteShopUser,
+    removeEmployee
 } from "../../controllers/shops/shopUserControllers.js";
 import { authenticate, authorizeInShop } from "../../middlewares/auth.middleware.js";
 
@@ -29,6 +30,8 @@ router.put("/status/:shopId", updateUserStatus);
 router.put("/relinquish", authenticate, relinquishOwnership);
 
 router.put("/:shopId", updateUserRole);
+
+router.delete("/:shopId/employee/:userId", authenticate, removeEmployee);
 
 // router.delete("/:id", deleteShopUser);
 

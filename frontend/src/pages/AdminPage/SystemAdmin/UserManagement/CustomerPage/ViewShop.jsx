@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import "./CustomerPage.css";
 import axiosInstance from "../../../../../utils/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import { X } from "lucide-react";
 
 export default function ViewDetails({ isOpen, onClose, userId }) {
+  const { t } = useTranslation("admin");
   const [shopData, setShopData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,11 +28,11 @@ export default function ViewDetails({ isOpen, onClose, userId }) {
         if (response.data.success) {
           setShopData(response.data.data || []);
         } else {
-          setError("Không thể tải dữ liệu shop");
+          setError(t("viewShop.messages.errorGeneric"));
         }
       } catch (err) {
         console.error("Error fetching user shops:", err);
-        setError(err.response?.data?.message || "Có lỗi xảy ra khi tải dữ liệu shop");
+        setError(err.response?.data?.message || t("viewShop.messages.error"));
       } finally {
         setLoading(false);
       }
@@ -45,24 +47,24 @@ export default function ViewDetails({ isOpen, onClose, userId }) {
     <div className="amu-shop-details-overlay" onClick={onClose}>
       <div className="amu-shop-details-modal" onClick={(e) => e.stopPropagation()}>
         <div className="amu-shop-details-header">
-          <h3 className="amu-shop-details-title">Shop Details</h3>
+          <h3 className="amu-shop-details-title">{t("viewShop.title")}</h3>
           <button className="amu-shop-details-close-btn-icon" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
         <div className="amu-shop-details-body">
           {loading ? (
-            <div className="amu-shop-details-loading">Đang tải dữ liệu...</div>
+            <div className="amu-shop-details-loading">{t("viewShop.messages.loading")}</div>
           ) : error ? (
             <div className="amu-shop-details-error">{error}</div>
           ) : shopData.length === 0 ? (
-            <div className="amu-shop-details-empty">User chưa thuộc shop nào</div>
+            <div className="amu-shop-details-empty">{t("viewShop.messages.empty")}</div>
           ) : (
             <table className="amu-shop-details-table">
               <thead>
                 <tr>
-                  <th>Shop Name</th>
-                  <th>Role</th>
+                  <th>{t("viewShop.columns.shopName")}</th>
+                  <th>{t("viewShop.columns.role")}</th>
                 </tr>
               </thead>
               <tbody>

@@ -185,58 +185,151 @@
   color: #b91c1c;
 }
 
-/* Responsive */
-@media (max-width: 1280px) {
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Laptop/Desktop nhỏ (1025px - 1279px) */
+@media (max-width: 1279px) {
   .customer-log-row {
     grid-template-columns: 1fr 0.8fr 1fr 0.8fr 1.2fr 1fr 0.9fr 0.8fr;
   }
-  
+
   .customer-log-search-input {
     width: 280px;
   }
 }
 
-@media (max-width: 992px) {
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .customer-log {
+    padding: 12px;
+    margin-top: 58px;
+  }
+
   .customer-log-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
-  
+
   .customer-log-toolbar-left,
   .customer-log-toolbar-right {
     width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
   }
-  
+
   .customer-log-search-input {
     width: 100%;
+    min-width: 200px;
   }
-  
+
   .customer-log-date-range {
     width: 100%;
   }
-  
+
+  .customer-log-table {
+    overflow-x: auto;
+  }
+
   .customer-log-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 0.7fr 0.9fr 0.7fr 1.1fr 0.9fr 0.8fr 0.7fr;
+    min-width: 1000px;
+  }
+}
+
+/* Smartphone lớn (481px - 767px) */
+@media (max-width: 767px) {
+  .customer-log {
+    padding: 10px 8px;
+    margin-top: 56px;
+  }
+
+  .customer-log-toolbar {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .customer-log-toolbar-left {
+    flex-direction: column;
     gap: 8px;
   }
-  
+
+  .customer-log-search-input,
+  .customer-log-date-range {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .customer-log-table {
+    overflow-x: auto;
+  }
+
+  .customer-log-row {
+    grid-template-columns: 1fr;
+    min-width: 700px;
+  }
+
+  .customer-log-header {
+    display: none;
+  }
+
   .customer-log-col {
     border-right: none;
     border-bottom: 1px solid #e5e7eb;
+    padding: 12px 10px;
+    flex-direction: column;
+    align-items: flex-start;
   }
-  
+
+  .customer-log-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
   .customer-log-col:last-child {
     border-bottom: none;
   }
-  
-  .customer-log-col-userid,
-  .customer-log-col-shopname,
-  .customer-log-col-shopid,
-  .customer-log-col-time,
-  .customer-log-col-role,
-  .customer-log-col-status,
-  .customer-log-col-event {
-    grid-column: 1 / -1;
+}
+
+/* Smartphone nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .customer-log {
+    padding: 8px 6px;
+    margin-top: 52px;
+  }
+
+  .customer-log-toolbar {
+    padding: 8px 6px;
+    gap: 8px;
+  }
+
+  .customer-log-search-input,
+  .customer-log-date-range {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+
+  .customer-log-row {
+    min-width: 600px;
+  }
+
+  .customer-log-col {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .customer-log-col::before {
+    font-size: 11px;
+  }
+
+  .customer-log-badge {
+    font-size: 11px;
+    padding: 3px 10px;
   }
 }
 
