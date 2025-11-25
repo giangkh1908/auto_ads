@@ -71,6 +71,7 @@ export async function syncAnalyticsSnapshots(account) {
     let synced = 0;
     let errors = 0;
     let structureSynced = false;
+    const pageNameCache = new Map(); // Cache to avoid repeated API calls for same page_id
 
     for (const insight of insights) {
       try {
@@ -117,7 +118,7 @@ export async function syncAnalyticsSnapshots(account) {
         // If page_name is still null, try to fetch from Facebook API
         if (!pageName && insight.adset_id && accessToken) {
           try {
-            pageName = await fetchPageNameFromFacebook(insight.adset_id, insight.ad_id, accessToken);
+            pageName = await fetchPageNameFromFacebook(insight.adset_id, insight.ad_id, accessToken, pageNameCache);
           } catch (err) {
             console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page_name from Facebook for ad ${insight.ad_id}:`, err.message);
           }
@@ -279,7 +280,7 @@ function extractMetrics(insight) {
  * 2. Fetch ad creative to get page_id from object_story_spec
  * 3. Fetch page name from page_id
  */
-async function fetchPageNameFromFacebook(adsetId, adId, accessToken) {
+async function fetchPageNameFromFacebook(adsetId, adId, accessToken, cache = new Map()) {
   try {
     let pageId = null;
 
@@ -319,6 +320,11 @@ async function fetchPageNameFromFacebook(adsetId, adId, accessToken) {
 
     // Method 3: Fetch page name from page_id
     if (pageId) {
+      // Check cache first to avoid repeated requests
+      if (cache.has(pageId)) {
+        return cache.get(pageId);
+      }
+
       try {
         const pageResponse = await axios.get(`${FB_API}/${pageId}`, {
           params: {
@@ -328,10 +334,20 @@ async function fetchPageNameFromFacebook(adsetId, adId, accessToken) {
         });
         
         if (pageResponse.data?.name) {
-          return pageResponse.data.name;
+          const pageName = pageResponse.data.name;
+          cache.set(pageId, pageName);
+          return pageName;
         }
       } catch (err) {
-        console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page name for page_id ${pageId}:`, err.message);
+        // Cache null to prevent repeated failed requests
+        cache.set(pageId, null);
+        
+        // Only log once per page_id (first failure)
+        if (err.response && (err.response.status === 400 || err.response.status === 403)) {
+          console.warn(`[analyticsSnapshotService] ⚠️ Cannot access Page ${pageId} (likely no permission). Skipping page name fetch.`);
+        } else {
+          console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page name for page_id ${pageId}:`, err.message);
+        }
       }
     }
 

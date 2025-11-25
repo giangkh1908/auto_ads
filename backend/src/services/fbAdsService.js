@@ -890,7 +890,7 @@ export async function syncAllFromFacebook(accessToken, adAccountId) {
       },
       {
         method: 'GET',
-        relative_url: `${withPrefix}/adsets?fields=id,name,status,campaign{id},daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status&limit=5000`
+        relative_url: `${withPrefix}/adsets?fields=id,name,status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time,effective_status&limit=5000`
       },
       {
         method: 'GET',
@@ -1012,7 +1012,7 @@ async function processAdsetsBatch(adsets, withoutPrefix) {
   if (adsets.length === 0) return [];
 
   // ✅ Batch query campaigns một lần
-  const campaignExternalIds = [...new Set(adsets.map(s => s.campaign?.id || s.campaign_id).filter(Boolean))];
+  const campaignExternalIds = [...new Set(adsets.map(s => s.campaign_id).filter(Boolean))];
   const campaignsMap = new Map();
   
   if (campaignExternalIds.length > 0) {
@@ -1026,10 +1026,9 @@ async function processAdsetsBatch(adsets, withoutPrefix) {
   const validAdsets = [];
 
   for (const s of adsets) {
-    const externalCampaignId = s.campaign?.id || s.campaign_id;
-    const campaignId = campaignsMap.get(externalCampaignId);
+    const campaignId = campaignsMap.get(s.campaign_id);
     if (!campaignId) {
-      console.warn(`⚠️ Bỏ qua adset ${s.id} - campaign ${externalCampaignId} không tồn tại`);
+      console.warn(`⚠️ Bỏ qua adset ${s.id} - campaign ${s.campaign_id} không tồn tại`);
       continue;
     }
 

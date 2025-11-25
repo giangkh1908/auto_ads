@@ -5,6 +5,7 @@ import AdsAccount from "../models/ads/adsAccount.model.js";
 import User from "../models/user.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
 import AdsCampaign from "../models/ads/adsCampaign.model.js";
+import "../models/package.model.js"; // ✅ Import Package model to avoid MissingSchemaError
 import { FEATURE_KEYS } from "../services/entitlementService.js";
 import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 import {
@@ -83,6 +84,7 @@ async function syncAllAccountsInsights() {
           needActions: true,
           actionBreakdowns: "action_type,action_destination",
           timeRange: timeRange,
+          timeIncrement: 1, // ✅ Bắt buộc Facebook trả về dữ liệu từng ngày
         };
 
         console.log(`  🔄 Fetching insights from Facebook...`);
