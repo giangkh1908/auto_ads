@@ -119,8 +119,8 @@ const startServer = async () => {
     await connectDB();
 
     startAutoRuleScheduler();
-    startAdPerformanceCron(); 
-    startAdHourlyInsightsCron();
+    // startAdPerformanceCron(); 
+    // startAdHourlyInsightsCron();
     startAnalyticsSnapshotCron();
     startCancelExpiredPaymentsCron();
 
