@@ -52,17 +52,9 @@ export function useAdsSync(cache, setCache, activeTab) {
     }
     
     try {
-      // Get access token from localStorage
-      const accessToken = localStorage.getItem("fb_access_token");
-      
-      if (!accessToken) {
-        throw new Error("Facebook access token not found. Please reconnect your Facebook account.");
-      }
-
-      // Call new unified entity sync API (syncs all entities: campaigns, adsets, ads)
+      // Call new unified entity sync API (backend will auto-resolve access token)
       await axiosInstance.post("/api/sync/entities", {
         accountId: accountId,
-        accessToken: accessToken,
       });
       
       console.log(`✅ Entity sync completed (${needsSync.length} entities needed: ${needsSync.join(', ')})`);
@@ -82,7 +74,8 @@ export function useAdsSync(cache, setCache, activeTab) {
       });
     } catch (error) {
       console.error("Sync error:", error);
-      throw error;
+      // Don't throw error to prevent breaking the UI
+      // User can still use the app, data will be fetched from DB
     }
   }, [cache, setCache]);
 
