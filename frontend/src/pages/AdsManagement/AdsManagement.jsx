@@ -866,7 +866,7 @@ function AdsManagement() {
             setWizardMode("create");
           }}
           onSuccess={() => {
-            handleRefresh();
+            handleFetchOnly();
           }}
           onError={() => {
             handleFetchOnly();
