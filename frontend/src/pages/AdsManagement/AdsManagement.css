@@ -694,3 +694,36 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.ads-initial-sync-state {
+  padding: 24px;
+  text-align: center;
+}
+
+.ads-initial-sync-state p {
+  margin-bottom: 16px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.ads-refresh-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #3b82f6;
+  background-color: #3b82f6;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.ads-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ads-refresh-button:not(:disabled):hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}

@@ -2,16 +2,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { connectDB } from "../config/db.js";
 import AdsAccount from "../models/ads/adsAccount.model.js";
-import User from "../models/user.model.js";
-import AdsSet from "../models/ads/adsSet.model.js";
-import AdsCampaign from "../models/ads/adsCampaign.model.js";
-import "../models/package.model.js"; // ✅ Import Package model to avoid MissingSchemaError
+import Ads from "../models/ads/ads.model.js";
+import AdPerformance from "../models/ads/adPerformance.model.js";
+import "../models/package.model.js";
+import "../models/userPackage.model.js";
 import { FEATURE_KEYS } from "../services/entitlementService.js";
 import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
-import {
-  fetchAccountInsights,
-  saveInsightsToAdPerformance,
-} from "../services/fbAdsService.js";
+import { syncInsightsForAccount } from "../services/insightsSyncService.js";
 
 dotenv.config();
 
@@ -22,9 +19,7 @@ async function syncAllAccountsInsights() {
 
     const accounts = await AdsAccount.find({
       status: "ACTIVE",
-    })
-      .populate("shop_admin_id", "_id")
-      .lean();
+    }).lean();
 
     const { eligibleAccounts, skippedAccounts } = await filterAccountsByFeature(
       accounts,
@@ -41,20 +36,8 @@ async function syncAllAccountsInsights() {
       process.exit(0);
     }
 
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const timeRange = {
-      since: firstDayOfMonth.toISOString().split("T")[0],
-      until: today.toISOString().split("T")[0],
-    };
-
-    console.log(`📅 Date range: ${timeRange.since} to ${timeRange.until}`);
-
     let successCount = 0;
     let errorCount = 0;
-    let totalSaved = 0;
-    let totalSkipped = 0;
 
     for (let i = 0; i < eligibleAccounts.length; i++) {
       const account = eligibleAccounts[i];
@@ -63,88 +46,29 @@ async function syncAllAccountsInsights() {
       );
 
       try {
-        if (!account.shop_admin_id) {
-          console.log(`  ⚠️ Skipped: No shop_admin_id`);
-          errorCount++;
-          continue;
-        }
+        await syncInsightsForAccount(account._id.toString());
 
-        const user = await User.findById(account.shop_admin_id._id).select(
-          "+facebookAccessToken"
+        const externalId = account.external_id || "";
+        const normalizedId = externalId.startsWith("act_")
+          ? externalId.substring(4)
+          : externalId;
+
+        const adsCount = await Ads.countDocuments({
+          external_account_id: { $in: [normalizedId, `act_${normalizedId}`] },
+          status: { $nin: ["DELETED", "ARCHIVED"] },
+        });
+
+        const performanceCount = await AdPerformance.countDocuments({
+          external_account_id: normalizedId,
+        });
+
+        console.log(
+          `  📈 Ads in DB: ${adsCount}, AdPerformance rows: ${performanceCount}`
         );
 
-        if (!user || !user.facebookAccessToken) {
-          console.log(`  ⚠️ Skipped: No Facebook access token for user ${account.shop_admin_id._id}`);
-          errorCount++;
-          continue;
-        }
-
-        const options = {
-          level: "ad",
-          needActions: true,
-          actionBreakdowns: "action_type,action_destination",
-          timeRange: timeRange,
-          timeIncrement: 1, // ✅ Bắt buộc Facebook trả về dữ liệu từng ngày
-        };
-
-        console.log(`  🔄 Fetching insights from Facebook...`);
-        const insightsData = await fetchAccountInsights(
-          user.facebookAccessToken,
-          account.external_id,
-          options
-        );
-
-        console.log(`  📥 Fetched ${insightsData.length} insights records`);
-
-        // Map page_name từ adset/campaign trong DB vào insightsData
-        if (insightsData.length > 0) {
-          const adsetExternalIds = [...new Set(insightsData.map(item => item.adset_id).filter(Boolean))];
-          const campaignExternalIds = [...new Set(insightsData.map(item => item.campaign_id).filter(Boolean))];
-
-          const [adsetsDocs, campaignsDocs] = await Promise.all([
-            AdsSet.find({ external_id: { $in: adsetExternalIds } }).select('external_id page_name'),
-            AdsCampaign.find({ external_id: { $in: campaignExternalIds } }).select('external_id page_name')
-          ]);
-
-          const adsetsMap = new Map(adsetsDocs.map(adset => [adset.external_id, adset]));
-          const campaignsMap = new Map(campaignsDocs.map(campaign => [campaign.external_id, campaign]));
-
-          insightsData.forEach(item => {
-            const adset = item.adset_id ? adsetsMap.get(item.adset_id) : null;
-            const campaign = item.campaign_id ? campaignsMap.get(item.campaign_id) : null;
-            item.page_name = adset?.page_name || campaign?.page_name || null;
-          });
-
-          // Log để debug
-          const withPageName = insightsData.filter(item => item.page_name).length;
-          console.log(`  📄 Mapped page_name: ${withPageName}/${insightsData.length} records have page_name`);
-        }
-
-        if (insightsData.length > 0) {
-          console.log(`  💾 Saving to database...`);
-          const saveResult = await saveInsightsToAdPerformance(
-            insightsData,
-            account._id.toString()
-          );
-
-          totalSaved += saveResult.saved;
-          totalSkipped += saveResult.skipped;
-
-          console.log(
-            `  ✅ Saved ${saveResult.saved} records, skipped ${saveResult.skipped}`
-          );
-          successCount++;
-        } else {
-          console.log(`  ℹ️ No insights data to save`);
-          successCount++;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        successCount++;
       } catch (err) {
         console.error(`  ❌ Error processing account:`, err.message);
-        if (err.response?.data) {
-          console.error(`     Facebook API error:`, err.response.data);
-        }
         errorCount++;
       }
     }
@@ -152,8 +76,6 @@ async function syncAllAccountsInsights() {
     console.log(`\n📊 Summary:`);
     console.log(`  ✅ Success: ${successCount} accounts`);
     console.log(`  ❌ Errors: ${errorCount} accounts`);
-    console.log(`  💾 Total saved: ${totalSaved} records`);
-    console.log(`  ⏭️ Total skipped: ${totalSkipped} records`);
 
     console.log("\n✅ Sync completed!");
     process.exit(0);

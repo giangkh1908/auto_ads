@@ -3,7 +3,7 @@ import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
-import { syncAdPerformanceData } from "../../services/adPerformanceService.js";
+import { syncInsightsForAccount } from "../../services/insightsSyncService.js";
 
 function normalizeToVietnamMidnight(dateInput) {
   let dateStr;
@@ -262,22 +262,23 @@ export async function getAdPerformance(req, res) {
  */
 export async function refreshAdPerformance(req, res) {
   try {
-    const { account_id, timeRange } = req.body;
+    const { account_id } = req.body;
     
     if (!account_id) {
       return res.status(400).json({ message: "account_id is required" });
     }
 
-    const options = {};
-    if (timeRange) {
-      options.timeRange = timeRange;
+    const account = await findAccountByExternalId(account_id);
+    if (!account) {
+      return res.status(404).json({
+        message: `Ad account not found: ${account_id}`,
+      });
     }
 
-    const result = await syncAdPerformanceData(account_id, options);
+    await syncInsightsForAccount(account._id.toString());
 
     return res.status(200).json({
       message: "Ad performance synced successfully",
-      ...result
     });
   } catch (error) {
     console.error("Refresh Ad Performance error:", error);

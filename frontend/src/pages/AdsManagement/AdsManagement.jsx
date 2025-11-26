@@ -66,11 +66,14 @@ function AdsManagement() {
     selectAdset,
   } = useAdsSelection();
 
-  // Data state
   const [datasets, setDatasets] = useState({
     campaigns: [],
     adsets: [],
     ads: [],
+  });
+  const [initialSyncState, setInitialSyncState] = useState({
+    isInitialSync: false,
+    message: "",
   });
 
   // Cache state
@@ -94,7 +97,7 @@ function AdsManagement() {
     fetchAdsForAdset,
     fetchAllAdsetsForAccount,
     fetchAllAdsForAccount,
-  } = useAdsDataFetching(datasets, setDatasets, cache, setCache);
+  } = useAdsDataFetching(datasets, setDatasets, cache, setCache, setInitialSyncState);
 
   // Table state hook
   const {
@@ -168,7 +171,7 @@ function AdsManagement() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      
+
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
@@ -179,23 +182,23 @@ function AdsManagement() {
 
       const fetchData = async () => {
         try {
-    if (activeTab === "campaigns") {
+          if (activeTab === "campaigns") {
             await fetchCampaignsForAccount(selectedAccountId);
-    } else if (activeTab === "adsets") {
-      if (selectedCampaign) {
+          } else if (activeTab === "adsets") {
+            if (selectedCampaign) {
               await fetchAdsetsForCampaign(selectedCampaign.id, selectedAccountId);
             } else {
               await fetchAllAdsetsForAccount(selectedAccountId);
             }
-    } else if (activeTab === "ads") {
-      if (selectedAdset) {
+          } else if (activeTab === "ads") {
+            if (selectedAdset) {
               await fetchAdsForAdset(selectedAdset.id, selectedAccountId);
             } else {
               await fetchAllAdsForAccount(selectedAccountId);
             }
           }
         } catch (error) {
-          if (error.name !== 'AbortError') {
+          if (error.name !== "AbortError") {
             console.error("Error fetching data:", error);
           }
         }
@@ -819,24 +822,38 @@ function AdsManagement() {
               selectedAccountId={selectedAccountId}
             />
 
-            <AdsTable
-              activeTab={activeTab}
-              rows={rows}
-              checkAll={checkAll}
-              onCheckAll={handleCheckAll}
-              onCheckItem={handleCheckItem}
-              onToggleRow={toggleRow}
-              togglingItems={togglingItems}
-              onUpdate={handleUpdate}
-              onArchive={handleArchive}
-              onDelete={handleDelete}
-              onCampaignClick={handleCampaignClick}
-              onAdsetClick={handleAdsetClick}
-              pagination={pagination}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
-              refreshing={refreshing}
-            />
+            {initialSyncState.isInitialSync ? (
+              <div className="ads-initial-sync-state">
+                <p>{initialSyncState.message}</p>
+                <button
+                  type="button"
+                  className="ads-refresh-button"
+                  onClick={() => handleRefresh()}
+                  disabled={refreshing}
+                >
+                  {t("ads:buttons.refresh_entities", "Refresh Entities")}
+                </button>
+              </div>
+            ) : (
+              <AdsTable
+                activeTab={activeTab}
+                rows={rows}
+                checkAll={checkAll}
+                onCheckAll={handleCheckAll}
+                onCheckItem={handleCheckItem}
+                onToggleRow={toggleRow}
+                togglingItems={togglingItems}
+                onUpdate={handleUpdate}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+                onCampaignClick={handleCampaignClick}
+                onAdsetClick={handleAdsetClick}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                refreshing={refreshing}
+              />
+            )}
           </div>
         </div>
       </div>

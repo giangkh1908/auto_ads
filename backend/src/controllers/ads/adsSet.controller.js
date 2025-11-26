@@ -1,8 +1,9 @@
 // controllers/ads/adsSet.controller.js
 import AdsSet from "../../models/ads/adsSet.model.js";
-import { syncAdSetsFromFacebook, fetchAdsetsFromFacebook, updateAdsetStatus, deleteEntity, fetchInsightsForEntities } from "../../services/fbAdsService.js";
+import { fetchAdsetsFromFacebook, updateAdsetStatus, deleteEntity, fetchInsightsForEntities } from "../../services/fbAdsService.js";
 import User from "../../models/user.model.js";
 import Ads from "../../models/ads/ads.model.js";
+import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
 
 // Helper function để extract string ID từ ObjectId format
 function extractObjectId(value) {
@@ -188,7 +189,6 @@ export async function syncAdSetsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
 
-    // Lấy token: ưu tiên query, fallback DB của user hiện tại
     let accessToken = req.query.access_token;
     if (!accessToken && req.user?._id) {
       const user = await User.findById(req.user._id).select("+facebookAccessToken");
@@ -202,10 +202,9 @@ export async function syncAdSetsCtrl(req, res) {
       });
     }
 
-    const results = await syncAdSetsFromFacebook(accessToken, account_id);
+    await syncEntitiesForAccount(account_id, accessToken);
     return res.status(200).json({
-      message: `Đã đồng bộ ${results.length} nhóm quảng cáo từ Facebook`,
-      count: results.length,
+      message: "Đã đồng bộ campaigns, adsets và ads từ Facebook",
     });
   } catch (err) {
     console.error("SYNC AdSets error:", err);

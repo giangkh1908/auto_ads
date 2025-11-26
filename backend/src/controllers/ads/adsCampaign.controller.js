@@ -1,8 +1,9 @@
-import { syncCampaignsFromFacebook, fetchCampaignsFromFacebook, updateCampaignStatus, deleteEntity, fetchInsightsForEntities, syncAllFromFacebook } from "../../services/fbAdsService.js";
+import { fetchCampaignsFromFacebook, updateCampaignStatus, deleteEntity, fetchInsightsForEntities } from "../../services/fbAdsService.js";
 import User from "../../models/user.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
+import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
 
 // Helper function để extract string ID từ ObjectId format
 function extractObjectId(value) {
@@ -171,12 +172,10 @@ export async function syncCampaignsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
     
-    // 1) Lấy token từ query (nếu FE có truyền)
     let accessToken = req.query.access_token;
 
-    // 2) Nếu không có: lấy từ DB theo user hiện tại
-    if (!accessToken) {
-      const user = await User.findById(req.user?._id).select("+facebookAccessToken");
+    if (!accessToken && req.user?._id) {
+      const user = await User.findById(req.user._id).select("+facebookAccessToken");
       accessToken = user?.facebookAccessToken || null;
     }
     
@@ -187,33 +186,28 @@ export async function syncCampaignsCtrl(req, res) {
       });
     }
     
-    console.log(`Đồng bộ campaigns cho tài khoản ${account_id}`);
-    
     try {
-      // Đồng bộ campaigns
-      const results = await syncCampaignsFromFacebook(accessToken, account_id);
-      
+      await syncEntitiesForAccount(account_id, accessToken);
+
       return res.status(200).json({
-        message: `Đã đồng bộ ${results.length} chiến dịch quảng cáo từ Facebook`,
-        count: results.length
+        message: "Đã đồng bộ campaigns, adsets và ads từ Facebook",
       });
     } catch (syncError) {
-      // Xử lý lỗi từ Facebook API cụ thể
       if (syncError.response?.data?.error?.code === 190) {
         return res.status(401).json({
           message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
-          tokenExpired: true
+          tokenExpired: true,
         });
       }
-      
+
       if (syncError.response?.data?.error?.code === 10) {
         return res.status(403).json({
           message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
-          permissionDenied: true
+          permissionDenied: true,
         });
       }
-      
-      throw syncError; // Ném lỗi để xử lý ở catch bên ngoài
+
+      throw syncError;
     }
   } catch (err) {
     console.error("SYNC Campaigns error:", err);
@@ -250,36 +244,27 @@ export async function syncAllCtrl(req, res) {
       });
     }
     
-    console.log(`🔄 Batch sync tất cả entities cho account ${account_id}`);
-    
     try {
-      // ✅ Gọi batch sync (1 request thay vì 3)
-      const results = await syncAllFromFacebook(accessToken, account_id);
+      await syncEntitiesForAccount(account_id, accessToken);
       
       return res.status(200).json({
-        message: "Đã đồng bộ tất cả dữ liệu từ Facebook",
-        counts: {
-          campaigns: results.campaigns.length,
-          adsets: results.adsets.length,
-          ads: results.ads.length
-        }
+        message: "Đã đồng bộ tất cả entities (campaigns, adsets, ads) từ Facebook",
       });
     } catch (syncError) {
-      // Xử lý lỗi từ Facebook API cụ thể
       if (syncError.response?.data?.error?.code === 190) {
         return res.status(401).json({
           message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
-          tokenExpired: true
+          tokenExpired: true,
         });
       }
-      
+
       if (syncError.response?.data?.error?.code === 10) {
         return res.status(403).json({
           message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
-          permissionDenied: true
+          permissionDenied: true,
         });
       }
-      
+
       throw syncError;
     }
   } catch (err) {

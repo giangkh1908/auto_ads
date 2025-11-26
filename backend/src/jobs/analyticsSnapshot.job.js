@@ -7,8 +7,8 @@ import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const startAnalyticsSnapshotCron = () => {
-  // Run every 30 minutes
-  cron.schedule("*/30 * * * *", async () => {
+  // Run at 5 and 35 minutes past each hour (staggered to avoid conflicts)
+  cron.schedule("5,35 * * * *", async () => {
     const startTime = new Date().toISOString();
     console.log(`[${startTime}] 🚀 Starting analytics snapshot sync job...`);
 
@@ -87,5 +87,5 @@ export const startAnalyticsSnapshotCron = () => {
     }
   });
 
-  console.log("✅ Analytics snapshot cron job registered (runs every 30 minutes)");
+  console.log("✅ Analytics snapshot cron job registered (runs at :05 and :35 each hour)");
 };

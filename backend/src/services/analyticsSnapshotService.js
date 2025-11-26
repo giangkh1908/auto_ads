@@ -1,7 +1,7 @@
 import AnalyticsSnapshot from "../models/analytics/analyticsSnapshot.model.js";
 import Ads from "../models/ads/ads.model.js";
 import AdsSet from "../models/ads/adsSet.model.js";
-import { fetchAccountInsights, syncAllFromFacebook } from "./fbAdsService.js";
+import { fetchAccountInsights } from "./fbAdsService.js";
 import axios from "axios";
 
 const FB_API = "https://graph.facebook.com/v23.0";
@@ -70,32 +70,14 @@ export async function syncAnalyticsSnapshots(account) {
 
     let synced = 0;
     let errors = 0;
-    let structureSynced = false;
-    const pageNameCache = new Map(); // Cache to avoid repeated API calls for same page_id
 
     for (const insight of insights) {
       try {
         // Find the ad in our database
-        let ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
-        
+        const ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
         if (!ad) {
-          // If ad not found and we haven't synced structure yet, try syncing
-          if (!structureSynced) {
-            console.log(`[analyticsSnapshotService] ⚠️ Ad ${insight.ad_id} not found in DB. Triggering structure sync...`);
-            try {
-              await syncAllFromFacebook(accessToken, accountId);
-              structureSynced = true;
-              // Try finding the ad again after sync
-              ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
-            } catch (syncErr) {
-              console.error(`[analyticsSnapshotService] ❌ Structure sync failed:`, syncErr.message);
-            }
-          }
-
-          if (!ad) {
-            console.log(`[analyticsSnapshotService] ⚠️ Ad not found in DB: ${insight.ad_id}`);
-            continue;
-          }
+          console.log(`[analyticsSnapshotService] ⚠️ Ad not found in DB: ${insight.ad_id}`);
+          continue;
         }
 
         // Get campaign objective, campaign_id, and page_name
@@ -118,7 +100,7 @@ export async function syncAnalyticsSnapshots(account) {
         // If page_name is still null, try to fetch from Facebook API
         if (!pageName && insight.adset_id && accessToken) {
           try {
-            pageName = await fetchPageNameFromFacebook(insight.adset_id, insight.ad_id, accessToken, pageNameCache);
+            pageName = await fetchPageNameFromFacebook(insight.adset_id, insight.ad_id, accessToken);
           } catch (err) {
             console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page_name from Facebook for ad ${insight.ad_id}:`, err.message);
           }
@@ -280,7 +262,7 @@ function extractMetrics(insight) {
  * 2. Fetch ad creative to get page_id from object_story_spec
  * 3. Fetch page name from page_id
  */
-async function fetchPageNameFromFacebook(adsetId, adId, accessToken, cache = new Map()) {
+async function fetchPageNameFromFacebook(adsetId, adId, accessToken) {
   try {
     let pageId = null;
 
@@ -320,11 +302,6 @@ async function fetchPageNameFromFacebook(adsetId, adId, accessToken, cache = new
 
     // Method 3: Fetch page name from page_id
     if (pageId) {
-      // Check cache first to avoid repeated requests
-      if (cache.has(pageId)) {
-        return cache.get(pageId);
-      }
-
       try {
         const pageResponse = await axios.get(`${FB_API}/${pageId}`, {
           params: {
@@ -334,20 +311,10 @@ async function fetchPageNameFromFacebook(adsetId, adId, accessToken, cache = new
         });
         
         if (pageResponse.data?.name) {
-          const pageName = pageResponse.data.name;
-          cache.set(pageId, pageName);
-          return pageName;
+          return pageResponse.data.name;
         }
       } catch (err) {
-        // Cache null to prevent repeated failed requests
-        cache.set(pageId, null);
-        
-        // Only log once per page_id (first failure)
-        if (err.response && (err.response.status === 400 || err.response.status === 403)) {
-          console.warn(`[analyticsSnapshotService] ⚠️ Cannot access Page ${pageId} (likely no permission). Skipping page name fetch.`);
-        } else {
-          console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page name for page_id ${pageId}:`, err.message);
-        }
+        console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page name for page_id ${pageId}:`, err.message);
       }
     }
 

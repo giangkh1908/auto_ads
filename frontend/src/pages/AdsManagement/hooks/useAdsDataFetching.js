@@ -19,7 +19,13 @@ const CACHE_TTL = 120000;
  * Custom hook to manage data fetching for campaigns, adsets, and ads
  * Handles caching, insights fetching, and data transformation
  */
-export function useAdsDataFetching(datasets, setDatasets, cache, setCache) {
+export function useAdsDataFetching(
+  datasets,
+  setDatasets,
+  cache,
+  setCache,
+  setInitialSyncState
+) {
   const cacheRef = useRef(cache);
   const datasetsRef = useRef(datasets);
 
@@ -326,6 +332,25 @@ export function useAdsDataFetching(datasets, setDatasets, cache, setCache) {
       });
       
       if (response.data) {
+        if (response.data.status === "initial_sync") {
+          if (setInitialSyncState) {
+            setInitialSyncState({
+              isInitialSync: true,
+              message:
+                response.data.message ||
+                "Hệ thống đang tải dữ liệu lần đầu. Vui lòng refresh sau 15-30s.",
+            });
+          }
+          return;
+        }
+
+        if (setInitialSyncState) {
+          setInitialSyncState({
+            isInitialSync: false,
+            message: "",
+          });
+        }
+
         const { items } = response.data;
         
         if (import.meta.env.DEV) {

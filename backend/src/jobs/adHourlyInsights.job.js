@@ -14,8 +14,8 @@ function getCurrentRetrievedAt() {
 }
 
 export const startAdHourlyInsightsCron = () => {
-  // Chạy mỗi 30 phút
-  cron.schedule("*/30 * * * *", async () => {
+  // Chạy mỗi 2 giờ, phút 10 (SAU insights sync để có data mới nhất)
+  cron.schedule("10 */2 * * *", async () => {
     const retrievedAt = getCurrentRetrievedAt(); 
     const retrievedAtIso = retrievedAt.toISOString();
 
@@ -78,5 +78,5 @@ export const startAdHourlyInsightsCron = () => {
     }
   });
 
-  console.log("✅ Ad hourly insights cronjob scheduled - runs every 30 minutes");
+  console.log("✅ Ad hourly insights cronjob scheduled - runs every 2 hours at :10 (e.g., 0:10, 2:10, 4:10)");
 };

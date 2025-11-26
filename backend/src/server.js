@@ -4,11 +4,11 @@ import { connectDB } from "./config/db.js";
 import cors from "cors";
 import path from "path";
 
-import { startAdPerformanceCron } from "./jobs/adPerformance.job.js"; 
 import { startAdHourlyInsightsCron } from "./jobs/adHourlyInsights.job.js";
 import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js";
-import { startAutoRuleScheduler } from './services/autoRuleScheduler.js';
+import { startAutoRuleScheduler } from "./services/autoRuleScheduler.js";
 import { startCancelExpiredPaymentsCron } from "./jobs/cancelExpiredPayments.job.js";
+import { startSyncCronJobs } from "./jobs/cronJobs.js";
 
 //Import Routes
 import userRoutes from './routes/userRoutes.js';
@@ -40,7 +40,8 @@ import paymentTransactionsRoutes from './routes/transaction/paymentTransactionsR
 import stripeTransactionsRoutes from './routes/transaction/stripeTransactionsRoutes.js';
 import zaloPayTransactionsRoutes from './routes/transaction/zaloPayTransactionsRoutes.js';
 import vnPayTransactionsRoutes from './routes/transaction/vnPayTransactionsRoutes.js';
-import invoiceRoutes from './routes/invoice/invoiceRoutes.js';
+import invoiceRoutes from "./routes/invoice/invoiceRoutes.js";
+import syncRoutes from "./routes/syncRoutes.js";
 
 //Load các biến môi trường
 dotenv.config();
@@ -98,6 +99,7 @@ app.use("/api/stripe-transactions", stripeTransactionsRoutes);
 app.use('/api/zalo-pay', zaloPayTransactionsRoutes);
 app.use('/api/vnpay', vnPayTransactionsRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/sync", syncRoutes);
 
 // Add a root route to check deployment status
 app.get("/", (req, res) => {
@@ -119,10 +121,10 @@ const startServer = async () => {
     await connectDB();
 
     startAutoRuleScheduler();
-    // startAdPerformanceCron(); 
-    // startAdHourlyInsightsCron();
+    startAdHourlyInsightsCron();
     startAnalyticsSnapshotCron();
     startCancelExpiredPaymentsCron();
+    startSyncCronJobs();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

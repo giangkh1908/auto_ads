@@ -1,8 +1,10 @@
 // controllers/ads/ads.controller.js
 import Ads from "../../models/ads/ads.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
-import { syncAdsFromFacebook, fetchAdsFromFacebook, updateAdStatus, deleteEntity, fetchAdInsights } from "../../services/fbAdsService.js";
+import AdsAccount from "../../models/ads/adsAccount.model.js";
+import { fetchAdsFromFacebook, updateAdStatus, deleteEntity, fetchAdInsights } from "../../services/fbAdsService.js";
 import User from "../../models/user.model.js";
+import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
 
 // Helper function để extract string ID từ ObjectId format
 function extractObjectId(value) {
@@ -96,24 +98,63 @@ export async function listAdsCtrl(req, res) {
   try {
     const { account_id, adset_id, q, status, page = 1, limit = 10, fetch_all = false } = req.query;
 
-    // Xây dựng filter
+    if (account_id && !adset_id) {
+      const normalizedId = account_id.startsWith("act_")
+        ? account_id.substring(4)
+        : account_id;
+
+      const accountAdsCount = await Ads.countDocuments({
+        external_account_id: { $in: [normalizedId, `act_${normalizedId}`] },
+      });
+
+      const account = await AdsAccount.findOne({
+        external_id: { $in: [account_id, `act_${normalizedId}`] },
+      });
+
+      if (accountAdsCount === 0 && account && account.sync_metadata?.entities_status === "idle") {
+        let accessToken = req.query.access_token;
+        if (!accessToken && req.user?._id) {
+          const user = await User.findById(req.user._id).select("+facebookAccessToken");
+          accessToken = user?.facebookAccessToken || null;
+        }
+
+        if (!accessToken) {
+          return res.status(400).json({
+            items: [],
+            total: 0,
+            page: Number(page),
+            limit: Number(limit),
+            pages: 1,
+            status: "initial_sync",
+            message: "Hệ thống đang tải dữ liệu lần đầu. Vui lòng refresh sau 15-30s.",
+          });
+        }
+
+        syncEntitiesForAccount(account_id, accessToken).catch(() => {});
+
+        return res.status(200).json({
+          items: [],
+          total: 0,
+          page: Number(page),
+          limit: Number(limit),
+          pages: 1,
+          status: "initial_sync",
+          message: "Hệ thống đang tải dữ liệu lần đầu. Vui lòng refresh sau 15-30s.",
+        });
+      }
+    }
+
     const filter = {};
 
-    // ✅ Lấy tất cả items (không filter theo status) - Frontend sẽ filter
     if (account_id && !adset_id) {
-      // Chỉ áp dụng filter account_id khi KHÔNG có adset_id (vì adset_id đã filter cụ thể rồi)
-      // Hỗ trợ cả định dạng có act_ và không có act_
       const normalizedId = account_id.startsWith("act_")
         ? account_id.substring(4)
         : account_id;
       
-      // ✅ Tìm ads theo account_id: Cả trực tiếp (external_account_id) và thông qua adset relationship
-      // Tìm các adsets thuộc account này
       const accountAdsets = await AdsSet.find({
         external_account_id: { $in: [normalizedId, `act_${normalizedId}`] }
       }).distinct('_id');
       
-      // Ads có external_account_id trực tiếp HOẶC có set_id thuộc một trong các adsets này
       filter.$or = [
         { external_account_id: { $in: [normalizedId, `act_${normalizedId}`] } },
         { set_id: { $in: accountAdsets } }
@@ -121,11 +162,9 @@ export async function listAdsCtrl(req, res) {
     }
 
     if (adset_id) filter.set_id = adset_id;
-    // Nếu có filter status cụ thể, áp dụng filter đó (bao gồm cả DELETED nếu query)
     if (status) {
       filter.status = status;
     }
-    // Nếu không có status parameter, lấy tất cả (bao gồm cả DELETED)
     
     if (q) filter.name = new RegExp(q, "i");
 
@@ -206,7 +245,6 @@ export async function syncAdsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
 
-    // Lấy token: ưu tiên query, fallback DB của user hiện tại
     let accessToken = req.query.access_token;
     if (!accessToken) {
       const user = await User.findById(req.user?._id).select(
@@ -223,10 +261,9 @@ export async function syncAdsCtrl(req, res) {
       });
     }
 
-    const results = await syncAdsFromFacebook(accessToken, account_id);
+    await syncEntitiesForAccount(account_id, accessToken);
     return res.status(200).json({
-      message: `Đã đồng bộ ${results.length} quảng cáo từ Facebook`,
-      count: results.length,
+      message: "Đã đồng bộ campaigns, adsets và ads từ Facebook",
     });
   } catch (err) {
     console.error("SYNC Ads error:", err);
