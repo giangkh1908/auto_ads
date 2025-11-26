@@ -14,11 +14,7 @@ import UserRole from "../../models/userRole.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
-// Live stats from Facebook
 import {
-  fetchCampaignsFromFacebook,
-  fetchAdsetsFromFacebook,
-  fetchAdsFromFacebook,
   fetchAccountInsights,
   saveInsightsToAdPerformance,
 } from "../../services/fbAdsService.js";
@@ -252,7 +248,7 @@ export async function getAccountStatsCtrl(req, res) {
 
 /**
  * GET /api/ads-accounts/stats/live
- * Lấy thống kê trực tiếp từ Facebook (không dựa DB)
+ * Lấy thống kê từ DB (chính xác hơn, có pagination)
  */
 export async function getAccountLiveStatsCtrl(req, res) {
   try {
@@ -261,39 +257,48 @@ export async function getAccountLiveStatsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
 
-    // Ưu tiên token từ query, nếu không có thì lấy từ DB theo user hiện tại
-    let accessToken = req.query.access_token;
-    if (!accessToken) {
-      const user = await User.findById(req.user?._id).select("+facebookAccessToken");
-      accessToken = user?.facebookAccessToken || null;
-    }
-
-    if (!accessToken) {
-      return res.status(400).json({
-        message: "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
-        missingToken: true,
-      });
-    }
-
-    const [campaigns, adsets, ads] = await Promise.all([
-      fetchCampaignsFromFacebook(accessToken, account_id),
-      fetchAdsetsFromFacebook(accessToken, account_id),
-      fetchAdsFromFacebook(accessToken, account_id),
+    // Chuẩn hóa ID (kiểm tra cả có và không có tiền tố act_)
+    const normalizedId = account_id.startsWith('act_') ? account_id.substring(4) : account_id;
+    const withPrefix = account_id.startsWith('act_') ? account_id : `act_${account_id}`;
+    
+    // Đếm từ DB (chính xác, có pagination trong entitySyncService)
+    const [campaignCount, adsetCount, adCount] = await Promise.all([
+      AdsCampaign.countDocuments({
+        $or: [
+          { external_account_id: normalizedId },
+          { external_account_id: withPrefix }
+        ],
+        status: { $nin: ["DELETED", "ARCHIVED"] }
+      }),
+      AdsSet.countDocuments({
+        $or: [
+          { external_account_id: normalizedId },
+          { external_account_id: withPrefix }
+        ],
+        status: { $nin: ["DELETED", "ARCHIVED"] }
+      }),
+      Ads.countDocuments({
+        $or: [
+          { external_account_id: normalizedId },
+          { external_account_id: withPrefix }
+        ],
+        status: { $nin: ["DELETED", "ARCHIVED"] }
+      })
     ]);
 
     return res.status(200).json({
       account_id,
-      source: "facebook",
+      source: "database",
       stats: {
-        campaigns: Array.isArray(campaigns) ? campaigns.length : 0,
-        adsets: Array.isArray(adsets) ? adsets.length : 0,
-        ads: Array.isArray(ads) ? ads.length : 0,
+        campaigns: campaignCount,
+        adsets: adsetCount,
+        ads: adCount,
       },
     });
   } catch (err) {
     console.error("GET Live Account Stats error:", err);
     return res.status(500).json({
-      message: "Lỗi khi lấy thống kê trực tiếp từ Facebook",
+      message: "Lỗi khi lấy thống kê tài khoản",
       error: err.message,
     });
   }
