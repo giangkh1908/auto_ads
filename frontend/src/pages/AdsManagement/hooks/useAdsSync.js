@@ -52,25 +52,22 @@ export function useAdsSync(cache, setCache, activeTab) {
     }
     
     try {
-      // Batch sync if all entities need sync
-      if (needsSync.length === 3) {
-        await axiosInstance.get(`/api/campaigns/sync-all?account_id=${accountId}`);
-        console.log("✅ Batch sync completed");
-      } else {
-        // Sync individual entities
-        const syncPromises = needsSync.map(type => {
-          const endpointMap = {
-            campaigns: 'campaigns',
-            adsets: 'adsets',
-            ads: 'ads'
-          };
-          return axiosInstance.get(`/api/${endpointMap[type]}/sync?account_id=${accountId}`);
-        });
-        await Promise.all(syncPromises);
-        console.log(`✅ Synced ${needsSync.length} entities:`, needsSync);
-      }
+      // Get access token from localStorage
+      const accessToken = localStorage.getItem("fb_access_token");
       
-      // Update cache
+      if (!accessToken) {
+        throw new Error("Facebook access token not found. Please reconnect your Facebook account.");
+      }
+
+      // Call new unified entity sync API (syncs all entities: campaigns, adsets, ads)
+      await axiosInstance.post("/api/sync/entities", {
+        accountId: accountId,
+        accessToken: accessToken,
+      });
+      
+      console.log(`✅ Entity sync completed (${needsSync.length} entities needed: ${needsSync.join(', ')})`);
+      
+      // Update cache for all synced entity types
       setCache(prev => {
         let updatedCache = { ...prev.lastFetch };
         needsSync.forEach(type => {
