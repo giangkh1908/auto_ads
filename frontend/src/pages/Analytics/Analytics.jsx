@@ -257,20 +257,37 @@ function Analytics() {
       return;
     }
 
+    if (syncing) {
+      return;
+    }
+
     setSyncing(true);
     try {
       const response = await axiosInstance.post("/api/analytics/snapshots/sync", {
-        account_id: selectedAccount, // external_id
+        account_id: selectedAccount,
       });
 
       if (response.data) {
-        alert(`Sync hoàn tất!\nĐã sync: ${response.data.synced} ads\nLỗi: ${response.data.errors}`);
-        // Refresh data after sync
-        await fetchAds();
+        const { synced, errors, rateLimitReached, retryAfter } = response.data;
+        
+        if (rateLimitReached) {
+          alert(`⚠️ ${response.data.message}\nVui lòng thử lại sau ${retryAfter} giây.`);
+        } else {
+          alert(`✅ Sync hoàn tất!\nĐã sync: ${synced} ads\nLỗi: ${errors}`);
+          setTimeout(() => {
+            fetchAds();
+          }, 5000);
+        }
       }
     } catch (error) {
       console.error("Error syncing analytics:", error);
-      alert(`Lỗi khi sync: ${error.response?.data?.message || error.message}`);
+      const errorResponse = error.response?.data;
+      
+      if (errorResponse?.rateLimitReached) {
+        alert(`⚠️ ${errorResponse.message}\nVui lòng thử lại sau ${errorResponse.retryAfter || 60} giây.`);
+      } else {
+        alert(`❌ Lỗi khi sync: ${errorResponse?.message || error.message}`);
+      }
     } finally {
       setSyncing(false);
     }

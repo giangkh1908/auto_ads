@@ -29,32 +29,43 @@ async function* fetchPagedEntities(url, accessToken, params = {}) {
   let pagingCursor = null;
 
   while (nextUrl) {
-    const response = await axios.get(nextUrl, {
-      params: {
-        ...buildFbAuthParams(accessToken),
-        limit: 100,
-        ...params,
-        ...(pagingCursor ? { after: pagingCursor } : {}),
-      },
-    });
+    try {
+      const response = await axios.get(nextUrl, {
+        params: {
+          ...buildFbAuthParams(accessToken),
+          limit: 100,
+          ...params,
+          ...(pagingCursor ? { after: pagingCursor } : {}),
+        },
+      });
 
-    const data = response.data?.data || [];
-    if (!data.length) {
-      break;
-    }
+      const data = response.data?.data || [];
+      if (!data.length) {
+        break;
+      }
 
-    yield data;
+      yield data;
 
-    const next = response.data?.paging?.next;
-    const cursors = response.data?.paging?.cursors;
-    if (next) {
-      nextUrl = next;
-      pagingCursor = null;
-    } else if (cursors?.after) {
-      nextUrl = url;
-      pagingCursor = cursors.after;
-    } else {
-      break;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const next = response.data?.paging?.next;
+      const cursors = response.data?.paging?.cursors;
+      if (next) {
+        nextUrl = next;
+        pagingCursor = null;
+      } else if (cursors?.after) {
+        nextUrl = url;
+        pagingCursor = cursors.after;
+      } else {
+        break;
+      }
+    } catch (err) {
+      console.error(`[entitySyncService] Error fetching from ${url}:`, {
+        message: err.message,
+        status: err.response?.status,
+        error: err.response?.data?.error,
+      });
+      throw err;
     }
   }
 }
@@ -254,6 +265,7 @@ export async function syncEntitiesForAccount(accountExternalId, accessToken) {
   }
 
   if (account.sync_metadata?.entities_status === "syncing") {
+    console.log(`⏭️ Skip sync - already syncing for account ${accountExternalId}`);
     return;
   }
 
@@ -271,7 +283,11 @@ export async function syncEntitiesForAccount(accountExternalId, accessToken) {
 
   try {
     await syncCampaignsWithPagination(account, accessToken);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
     await syncAdSetsWithPagination(account, accessToken);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
     await syncAdsWithPagination(account, accessToken);
 
     await AdsAccount.updateOne(

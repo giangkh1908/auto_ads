@@ -79,42 +79,85 @@ export async function syncAnalyticsSnapshots(account) {
 
     console.log(`[analyticsSnapshotService] 📥 Received ${insights.length} ad insights`);
 
+    const adExternalIds = insights.map(i => i.ad_id).filter(Boolean);
+    const ads = await Ads.find({ external_id: { $in: adExternalIds } })
+      .populate({
+        path: 'set_id',
+        populate: { path: 'campaign_id' }
+      })
+      .lean();
+
+    const adsMap = new Map(ads.map(ad => [ad.external_id, ad]));
+
+    const adsetIds = [...new Set(insights.map(i => i.adset_id).filter(Boolean))];
+    const pageNameCache = new Map();
+
+    for (const adsetId of adsetIds) {
+      const ad = ads.find(a => a.set_id?.external_id === adsetId);
+      if (ad?.set_id?.page_name) {
+        pageNameCache.set(adsetId, ad.set_id.page_name);
+      } else if (ad?.set_id?.campaign_id?.page_name) {
+        pageNameCache.set(adsetId, ad.set_id.campaign_id.page_name);
+      }
+    }
+
+    const missingPageNameAdsets = adsetIds.filter(id => !pageNameCache.has(id));
+    if (missingPageNameAdsets.length > 0 && accessToken) {
+      const adsetToPageIdMap = new Map();
+      const uniquePageIds = new Set();
+      
+      for (const adsetId of missingPageNameAdsets) {
+        try {
+          const pageId = await getPageIdFromAdset(adsetId, accessToken);
+          if (pageId) {
+            adsetToPageIdMap.set(adsetId, pageId);
+            uniquePageIds.add(pageId);
+          }
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (err) {
+          // Skip if error
+        }
+      }
+
+      if (uniquePageIds.size > 0) {
+        const pageNames = await batchFetchPageNames(Array.from(uniquePageIds), accessToken);
+        for (const [adsetId, pageId] of adsetToPageIdMap.entries()) {
+          if (pageNames.has(pageId)) {
+            pageNameCache.set(adsetId, pageNames.get(pageId));
+          }
+        }
+      }
+    }
+
     let synced = 0;
     let errors = 0;
 
     for (const insight of insights) {
       try {
-        // Find the ad in our database
-        const ad = await Ads.findOne({ external_id: insight.ad_id }).lean();
+        const ad = adsMap.get(insight.ad_id);
         if (!ad) {
           console.log(`[analyticsSnapshotService] ⚠️ Ad not found in DB: ${insight.ad_id}`);
           continue;
         }
 
-        // Get campaign objective, campaign_id, and page_name
         let campaignObjective = insight.objective;
         let campaignId = null;
         let pageName = null;
         
         if (ad.set_id) {
-          const adset = await AdsSet.findById(ad.set_id).populate('campaign_id').lean();
-          if (adset) {
-            campaignId = adset.campaign_id?._id || adset.campaign_id;
-            if (!campaignObjective && adset.campaign_id) {
-              campaignObjective = adset.campaign_id.objective;
-            }
-            // Get page_name: ưu tiên từ adset, fallback từ campaign
-            pageName = adset.page_name || adset.campaign_id?.page_name || null;
+          campaignId = ad.set_id.campaign_id?._id || ad.set_id.campaign_id;
+          if (!campaignObjective && ad.set_id.campaign_id) {
+            campaignObjective = ad.set_id.campaign_id.objective;
           }
+          pageName = ad.set_id.page_name || ad.set_id.campaign_id?.page_name || null;
         }
 
-        // If page_name is still null, try to fetch from Facebook API
-        if (!pageName && insight.adset_id && accessToken) {
-          try {
-            pageName = await fetchPageNameFromFacebook(insight.adset_id, insight.ad_id, accessToken);
-          } catch (err) {
-            console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page_name from Facebook for ad ${insight.ad_id}:`, err.message);
-          }
+        if (!pageName && insight.adset_id) {
+          pageName = pageNameCache.get(insight.adset_id) || null;
+        }
+
+        if (!pageName) {
+          pageName = "N/A";
         }
 
         // Extract metrics
@@ -266,72 +309,58 @@ function extractMetrics(insight) {
   return metrics;
 }
 
-/**
- * Fetch page name from Facebook API
- * Tries multiple methods:
- * 1. Fetch adset promoted_object to get page_id
- * 2. Fetch ad creative to get page_id from object_story_spec
- * 3. Fetch page name from page_id
- */
-async function fetchPageNameFromFacebook(adsetId, adId, accessToken) {
+async function getPageIdFromAdset(adsetId, accessToken) {
   try {
-    let pageId = null;
-
-    // Method 1: Try to get page_id from adset promoted_object
-    try {
-      const adsetResponse = await axios.get(`${FB_API}/${adsetId}`, {
-        params: {
-          fields: 'promoted_object',
-          access_token: accessToken,
-        },
-      });
-      
-      if (adsetResponse.data?.promoted_object?.page_id) {
-        pageId = adsetResponse.data.promoted_object.page_id;
-      }
-    } catch (err) {
-      // Continue to next method
-    }
-
-    // Method 2: If no page_id from adset, try to get from ad creative
-    if (!pageId && adId) {
-      try {
-        const adResponse = await axios.get(`${FB_API}/${adId}`, {
-          params: {
-            fields: 'creative{object_story_spec}',
-            access_token: accessToken,
-          },
-        });
-        
-        if (adResponse.data?.creative?.object_story_spec?.page_id) {
-          pageId = adResponse.data.creative.object_story_spec.page_id;
-        }
-      } catch (err) {
-        // Continue to next method
-      }
-    }
-
-    // Method 3: Fetch page name from page_id
-    if (pageId) {
-      try {
-        const pageResponse = await axios.get(`${FB_API}/${pageId}`, {
-          params: {
-            fields: 'name',
-            access_token: accessToken,
-          },
-        });
-        
-        if (pageResponse.data?.name) {
-          return pageResponse.data.name;
-        }
-      } catch (err) {
-        console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page name for page_id ${pageId}:`, err.message);
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error(`[analyticsSnapshotService] ❌ Error fetching page name:`, error.message);
+    const adsetResponse = await axios.get(`${FB_API}/${adsetId}`, {
+      params: {
+        fields: 'promoted_object',
+        access_token: accessToken,
+      },
+    });
+    
+    return adsetResponse.data?.promoted_object?.page_id || null;
+  } catch (err) {
     return null;
   }
+}
+
+async function batchFetchPageNames(pageIds, accessToken) {
+  const pageNamesMap = new Map();
+  
+  if (pageIds.length === 0) return pageNamesMap;
+
+  try {
+    const ids = pageIds.join(',');
+    const response = await axios.get(`${FB_API}/?ids=${ids}`, {
+      params: {
+        fields: 'name',
+        access_token: accessToken,
+      },
+    });
+
+    if (response.data) {
+      const failedPageIds = [];
+      for (const [pageId, pageData] of Object.entries(response.data)) {
+        if (pageData?.name) {
+          pageNamesMap.set(pageId, pageData.name);
+        } else if (pageData?.error) {
+          const errorCode = pageData.error?.code;
+          if (errorCode !== 17 && errorCode !== 4) {
+            failedPageIds.push(pageId);
+          }
+        }
+      }
+      
+      if (failedPageIds.length > 0) {
+        console.log(`[analyticsSnapshotService] ⚠️ Could not fetch page names for ${failedPageIds.length} page(s): ${failedPageIds.slice(0, 3).join(', ')}${failedPageIds.length > 3 ? '...' : ''}`);
+      }
+    }
+  } catch (err) {
+    const fbError = err.response?.data?.error;
+    if (fbError?.code !== 17 && fbError?.code !== 4) {
+      console.warn(`[analyticsSnapshotService] ⚠️ Batch fetch page names failed:`, err.message);
+    }
+  }
+
+  return pageNamesMap;
 }
