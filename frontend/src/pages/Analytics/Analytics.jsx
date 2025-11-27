@@ -269,7 +269,7 @@ function Analytics() {
 
       if (response.data) {
         const { synced, errors, rateLimitReached, retryAfter } = response.data;
-        
+
         if (rateLimitReached) {
           alert(`⚠️ ${response.data.message}\nVui lòng thử lại sau ${retryAfter} giây.`);
         } else {
@@ -282,7 +282,7 @@ function Analytics() {
     } catch (error) {
       console.error("Error syncing analytics:", error);
       const errorResponse = error.response?.data;
-      
+
       if (errorResponse?.rateLimitReached) {
         alert(`⚠️ ${errorResponse.message}\nVui lòng thử lại sau ${errorResponse.retryAfter || 60} giây.`);
       } else {
@@ -312,7 +312,19 @@ function Analytics() {
     const matchesObjective = selectedObjective === "ALL" ||
       adObjective === selectedObjective;
 
-    return matchesSearch && matchesObjective;
+    // ✅ THÊM: Chỉ hiển thị ads có số liệu thực tế (không phải tất cả = 0)
+    const hasData = ad.spend > 0 ||
+      ad.impressions > 0 ||
+      ad.clicks > 0 ||
+      ad.reach > 0 ||
+      ad.link_clicks > 0 ||
+      ad.post_engagement > 0 ||
+      ad.leads > 0 ||
+      ad.conversions > 0 ||
+      ad.website_purchases > 0 ||
+      ad.mobile_app_install > 0;
+
+    return matchesSearch && matchesObjective && hasData;
   });
 
   // Calculate highlighters
