@@ -7,8 +7,8 @@ import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const startAnalyticsSnapshotCron = () => {
-  // Run at 5 and 35 minutes past each hour (staggered to avoid conflicts)
-  cron.schedule("5,35 * * * *", async () => {
+  // Run once daily at 4:00 AM (analytics data ít thay đổi, không cần sync thường xuyên)
+  cron.schedule("0 4 * * *", async () => {
     const startTime = new Date().toISOString();
     console.log(`[${startTime}] 🚀 Starting analytics snapshot sync job...`);
 
@@ -55,6 +55,13 @@ export const startAnalyticsSnapshotCron = () => {
 
         try {
           const result = await syncAnalyticsSnapshots(account);
+          
+          // Stop processing if rate limit reached
+          if (result.rateLimited) {
+            console.warn(`[${accountStartTime}] ⚠️ Rate limit reached, stopping sync for remaining accounts`);
+            break;
+          }
+          
           totalSynced += result.synced;
           totalErrors += result.errors;
 
@@ -87,5 +94,5 @@ export const startAnalyticsSnapshotCron = () => {
     }
   });
 
-  console.log("✅ Analytics snapshot cron job registered (runs at :05 and :35 each hour)");
+  console.log("✅ Analytics snapshot cron job registered (runs daily at 4:00 AM)");
 };

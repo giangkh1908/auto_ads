@@ -23,43 +23,54 @@ export async function syncAnalyticsSnapshots(account) {
 
     console.log(`[analyticsSnapshotService] 📊 Syncing analytics snapshots for account: ${account.name || accountId}`);
 
-    // Calculate time range for lifetime data (last 2 years to today)
+    // Calculate time range for lifetime data (last 90 days - đủ cho analytics, giảm tải API)
     const today = new Date();
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(today.getFullYear() - 2);
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(today.getDate() - 90);
     
-    const since = twoYearsAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+    const since = ninetyDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
     const until = today.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Fetch lifetime insights from Facebook
-    const insights = await fetchAccountInsights(accessToken, accountId, {
-      level: 'ad',
-      fields: [
-        'ad_id',
-        'ad_name',
-        'adset_id',
-        'adset_name',
-        'campaign_id',
-        'campaign_name',
-        'objective',
-        'spend',
-        'impressions',
-        'clicks',
-        'reach',
-        'frequency',
-        'cpm',
-        'cpc',
-        'ctr',
-        'actions',
-        'action_values',
-        'cost_per_action_type',
-        'cost_per_inline_post_engagement',
-        'quality_ranking',
-        'engagement_rate_ranking',
-      ],
-      timeIncrement: 'all_days',
-      timeRange: { since, until }, // Use time_range instead of date_preset
-    });
+    let insights;
+    try {
+      insights = await fetchAccountInsights(accessToken, accountId, {
+        level: 'ad',
+        fields: [
+          'ad_id',
+          'ad_name',
+          'adset_id',
+          'adset_name',
+          'campaign_id',
+          'campaign_name',
+          'objective',
+          'spend',
+          'impressions',
+          'clicks',
+          'reach',
+          'frequency',
+          'cpm',
+          'cpc',
+          'ctr',
+          'actions',
+          'action_values',
+          'cost_per_action_type',
+          'cost_per_inline_post_engagement',
+          'quality_ranking',
+          'engagement_rate_ranking',
+        ],
+        timeIncrement: 'all_days',
+        timeRange: { since, until },
+      });
+    } catch (error) {
+      // Handle rate limit errors
+      const fbError = error?.response?.data?.error;
+      if (fbError?.code === 4 || fbError?.code === 17 || fbError?.error_subcode === 1504022) {
+        console.warn(`[analyticsSnapshotService] ⚠️ Rate limit reached for account ${accountId}. Will retry in next cron run.`);
+        return { synced: 0, errors: 0, rateLimited: true };
+      }
+      throw error; // Re-throw other errors
+    }
 
     if (!insights || insights.length === 0) {
       console.log(`[analyticsSnapshotService] ⚠️ No insights data returned for account ${accountId}`);

@@ -2,24 +2,54 @@ import express from "express";
 import AdsAccount from "../models/ads/adsAccount.model.js";
 import { syncEntitiesForAccount } from "../services/entitySyncService.js";
 import { startBackfill } from "../services/backfillService.js";
+import User from "../models/user.model.js";
 
 const router = express.Router();
 
 router.post("/entities", async (req, res) => {
   try {
-    const { accountId, accessToken } = req.body;
+    const { accountId } = req.body;
     if (!accountId) {
       return res.status(400).json({ message: "accountId is required" });
     }
 
+    const account = await AdsAccount.findOne({ external_id: accountId });
+    
+    if (!account) {
+      console.error(`[sync/entities] AdsAccount not found: ${accountId}`);
+      return res.status(404).json({ message: "AdsAccount not found" });
+    }
+
+    if (!account.shop_admin_id) {
+      console.error(`[sync/entities] Account ${accountId} has no shop_admin_id`);
+      return res.status(400).json({ 
+        message: "Account has no shop_admin_id. Please reconnect your Facebook account." 
+      });
+    }
+
+    const user = await User.findById(account.shop_admin_id).select("+facebookAccessToken");
+    
+    if (!user) {
+      console.error(`[sync/entities] User not found: ${account.shop_admin_id}`);
+      return res.status(400).json({ 
+        message: "User not found for this account. Please reconnect your Facebook account." 
+      });
+    }
+
+    const accessToken = user.facebookAccessToken;
+    
     if (!accessToken) {
-      return res.status(400).json({ message: "accessToken is required" });
+      console.error(`[sync/entities] User ${account.shop_admin_id} has no facebookAccessToken`);
+      return res.status(400).json({ 
+        message: "Missing Facebook access token for account. Please reconnect your Facebook account." 
+      });
     }
 
     await syncEntitiesForAccount(accountId, accessToken);
 
     return res.json({ success: true });
   } catch (err) {
+    console.error("[sync/entities] Error:", err);
     return res.status(500).json({
       success: false,
       message: "Failed to trigger entity sync",

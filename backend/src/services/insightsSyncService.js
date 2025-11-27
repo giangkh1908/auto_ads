@@ -15,7 +15,7 @@ async function getAccessTokenForAccount(account) {
   return user?.facebookAccessToken || null;
 }
 
-export async function syncInsightsForAccount(accountId, dateRange) {
+export async function syncInsightsForAccount(accountId) {
   const account = await AdsAccount.findById(accountId);
   if (!account) {
     throw new Error("AdsAccount not found");
@@ -49,8 +49,26 @@ export async function syncInsightsForAccount(accountId, dateRange) {
 
   const ads = await Ads.find({
     external_account_id: { $in: [withoutPrefix, `act_${withoutPrefix}`] },
-    status: { $nin: ["DELETED", "ARCHIVED"] },
+    status: { $in: ["ACTIVE", "PAUSED"] },
   }).select("external_id");
+
+  if (ads.length === 0) {
+    console.log(`⏭️ Skip insights sync - no active ads for account ${account.external_id}`);
+
+    await AdsAccount.updateOne(
+      { _id: account._id },
+      {
+        $set: {
+          "sync_metadata.insights_status": "done",
+          "sync_metadata.insights_last_synced_at": new Date(),
+        },
+      }
+    );
+
+    return;
+  }
+
+  console.log(`📊 Syncing insights for ${ads.length} active ads`);
 
   const adIds = ads.map((a) => a.external_id).filter(Boolean);
 
@@ -121,19 +139,5 @@ export async function syncInsightsForAccount(accountId, dateRange) {
   }
 }
 
-export async function syncInsightsForAllAccounts() {
-  const accounts = await AdsAccount.find({
-    status: "ACTIVE",
-    "sync_metadata.entities_status": "done",
-  }).select("_id");
-
-  const limit = pLimit(1);
-
-  await Promise.all(
-    accounts.map((account) =>
-      limit(() => syncInsightsForAccount(account._id))
-    )
-  );
-}
 
 

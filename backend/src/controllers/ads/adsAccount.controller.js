@@ -5,7 +5,6 @@ import {
   getAdsAccountById,
   getAdsAccountByExternalId,
   updateAdsAccount,
-  softDeleteAdsAccount,
   hardDeleteAdsAccount,
 } from "../../services/adsAccountService.js";
 import User from "../../models/user.model.js";
@@ -21,7 +20,8 @@ import {
 import axios from "axios";
 import { upsertOneAdAccount } from "../../services/adsAccountService.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
-import Shop from "../../models/shops/shop.model.js";
+import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
+import { startBackfill } from "../../services/backfillService.js";
 
 const FB_API = "https://graph.facebook.com/v23.0";
 
@@ -468,7 +468,25 @@ export async function connectAdAccountCtrl(req, res) {
       { shopUserId, adminUserId, shopId }
     );
 
-    return res.status(200).json({ message: "Kết nối tài khoản thành công", account: saved });
+    syncEntitiesForAccount(fbAcc.id, accessToken).catch(err => {
+      console.error(`Failed to sync entities for ${fbAcc.id}:`, err);
+    });
+
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+    startBackfill(
+      saved._id.toString(),
+      twoYearsAgo.toISOString().split('T')[0],
+      new Date().toISOString().split('T')[0]
+    ).catch(err => {
+      console.error(`Failed to start backfill for ${fbAcc.id}:`, err);
+    });
+
+    return res.status(200).json({ 
+      message: "Kết nối tài khoản thành công. Đang đồng bộ dữ liệu trong background...", 
+      account: saved 
+    });
   } catch (err) {
     console.error("CONNECT AdAccount error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "Lỗi kết nối tài khoản quảng cáo", error: err.message });
