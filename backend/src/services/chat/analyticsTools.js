@@ -6,6 +6,7 @@ import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
+import AnalyticsSnapshot from "../../models/analytics/analyticsSnapshot.model.js";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -189,12 +190,10 @@ export const queryDataTool = tool(
 
       // QUERY TYPE 4: TOP_BOTTOM (best/worst performing entities)
       if (query_type === "top_bottom") {
-        const fieldMap = {
-          campaign: { group: "$external_campaign_id", name: "$campaign_name" },
-          adset: { group: "$external_adset_id", name: "$adset_name" },
-          ad: { group: "$external_ad_id", name: "$ad_name" },
-        };
-
+        const dateFrom = new Date(date_from);
+        const dateTo = new Date(date_to);
+        const daysDiff = Math.ceil((dateTo - dateFrom) / (1000 * 60 * 60 * 24));
+        
         // Get list of non-deleted entity IDs
         const modelMap = {
           campaign: AdsCampaign,
@@ -210,31 +209,216 @@ export const queryDataTool = tool(
           .lean();
         
         const activeIds = activeEntities.map(e => e.external_id);
-        const entityIdField = entity_type === "campaign" ? "external_campaign_id" : 
-                              entity_type === "adset" ? "external_adset_id" : "external_ad_id";
-
-        const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
-        const results = await AdPerformance.aggregate([
-          {
-            $match: {
+        
+        // Try AdPerformance first (for recent data <= 90 days)
+        let results = [];
+        if (daysDiff <= 90) {
+          const entityIdField = entity_type === "campaign" ? "external_campaign_id" : 
+                                entity_type === "adset" ? "external_adset_id" : "external_ad_id";
+          const fieldMap = {
+            campaign: { group: "$external_campaign_id", name: "$campaign_name" },
+            adset: { group: "$external_adset_id", name: "$adset_name" },
+            ad: { group: "$external_ad_id", name: "$ad_name" },
+          };
+          const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
+          
+          results = await AdPerformance.aggregate([
+            {
+              $match: {
+                account_id: accountObjId,
+                date: { $gte: dateFrom, $lte: dateTo },
+                [entityIdField]: { $in: activeIds },
+              },
+            },
+            {
+              $group: {
+                _id: fieldMap[entity_type || "campaign"].group,
+                entity_name: { $first: fieldMap[entity_type || "campaign"].name },
+                total_spend: { $sum: "$spend" },
+                avg_ctr: { $avg: "$ctr" },
+                avg_cpc: { $avg: "$cpc" },
+                total_clicks: { $sum: "$clicks" },
+              },
+            },
+            { $sort: { [sortField]: -1 } },
+            { $limit: limit || 5 },
+          ]);
+        }
+        
+        // Fallback to AnalyticsSnapshot if no data or range > 90 days
+        if (results.length === 0 || daysDiff > 90) {
+          writer?.(`📊 Query từ AnalyticsSnapshot (lifetime data, filter theo campaign start_time)...`);
+          
+          // For campaigns: filter by start_time, then aggregate from AnalyticsSnapshot
+          if (entity_type === "campaign" || !entity_type) {
+            const campaigns = await AdsCampaign.find({
               account_id: accountObjId,
-              date: { $gte: new Date(date_from), $lte: new Date(date_to) },
-              [entityIdField]: { $in: activeIds },
-            },
-          },
-          {
-            $group: {
-              _id: fieldMap[entity_type || "campaign"].group,
-              entity_name: { $first: fieldMap[entity_type || "campaign"].name },
-              total_spend: { $sum: "$spend" },
-              avg_ctr: { $avg: "$ctr" },
-              avg_cpc: { $avg: "$cpc" },
-              total_clicks: { $sum: "$clicks" },
-            },
-          },
-          { $sort: { [sortField]: -1 } },
-          { $limit: limit || 5 },
-        ]);
+              status: { $ne: "DELETED" },
+              start_time: { $gte: dateFrom, $lte: dateTo },
+            })
+              .select("_id external_id name")
+              .lean();
+            
+            const campaignObjIds = campaigns.map(c => c._id);
+            const campaignMap = new Map(campaigns.map(c => [c._id.toString(), c]));
+            
+            if (campaignObjIds.length > 0) {
+              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
+              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
+                {
+                  $match: {
+                    account_id: accountObjId,
+                    campaign_id: { $in: campaignObjIds },
+                  },
+                },
+                {
+                  $group: {
+                    _id: "$campaign_id",
+                    entity_name: { $first: "$campaign_name" },
+                    total_spend: { $sum: "$spend" },
+                    avg_ctr: { $avg: "$ctr" },
+                    avg_cpc: { $avg: "$cpc" },
+                    total_clicks: { $sum: "$clicks" },
+                  },
+                },
+                { $sort: { [sortField]: -1 } },
+                { $limit: limit || 5 },
+              ]);
+              
+              // Map campaign_id back to external_id
+              results = resultsFromSnapshot.map(r => {
+                const campaign = campaignMap.get(r._id.toString());
+                return {
+                  ...r,
+                  _id: campaign?.external_id || r._id.toString(),
+                  entity_name: campaign?.name || r.entity_name,
+                };
+              });
+            }
+          } else if (entity_type === "adset") {
+            // For adsets: get adsets with campaigns in date range
+            const campaigns = await AdsCampaign.find({
+              account_id: accountObjId,
+              status: { $ne: "DELETED" },
+              start_time: { $gte: dateFrom, $lte: dateTo },
+            })
+              .select("_id")
+              .lean();
+            
+            const campaignObjIds = campaigns.map(c => c._id);
+            
+            const adsets = await AdsSet.find({
+              account_id: accountObjId,
+              status: { $ne: "DELETED" },
+              campaign_id: { $in: campaignObjIds },
+            })
+              .select("_id external_id name")
+              .lean();
+            
+            const adsetObjIds = adsets.map(a => a._id);
+            const adsetMap = new Map(adsets.map(a => [a._id.toString(), a]));
+            
+            if (adsetObjIds.length > 0) {
+              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
+              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
+                {
+                  $match: {
+                    account_id: accountObjId,
+                    adset_id: { $in: adsetObjIds },
+                  },
+                },
+                {
+                  $group: {
+                    _id: "$adset_id",
+                    entity_name: { $first: "$adset_name" },
+                    total_spend: { $sum: "$spend" },
+                    avg_ctr: { $avg: "$ctr" },
+                    avg_cpc: { $avg: "$cpc" },
+                    total_clicks: { $sum: "$clicks" },
+                  },
+                },
+                { $sort: { [sortField]: -1 } },
+                { $limit: limit || 5 },
+              ]);
+              
+              // Map adset_id back to external_id
+              results = resultsFromSnapshot.map(r => {
+                const adset = adsetMap.get(r._id.toString());
+                return {
+                  ...r,
+                  _id: adset?.external_id || r._id.toString(),
+                  entity_name: adset?.name || r.entity_name,
+                };
+              });
+            }
+          } else if (entity_type === "ad") {
+            // For ads: get ads with campaigns in date range
+            const campaigns = await AdsCampaign.find({
+              account_id: accountObjId,
+              status: { $ne: "DELETED" },
+              start_time: { $gte: dateFrom, $lte: dateTo },
+            })
+              .select("_id")
+              .lean();
+            
+            const campaignObjIds = campaigns.map(c => c._id);
+            
+            const adsets = await AdsSet.find({
+              account_id: accountObjId,
+              status: { $ne: "DELETED" },
+              campaign_id: { $in: campaignObjIds },
+            })
+              .select("_id")
+              .lean();
+            
+            const adsetObjIds = adsets.map(a => a._id);
+            
+            const ads = await Ads.find({
+              account_id: accountObjId,
+              status: { $ne: "DELETED" },
+              set_id: { $in: adsetObjIds },
+            })
+              .select("_id external_id name")
+              .lean();
+            
+            const adObjIds = ads.map(a => a._id);
+            const adMap = new Map(ads.map(a => [a._id.toString(), a]));
+            
+            if (adObjIds.length > 0) {
+              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
+              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
+                {
+                  $match: {
+                    account_id: accountObjId,
+                    ad_id: { $in: adObjIds },
+                  },
+                },
+                {
+                  $group: {
+                    _id: "$ad_id",
+                    entity_name: { $first: "$ad_name" },
+                    total_spend: { $sum: "$spend" },
+                    avg_ctr: { $avg: "$ctr" },
+                    avg_cpc: { $avg: "$cpc" },
+                    total_clicks: { $sum: "$clicks" },
+                  },
+                },
+                { $sort: { [sortField]: -1 } },
+                { $limit: limit || 5 },
+              ]);
+              
+              // Map ad_id back to external_id
+              results = resultsFromSnapshot.map(r => {
+                const ad = adMap.get(r._id.toString());
+                return {
+                  ...r,
+                  _id: ad?.external_id || r._id.toString(),
+                  entity_name: ad?.name || r.entity_name,
+                };
+              });
+            }
+          }
+        }
 
         writer?.(`✅ Tìm thấy ${results.length} ${entity_type || "campaign"}`);
 

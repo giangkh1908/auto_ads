@@ -16,8 +16,7 @@ export const startAnalyticsSnapshotCron = () => {
       const activeAccounts = await AdsAccount.find({
         status: "ACTIVE",
       })
-        .select("_id external_id name shop_admin_id")
-        .populate({ path: "shop_admin_id", select: "+facebookAccessToken" })
+        .select("_id external_id name")
         .lean();
 
       const { eligibleAccounts, skippedAccounts } = await filterAccountsByFeature(
@@ -56,12 +55,6 @@ export const startAnalyticsSnapshotCron = () => {
         try {
           const result = await syncAnalyticsSnapshots(account);
           
-          // Stop processing if rate limit reached
-          if (result.rateLimited) {
-            console.warn(`[${accountStartTime}] ⚠️ Rate limit reached, stopping sync for remaining accounts`);
-            break;
-          }
-          
           totalSynced += result.synced;
           totalErrors += result.errors;
 
@@ -76,9 +69,9 @@ export const startAnalyticsSnapshotCron = () => {
           totalErrors++;
         }
 
-        // Rate limit protection: wait 2 seconds between accounts
+        // Small delay to avoid overwhelming DB (aggregation is fast, but still good practice)
         if (i < eligibleAccounts.length - 1) {
-          await delay(2000);
+          await delay(500); // Reduced from 2000ms since we're only aggregating from DB
         }
       }
 

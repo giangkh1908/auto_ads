@@ -46,7 +46,7 @@ async function* fetchPagedEntities(url, accessToken, params = {}) {
 
       yield data;
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Increased delay to 500ms to reduce rate limit
 
       const next = response.data?.paging?.next;
       const cursors = response.data?.paging?.cursors;
@@ -283,10 +283,10 @@ export async function syncEntitiesForAccount(accountExternalId, accessToken) {
 
   try {
     await syncCampaignsWithPagination(account, accessToken);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased delay to 2 seconds
     
     await syncAdSetsWithPagination(account, accessToken);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased delay to 2 seconds
     
     await syncAdsWithPagination(account, accessToken);
 

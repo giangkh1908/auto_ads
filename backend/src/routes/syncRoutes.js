@@ -45,15 +45,84 @@ router.post("/entities", async (req, res) => {
       });
     }
 
+    if (account.sync_metadata?.entities_status === "syncing") {
+      return res.status(409).json({
+        success: false,
+        message: "Đang đồng bộ dữ liệu. Vui lòng chờ hoàn tất trước khi đồng bộ lại.",
+        alreadySyncing: true,
+      });
+    }
+
     await syncEntitiesForAccount(accountId, accessToken);
 
     return res.json({ success: true });
   } catch (err) {
     console.error("[sync/entities] Error:", err);
+    console.error("[sync/entities] Error details:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+      errorCode: err.response?.data?.error?.code,
+      errorType: err.response?.data?.error?.type,
+      errorMessage: err.response?.data?.error?.message,
+    });
+
+    const fbError = err.response?.data?.error;
+
+    if (fbError?.code === 190) {
+      return res.status(401).json({
+        success: false,
+        message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+        error: fbError.message || err.message,
+        tokenExpired: true,
+      });
+    }
+
+    if (fbError?.code === 10) {
+      return res.status(403).json({
+        success: false,
+        message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
+        error: fbError.message || err.message,
+        permissionDenied: true,
+      });
+    }
+
+    if (fbError?.code === 17 || fbError?.code === 4) {
+      return res.status(429).json({
+        success: false,
+        message: fbError?.error_user_msg || "Đã vượt quá giới hạn số lượng request. Vui lòng chờ một chút và thử lại.",
+        error: fbError?.message || err.message,
+        rateLimitReached: true,
+        fbErrorCode: fbError?.code,
+        fbErrorType: fbError?.type,
+        retryAfter: fbError?.error_subcode === 2446079 ? 60 : 30,
+      });
+    }
+
+    if (fbError?.code === 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Tham số không hợp lệ. Vui lòng kiểm tra lại account ID.",
+        error: fbError.message || err.message,
+        invalidParameter: true,
+      });
+    }
+
+    if (err.response?.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: fbError?.error_user_msg || fbError?.message || "Lỗi từ Facebook API",
+        error: fbError?.message || err.message,
+        fbErrorCode: fbError?.code,
+        fbErrorType: fbError?.type,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Failed to trigger entity sync",
-      error: err.message,
+      error: fbError?.message || err.message,
+      fbErrorCode: fbError?.code,
     });
   }
 });

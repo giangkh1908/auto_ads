@@ -148,12 +148,17 @@ function AdsManagement() {
     }
   };
 
-  // Sync data when account changes
+  // Sync data when account changes (only when account changes, not when cache changes)
+  const syncDataRef = useRef(syncData);
+  useEffect(() => {
+    syncDataRef.current = syncData;
+  }, [syncData]);
+
   useEffect(() => {
     if (selectedAccountId && initialized) {
-      syncData(selectedAccountId);
+      syncDataRef.current(selectedAccountId);
     }
-  }, [selectedAccountId, initialized, syncData]);
+  }, [selectedAccountId, initialized]);
 
   // Cleanup AbortController
   useEffect(() => {
