@@ -50,11 +50,21 @@ export async function syncAnalyticsSnapshots(account) {
     const adIds = allAds.filter(ad => ad?._id).map(ad => ad._id);
     console.log(`[analyticsSnapshotService] 📊 Aggregating metrics from AdPerformance for ${adIds.length} ads...`);
     
+    // ✅ THÊM: Filter date range để loại bỏ data sai (future dates hoặc quá cũ)
+    const today = new Date();
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(today.getFullYear() - 2);
+    
     const performanceData = await AdPerformance.aggregate([
       {
         $match: {
           ads_id: { $in: adIds },
-          account_id: account._id
+          // ✅ Bỏ account_id filter vì ads đã được filter theo account rồi
+          // ✅ THÊM: Chỉ lấy data trong 2 năm gần nhất và không phải tương lai
+          date: {
+            $gte: twoYearsAgo,
+            $lte: today
+          }
         }
       },
       {

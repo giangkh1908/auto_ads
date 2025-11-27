@@ -14,7 +14,7 @@ function buildChunks(startDate, endDate) {
   while (currentStart <= end) {
     const chunkStart = new Date(currentStart);
     const chunkEnd = new Date(currentStart);
-    chunkEnd.setDate(chunkEnd.getDate() + 29);
+    chunkEnd.setDate(chunkEnd.getDate() + 6); // ✅ 7 ngày (0-6 = 7 ngày)
     if (chunkEnd > end) {
       chunkEnd.setTime(end.getTime());
     }
@@ -24,7 +24,7 @@ function buildChunks(startDate, endDate) {
       end: getDateString(chunkEnd),
     });
 
-    currentStart.setDate(currentStart.getDate() + 30);
+    currentStart.setDate(currentStart.getDate() + 7); // ✅ Move to next 7-day chunk
   }
 
   return chunks;

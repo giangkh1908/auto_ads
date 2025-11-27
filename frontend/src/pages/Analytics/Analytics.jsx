@@ -168,6 +168,15 @@ function Analytics() {
   useEffect(() => {
     if (selectedAccount) {
       fetchAds();
+
+      // ✅ THÊM: Auto-sync lần đầu để đảm bảo data mới nhất
+      // (vì AnalyticsSnapshot chỉ sync daily lúc 4 AM)
+      const hasAutoSynced = sessionStorage.getItem(`analytics_synced_${selectedAccount}`);
+      if (!hasAutoSynced) {
+        console.log(`[Analytics] Auto-syncing snapshots for account ${selectedAccount}...`);
+        syncAnalytics();
+        sessionStorage.setItem(`analytics_synced_${selectedAccount}`, 'true');
+      }
     }
   }, [selectedAccount]);
 

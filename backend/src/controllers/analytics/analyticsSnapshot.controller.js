@@ -105,6 +105,16 @@ export async function syncAnalyticsSnapshotsCtrl(req, res) {
 
     const result = await syncAnalyticsSnapshots(account);
 
+    if (result.rateLimited) {
+      return res.status(429).json({
+        message: "Đã vượt quá giới hạn số lượng request. Vui lòng chờ một chút và thử lại.",
+        synced: result.synced,
+        errors: result.errors,
+        rateLimitReached: true,
+        retryAfter: 60,
+      });
+    }
+
     return res.status(200).json({
       message: "Sync completed",
       synced: result.synced,
@@ -112,6 +122,18 @@ export async function syncAnalyticsSnapshotsCtrl(req, res) {
     });
   } catch (error) {
     console.error("Sync Analytics Snapshots error:", error);
+    
+    const fbError = error.response?.data?.error;
+    if (fbError?.code === 17 || fbError?.code === 4) {
+      return res.status(429).json({
+        message: fbError?.error_user_msg || "Đã vượt quá giới hạn số lượng request. Vui lòng chờ một chút và thử lại.",
+        synced: 0,
+        errors: 1,
+        rateLimitReached: true,
+        retryAfter: 60,
+      });
+    }
+
     return res.status(500).json({
       message: "Error syncing analytics snapshots",
       error: error.message,
