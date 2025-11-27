@@ -180,13 +180,10 @@ export const useShopPackage = () => {
 
   const hasFeature = (feature) => {
     if (!shopPkg || !shopPkg.package) {
-      console.log("hasFeature - shopPkg is null or package is null", { shopPkg, feature });
       return false;
     }
     const features = shopPkg.package.features || [];
-    const hasIt = features.includes(feature);
-    console.log("hasFeature check:", { feature, features, hasIt, shopPkg });
-    return hasIt;
+    return features.includes(feature);
   };
 
   const refetch = async () => {

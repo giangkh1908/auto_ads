@@ -5,7 +5,6 @@ import DateRangePicker from "../../../components/common/DateRangePicker/DateRang
 import { useTranslation } from "react-i18next";
 import { useShopPackage } from "../../../hooks/useShopPackage";
 import { toast } from "sonner";
-import { useEffect } from "react";
 
 /**
  * Toolbar component for Ads Management
@@ -26,13 +25,6 @@ export default function AdsToolbar({
   const navigate = useNavigate();
   const { hasFeature, shopPkg, loading: pkgLoading } = useShopPackage();
   const hasAdsAutoRun = hasFeature("ads_auto_run");
-  
-  // Debug logging
-  useEffect(() => {
-    console.log("AdsToolbar - shopPkg:", shopPkg);
-    console.log("AdsToolbar - hasAdsAutoRun:", hasAdsAutoRun);
-    console.log("AdsToolbar - pkgLoading:", pkgLoading);
-  }, [shopPkg, hasAdsAutoRun, pkgLoading]);
 
   return (
     <div className="ads-toolbar">

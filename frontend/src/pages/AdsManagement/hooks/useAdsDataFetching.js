@@ -28,46 +28,123 @@ export function useAdsDataFetching(
 ) {
   const cacheRef = useRef(cache);
   const datasetsRef = useRef(datasets);
+  const setDatasetsRef = useRef(setDatasets);
 
   // Update refs when state changes
   useEffect(() => {
     cacheRef.current = cache;
     datasetsRef.current = datasets;
-  }, [cache, datasets]);
+    setDatasetsRef.current = setDatasets;
+  }, [cache, datasets, setDatasets]);
 
   /**
    * Fetch insights in batches
    */
-  const fetchInsightsBatch = useCallback(async (entityIds, endpoint) => {
+  const fetchInsightsBatch = useCallback(async (entityIds, endpoint, signal = null) => {
     if (!entityIds.length) return {};
     
     const insightsMap = {};
     try {
       for (let i = 0; i < entityIds.length; i += BATCH_SIZE) {
-        const batch = entityIds.slice(i, i + BATCH_SIZE);
-        const { data: ins } = await axiosInstance.get(
-          `${endpoint}?ids=${batch.join(',')}`
-        );
-        if (ins?.items?.length) {
-          ins.items.forEach(it => {
-            insightsMap[it.id] = it.insights || {};
-          });
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
         }
+        
+        const batch = entityIds.slice(i, i + BATCH_SIZE);
+        try {
+          const { data: ins } = await axiosInstance.get(
+            `${endpoint}?ids=${batch.join(',')}`,
+            { signal }
+          );
+          if (ins?.items?.length) {
+            ins.items.forEach(it => {
+              if (it.id && it.insights) {
+                insightsMap[it.id] = it.insights || {};
+              }
+            });
+          }
+        } catch (batchError) {
+          // Nếu batch request fail (rate limit, GraphBatchException), skip batch này
+          // Không throw để tiếp tục với các batch khác
+          const errorData = batchError.response?.data;
+          const fbError = errorData?.detail?.error || errorData?.error;
+          
+          if (fbError?.type === 'GraphBatchException' || 
+              fbError?.code === 4 || 
+              fbError?.code === 17 ||
+              fbError?.code === 100) {
+            // Skip batch này, tiếp tục với batch tiếp theo (không log để tránh spam)
+            continue;
+          }
+          // Nếu là lỗi khác, skip batch này nhưng không log
+          if (batchError.name === 'AbortError' || batchError.name === 'CanceledError') {
+            throw batchError;
+          }
+          // Skip batch này, tiếp tục
+          continue;
+        }
+        
         // Delay between batches to avoid rate limit
         if (i + BATCH_SIZE < entityIds.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 100)); // Tăng delay lên 100ms
         }
       }
     } catch (e) {
-      console.warn(`${endpoint} insights fetch failed`, e);
+      if (e.name === 'AbortError' || e.name === 'CanceledError') {
+        throw e;
+      }
+      // Không log error ở đây vì đã handle trong loop
     }
     return insightsMap;
   }, []);
 
   /**
+   * Fetch insights for visible items only (lazy load)
+   */
+  const fetchInsightsForVisibleItems = useCallback(async (
+    visibleItems,
+    endpoint,
+    signal = null
+  ) => {
+    if (!visibleItems || visibleItems.length === 0) return {};
+    
+    const entityIds = visibleItems
+      .filter(item => {
+        // Chỉ fetch insights cho items chưa có insights hoặc insights rỗng
+        return item.external_id && (!item.insights || Object.keys(item.insights || {}).length === 0);
+      })
+      .map(item => item.external_id)
+      .filter(Boolean);
+    
+    if (entityIds.length === 0) return {};
+    
+    const insightsMap = await fetchInsightsBatch(entityIds, endpoint, signal);
+    
+    // Update datasets với insights mới
+    if (Object.keys(insightsMap).length > 0) {
+      setDatasetsRef.current(prev => {
+        const key = endpoint.includes('/ads/insights') ? 'ads' : 
+                   endpoint.includes('/adsets/insights') ? 'adsets' : 'campaigns';
+        
+        return {
+          ...prev,
+          [key]: prev[key].map(item => {
+            if (insightsMap[item.external_id]) {
+              return mergeInsights(item, insightsMap[item.external_id]);
+            }
+            return item;
+          }),
+        };
+      });
+    }
+    
+    return insightsMap;
+  }, [fetchInsightsBatch]);
+
+  /**
    * Fetch campaigns for account
    */
-  const fetchCampaignsForAccount = useCallback(async (accountId) => {
+  const fetchCampaignsForAccount = useCallback(async (accountId, signal = null) => {
     if (!accountId) return;
     
     try {
@@ -75,8 +152,11 @@ export function useAdsDataFetching(
         params: {
           account_id: accountId,
           fetch_all: true
-        }
+        },
+        signal
       });
+      
+      if (signal?.aborted) return;
       
       if (response.data) {
         const { items } = response.data;
@@ -90,17 +170,38 @@ export function useAdsDataFetching(
         }
         
         const mapped = items.map(transformCampaign);
-        const campaignIds = mapped.map((c) => c.external_id).filter(Boolean);
-        const insightsMap = await fetchInsightsBatch(campaignIds, '/api/campaigns/insights');
         
-        const merged = mapped.map((c) => mergeInsights(c, insightsMap[c.external_id] || {}));
-        
+        // Progressive loading: Hiển thị data ngay, insights load sau
         setDatasets(prev => ({
           ...prev,
-          campaigns: merged,
+          campaigns: mapped,
         }));
+        
+        // Fetch insights async (không block UI)
+        const campaignIds = mapped.map((c) => c.external_id).filter(Boolean);
+        if (campaignIds.length > 0) {
+          fetchInsightsBatch(campaignIds, '/api/campaigns/insights', signal)
+            .then(insightsMap => {
+              if (signal?.aborted) return;
+              
+              setDatasets(prev => ({
+                ...prev,
+                campaigns: prev.campaigns.map(c => 
+                  mergeInsights(c, insightsMap[c.external_id] || {})
+                ),
+              }));
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+                console.warn('Campaigns insights fetch failed, but data is displayed', err);
+              }
+            });
+        }
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error("Error fetching campaigns:", error);
     }
   }, [fetchInsightsBatch, setDatasets]);
@@ -108,7 +209,7 @@ export function useAdsDataFetching(
   /**
    * Fetch adsets for campaign
    */
-  const fetchAdsetsForCampaign = useCallback(async (campaignId, accountId) => {
+  const fetchAdsetsForCampaign = useCallback(async (campaignId, accountId, signal = null) => {
     if (!campaignId || !accountId) return;
     
     const cacheKey = getCacheKey(accountId, 'adsets', campaignId);
@@ -133,8 +234,11 @@ export function useAdsDataFetching(
         params: {
           campaign_id: campaignId,
           fetch_all: true
-        }
+        },
+        signal
       });
+      
+      if (signal?.aborted) return;
       
       if (response.data) {
         const { items } = response.data;
@@ -148,26 +252,53 @@ export function useAdsDataFetching(
         }
         
         const mapped = items.map((adset) => transformAdset(adset, campaignId));
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        const insightsMap = await fetchInsightsBatch(adsetIds, '/api/adsets/insights');
         
-        const merged = mapped.map((a) => mergeInsights(a, insightsMap[a.external_id] || {}));
-        
-        // Merge: Keep adsets from other campaigns, only update this campaign
+        // Progressive loading: Hiển thị data ngay, insights load sau
         setDatasets((prev) => {
           const otherAdsets = prev.adsets.filter(
             a => String(a.campaignId) !== String(campaignId)
           );
           return {
             ...prev,
-            adsets: [...otherAdsets, ...merged]
+            adsets: [...otherAdsets, ...mapped]
           };
         });
+        
+        // Fetch insights async (không block UI)
+        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
+        if (adsetIds.length > 0) {
+          fetchInsightsBatch(adsetIds, '/api/adsets/insights', signal)
+            .then(insightsMap => {
+              if (signal?.aborted) return;
+              
+              setDatasets((prev) => {
+                const otherAdsets = prev.adsets.filter(
+                  a => String(a.campaignId) !== String(campaignId)
+                );
+                const updatedAdsets = prev.adsets
+                  .filter(a => String(a.campaignId) === String(campaignId))
+                  .map(a => mergeInsights(a, insightsMap[a.external_id] || {}));
+                
+                return {
+                  ...prev,
+                  adsets: [...otherAdsets, ...updatedAdsets]
+                };
+              });
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+                console.warn('Adsets insights fetch failed, but data is displayed', err);
+              }
+            });
+        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error("Error fetching adsets:", error);
     }
   }, [fetchInsightsBatch, setDatasets, setCache]);
@@ -175,7 +306,7 @@ export function useAdsDataFetching(
   /**
    * Fetch ads for adset
    */
-  const fetchAdsForAdset = useCallback(async (adsetId, accountId = null) => {
+  const fetchAdsForAdset = useCallback(async (adsetId, accountId = null, signal = null) => {
     if (!adsetId) return;
     
     const cacheKey = getCacheKey(accountId, 'ads', adsetId);
@@ -201,8 +332,11 @@ export function useAdsDataFetching(
           adset_id: adsetId,
           ...(accountId && { account_id: accountId }),
           fetch_all: true
-        }
+        },
+        signal
       });
+      
+      if (signal?.aborted) return;
       
       if (response.data) {
         const { items } = response.data;
@@ -215,30 +349,57 @@ export function useAdsDataFetching(
           console.log(`📊 Backend returned ads by status:`, statusCount);
         }
         
-        const mapped = items.map((ad) => transformAd(ad, adsetId));
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        const insightsMap = await fetchInsightsBatch(adIds, '/api/ads/insights');
-        
-        const merged = mapped.map((a) => ({
-          ...mergeInsights(a, insightsMap[a.external_id] || {}),
-          updated_at: a.updated_at || a.updatedAt,
+        const mapped = items.map((ad) => ({
+          ...transformAd(ad, adsetId),
+          updated_at: ad.updated_at || ad.updatedAt,
         }));
         
-        // Merge: Keep ads from other adsets, only update this adset
+        // Progressive loading: Hiển thị data ngay, insights load sau
         setDatasets((prev) => {
           const otherAds = prev.ads.filter(
             a => String(a.adsetId) !== String(adsetId)
           );
           return {
             ...prev,
-            ads: [...otherAds, ...merged]
+            ads: [...otherAds, ...mapped]
           };
         });
+        
+        // Fetch insights async (không block UI)
+        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
+        if (adIds.length > 0) {
+          fetchInsightsBatch(adIds, '/api/ads/insights', signal)
+            .then(insightsMap => {
+              if (signal?.aborted) return;
+              
+              setDatasets((prev) => {
+                const otherAds = prev.ads.filter(
+                  a => String(a.adsetId) !== String(adsetId)
+                );
+                const updatedAds = prev.ads
+                  .filter(a => String(a.adsetId) === String(adsetId))
+                  .map(a => mergeInsights(a, insightsMap[a.external_id] || {}));
+                
+                return {
+                  ...prev,
+                  ads: [...otherAds, ...updatedAds]
+                };
+              });
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+                console.warn('Ads insights fetch failed, but data is displayed', err);
+              }
+            });
+        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error("Error fetching ads:", error);
     }
   }, [fetchInsightsBatch, setDatasets, setCache]);
@@ -246,7 +407,7 @@ export function useAdsDataFetching(
   /**
    * Fetch all adsets for account
    */
-  const fetchAllAdsetsForAccount = useCallback(async (accountId) => {
+  const fetchAllAdsetsForAccount = useCallback(async (accountId, signal = null) => {
     if (!accountId) return;
     
     const cacheKey = getCacheKey(accountId, 'adsets');
@@ -269,8 +430,11 @@ export function useAdsDataFetching(
         params: {
           account_id: accountId,
           fetch_all: true
-        }
+        },
+        signal
       });
+      
+      if (signal?.aborted) return;
       
       if (response.data) {
         const { items } = response.data;
@@ -284,20 +448,41 @@ export function useAdsDataFetching(
         }
         
         const mapped = items.map((adset) => transformAdset(adset));
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        const insightsMap = await fetchInsightsBatch(adsetIds, '/api/adsets/insights');
         
-        const merged = mapped.map((a) => mergeInsights(a, insightsMap[a.external_id] || {}));
-        
+        // Progressive loading: Hiển thị data ngay, insights load sau
         setDatasets((prev) => ({
           ...prev,
-          adsets: merged,
+          adsets: mapped,
         }));
+        
+        // Fetch insights async (không block UI)
+        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
+        if (adsetIds.length > 0) {
+          fetchInsightsBatch(adsetIds, '/api/adsets/insights', signal)
+            .then(insightsMap => {
+              if (signal?.aborted) return;
+              
+              setDatasets((prev) => ({
+                ...prev,
+                adsets: prev.adsets.map(a => 
+                  mergeInsights(a, insightsMap[a.external_id] || {})
+                ),
+              }));
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+                console.warn('Adsets insights fetch failed, but data is displayed', err);
+              }
+            });
+        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error("Error fetching adsets:", error);
     }
   }, [fetchInsightsBatch, setDatasets, setCache]);
@@ -305,7 +490,7 @@ export function useAdsDataFetching(
   /**
    * Fetch all ads for account
    */
-  const fetchAllAdsForAccount = useCallback(async (accountId) => {
+  const fetchAllAdsForAccount = useCallback(async (accountId, signal = null) => {
     if (!accountId) return;
     
     const cacheKey = getCacheKey(accountId, 'ads');
@@ -328,8 +513,11 @@ export function useAdsDataFetching(
         params: {
           account_id: accountId,
           fetch_all: true
-        }
+        },
+        signal
       });
+      
+      if (signal?.aborted) return;
       
       if (response.data) {
         if (response.data.status === "initial_sync") {
@@ -361,21 +549,42 @@ export function useAdsDataFetching(
           console.log(`📊 Backend returned ads by status:`, statusCount);
         }
         
-        const mapped = items.map((ad) => transformAd(ad));
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        const insightsMap = await fetchInsightsBatch(adIds, '/api/ads/insights');
-        
-        const merged = mapped.map((a) => ({
-          ...mergeInsights(a, insightsMap[a.external_id] || {}),
-          updated_at: a.updated_at || a.updatedAt,
+        const mapped = items.map((ad) => ({
+          ...transformAd(ad),
+          updated_at: ad.updated_at || ad.updatedAt,
         }));
         
-        setDatasets((prev) => ({ ...prev, ads: merged }));
+        // Progressive loading: Hiển thị data ngay, insights load sau
+        setDatasets((prev) => ({ ...prev, ads: mapped }));
+        
+        // Fetch insights async (không block UI)
+        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
+        if (adIds.length > 0) {
+          fetchInsightsBatch(adIds, '/api/ads/insights', signal)
+            .then(insightsMap => {
+              if (signal?.aborted) return;
+              
+              setDatasets((prev) => ({
+                ...prev,
+                ads: prev.ads.map(a => 
+                  mergeInsights(a, insightsMap[a.external_id] || {})
+                ),
+              }));
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+                console.warn('Ads insights fetch failed, but data is displayed', err);
+              }
+            });
+        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error("Error fetching ads:", error);
     }
   }, [fetchInsightsBatch, setDatasets, setCache]);
@@ -386,6 +595,7 @@ export function useAdsDataFetching(
     fetchAdsForAdset,
     fetchAllAdsetsForAccount,
     fetchAllAdsForAccount,
+    fetchInsightsForVisibleItems,
   };
 }
 

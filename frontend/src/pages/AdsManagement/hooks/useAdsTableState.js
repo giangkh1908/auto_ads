@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { getFilteredRows } from "../services/adsDataService";
 
 /**
@@ -15,6 +15,10 @@ export function useAdsTableState(datasets, activeTab, selectedCampaign, selected
 
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("");
+  
+  // Use ref to track previous values to avoid infinite loops
+  const prevLimitRef = useRef(pagination.limit);
+  const prevActiveTabRef = useRef(activeTab);
 
   // Get filtered and sorted rows
   const filteredRows = useMemo(() => {
@@ -35,14 +39,12 @@ export function useAdsTableState(datasets, activeTab, selectedCampaign, selected
     }));
   }, [filteredRows.length, pagination.limit]);
 
-  // Reset page when limit changes
-  useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-  }, [pagination.limit]);
-
   // Reset page when tab changes
   useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
+    if (prevActiveTabRef.current !== activeTab) {
+      prevActiveTabRef.current = activeTab;
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
   }, [activeTab]);
 
   // Get paginated rows
@@ -57,6 +59,7 @@ export function useAdsTableState(datasets, activeTab, selectedCampaign, selected
   };
 
   const handleItemsPerPageChange = (limit) => {
+    prevLimitRef.current = limit;
     setPagination(prev => ({ ...prev, page: 1, limit }));
   };
 
