@@ -121,10 +121,10 @@ const startServer = async () => {
     await connectDB();
 
     startAutoRuleScheduler();
-    startAdHourlyInsightsCron();
-    startAnalyticsSnapshotCron();
+    // startAdHourlyInsightsCron();
+    // startAnalyticsSnapshotCron();
     startCancelExpiredPaymentsCron();
-    startSyncCronJobs();
+    // startSyncCronJobs();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
