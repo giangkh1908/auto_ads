@@ -7,6 +7,7 @@ import leadService from "../../../../services/leadService";
 import { useToast } from "../../../../hooks/useToast";
 import { useAuth } from "../../../../hooks/useAuth";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
+import Pagination from "../../../../components/common/Pagination/Pagination";
 
 // Format date từ ISO string sang dd/mm/yyyy HH:mm:ss
 const formatDate = (dateString) => {
@@ -40,13 +41,19 @@ export default function LeadPage() {
   const [status, setStatus] = useState(t("common.all"));
   const [assignedStatus, setAssignedStatus] = useState(t("common.all"));
   const [dateRange, setDateRange] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
   const toast = useToast();
   const { user } = useAuth();
   const currentUserId = user?._id || user?.id;
 
   const STATUSES = useMemo(() => [t("common.all"), t("leadPage.statuses.new"), t("leadPage.statuses.contacted")], [t]);
   const ASSIGNED_STATUSES = useMemo(() => [t("common.all"), t("common.assigned"), t("common.unassigned")], [t]);
-  
+
   // Track previous search và filters để phân biệt thay đổi
   // Khởi tạo với null để detect lần mount đầu tiên
   const prevSearchRef = useRef(null);
@@ -76,7 +83,6 @@ export default function LeadPage() {
           }
         }
       }
-
       // Map UI status back to DB status for API
       const getDbStatus = (uiStatus) => {
         if (uiStatus === t("leadPage.statuses.new")) return "new";
@@ -90,12 +96,12 @@ export default function LeadPage() {
         assigned_status: assignedStatus !== t("common.all") ? (assignedStatus === t("common.assigned") ? "assigned" : "unassigned") : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-        page: 1,
-        limit: 1000, // Lấy tất cả để filter ở frontend
+        page: pagination.page,
+        limit: pagination.limit,
       };
 
       const response = await leadService.getLeads(params);
-      
+
       if (response.success) {
         setRawLeads(response.data);
         // Map dữ liệu từ DB format sang UI format
@@ -117,6 +123,11 @@ export default function LeadPage() {
           _raw: lead, // Lưu raw data để update
         }));
         setRows(mappedLeads);
+        setPagination(prev => ({
+          ...prev,
+          total: response.total,
+          totalPages: response.pages
+        }));
       } else {
         toast.error(response.message || t("leadPage.messages.fetchError"));
       }
@@ -129,12 +140,12 @@ export default function LeadPage() {
 
   // Lấy user ID để track thay đổi (tránh trigger khi user object reference thay đổi)
   const userId = useMemo(() => user?._id || user?.id || null, [user?._id, user?.id]);
-  
+
   // Tạo một dependency key duy nhất để track khi nào cần fetch
   // Chỉ thay đổi khi user ID thay đổi hoặc filter/search thay đổi
-  const filtersKey = useMemo(() => 
-    `${status}|${assignedStatus}|${dateRange}|${search}`,
-    [status, assignedStatus, dateRange, search]
+  const filtersKey = useMemo(() =>
+    `${status}|${assignedStatus}|${dateRange}|${search}|${pagination.page}|${pagination.limit}`,
+    [status, assignedStatus, dateRange, search, pagination.page, pagination.limit]
   );
 
   // Gộp tất cả logic fetch vào 1 useEffect với debounce thông minh
@@ -152,7 +163,7 @@ export default function LeadPage() {
 
     // Kiểm tra xem user ID có thay đổi không
     const isUserIdChanged = prevUserIdRef.current !== userId;
-    
+
     // Lưu filters key hiện tại để so sánh
     const currentFiltersKey = filtersKey;
 
@@ -161,7 +172,7 @@ export default function LeadPage() {
       // Cập nhật refs
       prevUserIdRef.current = userId;
       prevSearchRef.current = search;
-      prevFiltersRef.current = { status, assignedStatus, dateRange };
+      prevFiltersRef.current = { status, assignedStatus, dateRange, page: pagination.page, limit: pagination.limit };
       isMountedRef.current = true;
       // Gọi ngay lập tức (không debounce) khi user ID thay đổi
       fetchLeads();
@@ -172,7 +183,7 @@ export default function LeadPage() {
     // Kiểm tra xem có phải search thay đổi không
     const isSearchChange = prevSearchRef.current !== search;
     // Kiểm tra xem có filter nào thay đổi không bằng cách so sánh filtersKey
-    const prevFiltersKey = `${prevFiltersRef.current?.status}|${prevFiltersRef.current?.assignedStatus}|${prevFiltersRef.current?.dateRange}|${prevSearchRef.current}`;
+    const prevFiltersKey = `${prevFiltersRef.current?.status}|${prevFiltersRef.current?.assignedStatus}|${prevFiltersRef.current?.dateRange}|${prevSearchRef.current}|${prevFiltersRef.current?.page}|${prevFiltersRef.current?.limit}`;
     const hasFilterChange = prevFiltersKey !== currentFiltersKey;
 
     // Nếu không có thay đổi gì, không gọi API
@@ -182,7 +193,7 @@ export default function LeadPage() {
 
     // Cập nhật ref TRƯỚC KHI set timeout để tránh race condition
     prevSearchRef.current = search;
-    prevFiltersRef.current = { status, assignedStatus, dateRange };
+    prevFiltersRef.current = { status, assignedStatus, dateRange, page: pagination.page, limit: pagination.limit };
 
     // Debounce 500ms chỉ cho search, không debounce cho filter khác
     // Nếu chỉ filter thay đổi (không phải search), gọi ngay lập tức
@@ -218,8 +229,8 @@ export default function LeadPage() {
       }));
       setRows(mappedLeads);
       // Reset filters về "All" khi đổi ngôn ngữ
-      setStatus(t("common.all"));
-      setAssignedStatus(t("common.all"));
+      // setStatus(t("common.all"));
+      // setAssignedStatus(t("common.all"));
     }
   }, [i18n.language, rawLeads, t, user]);
 
@@ -227,27 +238,33 @@ export default function LeadPage() {
     <div className="cs-lead-page">
       <div className="cs-lead-toolbar">
         <div className="cs-lead-toolbar-left">
-        <div className="cs-lead-filter-group">
+          <div className="cs-lead-filter-group">
             <label className="cs-lead-filter-label">{t("leadPage.search")}</label>
-          <div className="cs-lead-search">
-            <input
-              className="cs-lead-search-input"
-              placeholder={t("leadPage.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <span className="cs-lead-search-icon">
-              <Search size={16} />
-            </span>
+            <div className="cs-lead-search">
+              <input
+                className="cs-lead-search-input"
+                placeholder={t("leadPage.searchPlaceholder")}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
+              />
+              <span className="cs-lead-search-icon">
+                <Search size={16} />
+              </span>
+            </div>
           </div>
-        </div>
           <div className="cs-lead-filter-group">
             <label className="cs-lead-filter-label">{t("leadPage.status")}</label>
             <div className="cs-lead-select-wrapper">
               <select
                 className="cs-lead-status-select"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -265,7 +282,10 @@ export default function LeadPage() {
               <select
                 className="cs-lead-assigned-select"
                 value={assignedStatus}
-                onChange={(e) => setAssignedStatus(e.target.value)}
+                onChange={(e) => {
+                  setAssignedStatus(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
               >
                 {ASSIGNED_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -281,7 +301,10 @@ export default function LeadPage() {
             <label className="cs-lead-filter-label">{t("leadPage.dateRange")}</label>
             <DateRangePicker
               value={dateRange}
-              onChange={(value) => setDateRange(value)}
+              onChange={(value) => {
+                setDateRange(value);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
               placeholder={t("leadPage.dateRangePlaceholder")}
             />
           </div>
@@ -304,150 +327,160 @@ export default function LeadPage() {
           <div className="cs-lead-empty">{t("leadPage.messages.noData")}</div>
         ) : (
           rows.map((lead) => (
-          <div className="cs-lead-row" key={lead.id}>
-            <div className="cs-lead-col cs-lead-col-name">{lead.leadName}</div>
-            <div className="cs-lead-col cs-lead-col-phone">{lead.phone}</div>
-            <div className="cs-lead-col cs-lead-col-created">
-              <div>{lead.createdAt.split(" ")[0]}</div>
-              <div className="cs-lead-sub">{lead.createdAt.split(" ")[1]}</div>
-            </div>
-            <div className="cs-lead-col cs-lead-col-status">
-              <div className="cs-lead-select-wrapper">
-                <select
-                  className="cs-lead-status-select"
-                  value={lead.status}
-                  disabled={!lead.isAssignedToMe}
-                  onChange={async (e) => {
-                    // Check ngay lập tức: chỉ cho phép nếu được assign cho user hiện tại
-                    if (!lead.isAssignedToMe) {
-                      toast.error(t("leadPage.messages.onlyAssignedCanChange"));
-                      return;
-                    }
+            <div className="cs-lead-row" key={lead.id}>
+              <div className="cs-lead-col cs-lead-col-name">{lead.leadName}</div>
+              <div className="cs-lead-col cs-lead-col-phone">{lead.phone}</div>
+              <div className="cs-lead-col cs-lead-col-created">
+                <div>{lead.createdAt.split(" ")[0]}</div>
+                <div className="cs-lead-sub">{lead.createdAt.split(" ")[1]}</div>
+              </div>
+              <div className="cs-lead-col cs-lead-col-status">
+                <div className="cs-lead-select-wrapper">
+                  <select
+                    className="cs-lead-status-select"
+                    value={lead.status}
+                    disabled={!lead.isAssignedToMe}
+                    onChange={async (e) => {
+                      // Check ngay lập tức: chỉ cho phép nếu được assign cho user hiện tại
+                      if (!lead.isAssignedToMe) {
+                        toast.error(t("leadPage.messages.onlyAssignedCanChange"));
+                        return;
+                      }
 
-                    const newStatus = e.target.value;
-                    const oldStatus = lead.status;
-                    
-                    // Optimistic update
-                    setRows((prev) =>
-                      prev.map((r) =>
-                        r.id === lead.id ? { ...r, status: newStatus } : r
-                      )
-                    );
+                      const newStatus = e.target.value;
+                      const oldStatus = lead.status;
 
-                    try {
-                      await leadService.updateLeadStatus(lead.id, newStatus);
-                      toast.success(t("leadPage.messages.updateStatusSuccess"));
-                    } catch (error) {
-                      // Revert on error
+                      // Optimistic update
                       setRows((prev) =>
                         prev.map((r) =>
-                          r.id === lead.id ? { ...r, status: oldStatus } : r
+                          r.id === lead.id ? { ...r, status: newStatus } : r
                         )
                       );
-                      const errorMessage = error.message || t("leadPage.messages.updateStatusError");
-                      toast.error(errorMessage);
-                      
-                      // Nếu lỗi là do không có quyền, reload trang
-                      if (errorMessage.includes("Chỉ người dùng được gán") || 
+
+                      try {
+                        await leadService.updateLeadStatus(lead.id, newStatus);
+                        toast.success(t("leadPage.messages.updateStatusSuccess"));
+                      } catch (error) {
+                        // Revert on error
+                        setRows((prev) =>
+                          prev.map((r) =>
+                            r.id === lead.id ? { ...r, status: oldStatus } : r
+                          )
+                        );
+                        const errorMessage = error.message || t("leadPage.messages.updateStatusError");
+                        toast.error(errorMessage);
+
+                        // Nếu lỗi là do không có quyền, reload trang
+                        if (errorMessage.includes("Chỉ người dùng được gán") ||
                           errorMessage.includes("chưa được gán") ||
                           errorMessage.includes("làm mới trang")) {
-                        setTimeout(() => {
-                          window.location.reload();
-                        }, 1500);
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 1500);
+                        }
                       }
-                    }
-                  }}
-                  title={lead.isAssignedToMe ? t("leadPage.actions.changeStatus") : t("leadPage.actions.changeStatusTooltip")}
-                >
-                  {STATUSES.filter((s) => s !== t("common.all")).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="cs-lead-select-icon" />
+                    }}
+                    title={lead.isAssignedToMe ? t("leadPage.actions.changeStatus") : t("leadPage.actions.changeStatusTooltip")}
+                  >
+                    {STATUSES.filter((s) => s !== t("common.all")).map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="cs-lead-select-icon" />
+                </div>
               </div>
-            </div>
-            <div className="cs-lead-col cs-lead-col-assigned">
-              {!lead.assignedTo ? (
-                <button
-                  className="cs-lead-assign-btn"
-                  onClick={async () => {
-                    if (!user || !currentUserId) {
-                      toast.error(t("leadPage.messages.userNotFound"));
-                      return;
-                    }
+              <div className="cs-lead-col cs-lead-col-assigned">
+                {!lead.assignedTo ? (
+                  <button
+                    className="cs-lead-assign-btn"
+                    onClick={async () => {
+                      if (!user || !currentUserId) {
+                        toast.error(t("leadPage.messages.userNotFound"));
+                        return;
+                      }
 
-                    try {
-                      await leadService.assignLead(lead.id, currentUserId);
-                      toast.success(t("leadPage.messages.assignSuccess"));
-                      // Refresh data
-                      fetchLeads();
-                    } catch (error) {
-                      const errorMessage = error.message || t("leadPage.messages.assignError");
-                      toast.error(errorMessage);
-                      
-                      // Nếu lỗi là do lead đã được assign cho user khác, reload trang
-                      if (errorMessage.includes("đã được gán cho người dùng khác") || 
+                      try {
+                        await leadService.assignLead(lead.id, currentUserId);
+                        toast.success(t("leadPage.messages.assignSuccess"));
+                        // Refresh data
+                        fetchLeads();
+                      } catch (error) {
+                        const errorMessage = error.message || t("leadPage.messages.assignError");
+                        toast.error(errorMessage);
+
+                        // Nếu lỗi là do lead đã được assign cho user khác, reload trang
+                        if (errorMessage.includes("đã được gán cho người dùng khác") ||
                           errorMessage.includes("already assigned") ||
                           errorMessage.includes("làm mới trang")) {
-                        setTimeout(() => {
-                          window.location.reload();
-                        }, 1500);
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 1500);
+                        }
                       }
-                    }
+                    }}
+                    title={t("leadPage.actions.assignTooltip")}
+                  >
+                    <UserPlus size={18} />
+                  </button>
+                ) : lead.isAssignedToMe ? (
+                  <button
+                    className="cs-lead-assign-btn cs-lead-assigned-btn"
+                    onClick={async () => {
+                      try {
+                        await leadService.assignLead(lead.id, null);
+                        toast.success(t("leadPage.messages.unassignSuccess"));
+                        // Refresh data
+                        fetchLeads();
+                      } catch (error) {
+                        toast.error(error.message || t("leadPage.messages.unassignError"));
+                      }
+                    }}
+                    title={t("leadPage.actions.unassignTooltip")}
+                  >
+                    <UserCheck size={18} />
+                  </button>
+                ) : (
+                  <span className="cs-lead-badge cs-lead-badge-assigned">
+                    {t("common.assigned")}
+                  </span>
+                )}
+              </div>
+              <div className="cs-lead-col cs-lead-col-note">
+                <NoteEditor
+                  targetType="Lead"
+                  targetId={lead.id}
+                  initialNote={lead.note || ""}
+                  noteId={lead.noteId}
+                  disabled={!lead.isAssignedToMe}
+                  disabledMessage={t("leadPage.note.disabledMessage")}
+                  onNoteSaved={(savedData) => {
+                    setRows((prev) =>
+                      prev.map((r) =>
+                        r.id === lead.id
+                          ? { ...r, note: savedData.note, noteId: savedData.noteId }
+                          : r
+                      )
+                    );
                   }}
-                  title={t("leadPage.actions.assignTooltip")}
-                >
-                  <UserPlus size={18} />
-                </button>
-              ) : lead.isAssignedToMe ? (
-                <button
-                  className="cs-lead-assign-btn cs-lead-assigned-btn"
-                  onClick={async () => {
-                    try {
-                      await leadService.assignLead(lead.id, null);
-                      toast.success(t("leadPage.messages.unassignSuccess"));
-                      // Refresh data
-                      fetchLeads();
-                    } catch (error) {
-                      toast.error(error.message || t("leadPage.messages.unassignError"));
-                    }
-                  }}
-                  title={t("leadPage.actions.unassignTooltip")}
-                >
-                  <UserCheck size={18} />
-                </button>
-              ) : (
-                <span className="cs-lead-badge cs-lead-badge-assigned">
-                  {t("common.assigned")}
-                </span>
-              )}
+                />
+              </div>
             </div>
-            <div className="cs-lead-col cs-lead-col-note">
-              <NoteEditor
-                targetType="Lead"
-                targetId={lead.id}
-                initialNote={lead.note || ""}
-                noteId={lead.noteId}
-                disabled={!lead.isAssignedToMe}
-                disabledMessage={t("leadPage.note.disabledMessage")}
-                onNoteSaved={(savedData) => {
-                  setRows((prev) =>
-                    prev.map((r) =>
-                      r.id === lead.id
-                        ? { ...r, note: savedData.note, noteId: savedData.noteId }
-                        : r
-                    )
-                  );
-                }}
-              />
-            </div>
-          </div>
-        ))
+          ))
         )}
       </div>
+
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        itemsPerPage={pagination.limit}
+        startIndex={(pagination.page - 1) * pagination.limit}
+        endIndex={Math.min(pagination.page * pagination.limit, pagination.total)}
+        onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+        onItemsPerPageChange={(limit) => setPagination(prev => ({ ...prev, limit, page: 1 }))}
+      />
     </div>
   );
 }
-

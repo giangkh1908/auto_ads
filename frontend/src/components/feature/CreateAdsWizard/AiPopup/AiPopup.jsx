@@ -1,11 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye } from 'lucide-react';
 import axiosInstance from '../../../../utils/axios';
 import { aiConfigService } from '../../../../services/aiConfigService';
 import { useToast } from '../../../../hooks/useToast';
 import PromptPreviewModal from '../PromptPreview/PromptPreviewModal';
 
-const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
+const AiPopup = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  defaultConfigId = null,
+  initialPersonalization = '',
+  initialMainKeywords = '',
+  initialSynonymousKeywords = '',
+  onPersistInputs = null,
+}) => {
   const toast = useToast();
   const [savedConfigs, setSavedConfigs] = useState([]);
   const [selectedConfigId, setSelectedConfigId] = useState(defaultConfigId || '');
@@ -25,36 +34,32 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
   const [isGeneratingKeywords, setIsGeneratingKeywords] = useState(false);
   const [showSaveConfig, setShowSaveConfig] = useState(false);
   const [configName, setConfigName] = useState('');
+  // Track if user manually changed language/tone/aiModel to preserve selections
+  const userModifiedRef = useRef(false);
 
+  
+
+  // Ensure persisted values are restored when popup opens
   useEffect(() => {
-    if (isOpen) {
-      loadConfigs();
-      if (defaultConfigId) {
-        loadConfig(defaultConfigId);
-      }
-    }
-  }, [isOpen, defaultConfigId]);
+    if (!isOpen) return;
+    setAiConfig((prev) => ({
+      ...prev,
+      personalization:
+        typeof initialPersonalization === 'string'
+          ? initialPersonalization
+          : prev.personalization,
+      mainKeywords:
+        typeof initialMainKeywords === 'string'
+          ? initialMainKeywords
+          : prev.mainKeywords,
+      synonymousKeywords:
+        typeof initialSynonymousKeywords === 'string'
+          ? initialSynonymousKeywords
+          : prev.synonymousKeywords,
+    }));
+  }, [isOpen, initialPersonalization, initialMainKeywords, initialSynonymousKeywords]);
 
-  const loadConfigs = async () => {
-    setIsLoadingConfigs(true);
-    try {
-      const response = await aiConfigService.getConfigs('own,templates');
-      if (response.success) {
-        setSavedConfigs(response.configs || []);
-        const defaultConfig = response.configs?.find(c => c.is_default);
-        if (defaultConfig && !defaultConfigId) {
-          setSelectedConfigId(defaultConfig._id);
-          loadConfig(defaultConfig._id);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading configs:', error);
-    } finally {
-      setIsLoadingConfigs(false);
-    }
-  };
-
-  const loadConfig = async (configId) => {
+  const loadConfig = useCallback(async (configId) => {
     try {
       const response = await aiConfigService.getConfig(configId);
       if (response.success && response.config) {
@@ -66,9 +71,9 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
           language: config.metadata?.language === 'vi' ? 'Tiếng Việt' : 
                    config.metadata?.language === 'en' ? 'English' : '中文',
           tone: config.metadata?.tone?.replace(/_/g, ' ') || 'Chuyên Nghiệp',
-          personalization: config.metadata?.personalization || '',
-          mainKeywords: '',
-          synonymousKeywords: '',
+          personalization: initialPersonalization || '',
+          mainKeywords: initialMainKeywords || '',
+          synonymousKeywords: initialSynonymousKeywords || '',
           aiModel: model.includes('gemini') ? 'gemini' : 'openai'
         });
       }
@@ -76,7 +81,38 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
       console.error('Error loading config:', error);
       toast.error('Không thể tải config');
     }
-  };
+  }, [toast, initialPersonalization, initialMainKeywords, initialSynonymousKeywords]);
+
+  const loadConfigs = useCallback(async () => {
+    setIsLoadingConfigs(true);
+    try {
+      const response = await aiConfigService.getConfigs('own,templates');
+      if (response.success) {
+        setSavedConfigs(response.configs || []);
+        const defaultConfig = response.configs?.find(c => c.is_default);
+        // Only auto-load default config if parent didn't provide defaultConfigId
+        // and the user hasn't manually changed language/tone/model in this popup.
+        if (defaultConfig && !defaultConfigId && !userModifiedRef.current) {
+          setSelectedConfigId(defaultConfig._id);
+          loadConfig(defaultConfig._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading configs:', error);
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  }, [defaultConfigId, loadConfig]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadConfigs();
+      // If a defaultConfigId prop exists, only load it if user hasn't modified
+      if (defaultConfigId && !userModifiedRef.current) {
+        loadConfig(defaultConfigId);
+      }
+    }
+  }, [isOpen, defaultConfigId, loadConfig, loadConfigs]);
 
   const handleConfigSelect = (e) => {
     const configId = e.target.value;
@@ -89,9 +125,9 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
       setAiConfig({
         language: 'Tiếng Việt',
         tone: 'Chuyên Nghiệp',
-        personalization: '',
-        mainKeywords: '',
-        synonymousKeywords: '',
+        personalization: initialPersonalization || '',
+        mainKeywords: initialMainKeywords || '',
+        synonymousKeywords: initialSynonymousKeywords || '',
         aiModel: 'openai'
       });
     }
@@ -138,6 +174,32 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
       toast.error('Không thể lưu config');
     }
   };
+
+  // Khi click vào tag từ khóa cùng nghĩa: chuyển từ đó lên Từ khóa chính
+  const handleSynonymClick = useCallback((keyword) => {
+    if (!keyword) return;
+    setAiConfig(prev => {
+      const prevMain = String(prev.mainKeywords || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      // Thêm nếu chưa tồn tại
+      if (!prevMain.includes(keyword)) prevMain.push(keyword);
+
+      const remaining = String(prev.synonymousKeywords || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .filter(k => k !== keyword);
+
+      return {
+        ...prev,
+        mainKeywords: prevMain.join(', '),
+        synonymousKeywords: remaining.join(', ')
+      };
+    });
+  }, []);
 
   if (!isOpen) return null;
 
@@ -212,13 +274,22 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
           ai_provider: aiConfig.aiModel
         };
     
+    // Persist latest inputs back to parent if requested
+    if (typeof onPersistInputs === 'function') {
+      onPersistInputs({
+        personalization: aiConfig.personalization,
+        mainKeywords: aiConfig.mainKeywords,
+        synonymousKeywords: aiConfig.synonymousKeywords,
+      });
+    }
+
     onConfirm(configData);
     onClose();
   };
 
   return (
-    <div className="ai-config-modal-overlay" onClick={onClose}>
-      <div className="ai-config-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="ai-config-modal-overlay">
+      <div className="ai-config-modal">
         <div className="ai-config-header">
           <h3>Auto Ads AI</h3>
           <button 
@@ -301,7 +372,10 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
             <select 
               className="ai-config-select"
               value={aiConfig.language}
-              onChange={(e) => setAiConfig(prev => ({ ...prev, language: e.target.value }))}
+              onChange={(e) => {
+                userModifiedRef.current = true;
+                setAiConfig(prev => ({ ...prev, language: e.target.value }));
+              }}
             >
               <option value="Tiếng Việt">Tiếng Việt</option>
               <option value="English">English</option>
@@ -315,7 +389,10 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
             <select 
               className="ai-config-select"
               value={aiConfig.tone}
-              onChange={(e) => setAiConfig(prev => ({ ...prev, tone: e.target.value }))}
+              onChange={(e) => {
+                userModifiedRef.current = true;
+                setAiConfig(prev => ({ ...prev, tone: e.target.value }));
+              }}
             >
               <option value="Chuyên Nghiệp">Chuyên Nghiệp</option>
               <option value="Thân Thiện">Thân Thiện</option>
@@ -330,7 +407,10 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
             <select 
               className="ai-config-select"
               value={aiConfig.aiModel}
-              onChange={(e) => setAiConfig(prev => ({ ...prev, aiModel: e.target.value }))}
+              onChange={(e) => {
+                userModifiedRef.current = true;
+                setAiConfig(prev => ({ ...prev, aiModel: e.target.value }));
+              }}
             >
               <option value="openai">OpenAI GPT-4o-mini</option>
               <option value="gemini">Google Gemini 2.5 Flash</option>
@@ -402,22 +482,29 @@ const AiPopup = ({ isOpen, onClose, onConfirm, defaultConfigId = null }) => {
               backgroundColor: '#f8f9fa'
             }}>
               {aiConfig.synonymousKeywords.split(',').filter(k => k.trim()).map((keyword, index) => (
-                <span key={index} className="keyword-tag" style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 8px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>
+                <span
+                  key={index}
+                  className="keyword-tag"
+                  onClick={() => handleSynonymClick(keyword.trim())}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
                   {keyword.trim()}
                   <button
                     className="keyword-remove"
-                    onClick={() => {
-                      const keywords = aiConfig.synonymousKeywords.split(',').filter(k => k.trim());
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const keywords = aiConfig.synonymousKeywords.split(',').map(k => k.trim()).filter(k => k);
                       keywords.splice(index, 1);
                       setAiConfig(prev => ({ ...prev, synonymousKeywords: keywords.join(', ') }));
                     }}

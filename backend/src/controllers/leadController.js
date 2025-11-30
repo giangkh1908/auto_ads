@@ -116,9 +116,9 @@ export const getLeads = async (req, res) => {
 
     // Filter theo assigned status
     if (assigned_status && assigned_status !== "All") {
-      if (assigned_status === "Assigned") {
+      if (assigned_status === "assigned") {
         filter.assigned_to = { $ne: null };
-      } else if (assigned_status === "Unassigned") {
+      } else if (assigned_status === "unassigned") {
         filter.assigned_to = null;
       }
     }
@@ -340,4 +340,3 @@ export const assignLead = async (req, res) => {
     });
   }
 };
-

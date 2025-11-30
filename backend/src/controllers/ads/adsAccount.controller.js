@@ -8,7 +8,6 @@ import {
   hardDeleteAdsAccount,
 } from "../../services/adsAccountService.js";
 import User from "../../models/user.model.js";
-import UserRole from "../../models/userRole.model.js";
 // Thêm imports
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
@@ -46,20 +45,13 @@ export async function syncAdsAccounts(req, res) {
 
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
-    
-    // Lấy shop_id từ UserRole với is_current = true
-    let shopId = null;
-    const currentUserRole = await UserRole.findOne({
-      user_id: adminUserId,
-      is_current: true,
-      shop_id: { $ne: null },
-      revoked_at: null,
-    }).lean();
-    if (currentUserRole?.shop_id) {
-      shopId = currentUserRole.shop_id;
-    }
 
-    const docs = await upsertAdAccountsFromFacebook(accessToken, { shopUserId, adminUserId, shopId });
+    // ✅ Bỏ logic lấy shop_id, chỉ cần user_id
+    const docs = await upsertAdAccountsFromFacebook(accessToken, { 
+      shopUserId, 
+      adminUserId, 
+      shopId: null 
+    });
 
     return res.status(200).json({
       message: "Đồng bộ tài khoản quảng cáo thành công",
@@ -84,7 +76,6 @@ export async function listAdsAccountsCtrl(req, res) {
     
     // Lấy thông tin user từ req.user (được set bởi middleware authenticate)
     const userId = req.user?._id || req.user?.id;
-    const shopUserId = req.user?.shop_user_id;
     
     if (!userId) {
       return res.status(401).json({ 
@@ -92,22 +83,9 @@ export async function listAdsAccountsCtrl(req, res) {
       });
     }
     
-    // Lấy shop_id từ UserRole với is_current = true (chỉ lấy accounts của current shop)
-    let shopId = null;
-    const currentUserRole = await UserRole.findOne({
-      user_id: userId,
-      is_current: true,
-      shop_id: { $ne: null },
-      revoked_at: null,
-    }).lean();
-    if (currentUserRole?.shop_id) {
-      shopId = currentUserRole.shop_id;
-    }
-    
+    // ✅ Filter trực tiếp theo userId (tìm trong array user_ids)
     const result = await listAdsAccounts({ 
       userId, 
-      shopUserId,
-      shopId, 
       q, 
       status, 
       account_status, 
@@ -346,45 +324,37 @@ export async function listFacebookAdAccountsCtrl(req, res) {
       after = resp.data?.paging?.cursors?.after || null;
     } while (after);
 
-    // Lấy current shop_id để check is_current_shop
+    // ✅ Lấy user_id để check ownership
     const userId = req.user?._id || req.user?.id;
-    let currentShopId = null;
-    if (userId) {
-      const currentUserRole = await UserRole.findOne({
-        user_id: userId,
-        is_current: true,
-        shop_id: { $ne: null },
-        revoked_at: null,
-      }).lean();
-      if (currentUserRole?.shop_id) {
-        currentShopId = currentUserRole.shop_id;
-      }
-    }
-
-    // Check xem các account đã được kết nối với shop nào chưa
+    
+    // Check xem các account đã được kết nối với user nào chưa
     const externalIds = all.map(a => a.external_id);
     const connectedAccounts = await AdsAccount.find({
       external_id: { $in: externalIds },
-      shop_id: { $ne: null }
-    }).populate('shop_id', 'shop_name').lean();
+      user_ids: { $ne: null, $exists: true, $size: { $gt: 0 } }
+    }).populate('shop_admin_id', 'username email').lean();
 
     // Tạo map để tra cứu nhanh
     const connectedMap = {};
     for (const acc of connectedAccounts) {
+      const hasAccess = acc.user_ids && acc.user_ids.some(
+        id => id.toString() === userId?.toString()
+      );
       connectedMap[acc.external_id] = {
-        shop_id: acc.shop_id?._id || acc.shop_id,
-        shop_name: acc.shop_id?.shop_name || 'Unknown Shop',
-        is_current_shop: acc.shop_id?._id?.toString() === currentShopId?.toString()
+        user_id: acc.shop_admin_id?._id || acc.shop_admin_id,
+        username: acc.shop_admin_id?.username || 'Unknown User',
+        is_current_user: hasAccess,
+        total_users: acc.user_ids?.length || 0
       };
     }
 
-    // Thêm thông tin connected_shop và can_connect vào mỗi account
+    // Thêm thông tin connected_user và can_connect vào mỗi account
     const itemsWithConnection = all.map(acc => {
       const connectedInfo = connectedMap[acc.external_id];
       return {
         ...acc,
-        connected_shop: connectedInfo || null,
-        can_connect: !connectedInfo // Có thể connect nếu chưa có shop_id
+        connected_user: connectedInfo || null,
+        can_connect: !connectedInfo || connectedInfo.is_current_user
       };
     });
 
@@ -429,34 +399,10 @@ export async function connectAdAccountCtrl(req, res) {
     });
     const fbAcc = resp.data;
 
-    // Kiểm tra xem account đã được kết nối với shop nào chưa
-    const existingAccount = await AdsAccount.findOne({
-      external_id: fbAcc.id,
-      shop_id: { $ne: null }
-    }).populate('shop_id', 'shop_name').lean();
-
-    if (existingAccount) {
-      return res.status(400).json({
-        message: `Tài khoản quảng cáo này đã được kết nối với shop "${existingAccount.shop_id?.shop_name || 'Unknown Shop'}". Mỗi tài khoản quảng cáo chỉ có thể kết nối với một shop duy nhất.`,
-        success: false
-      });
-    }
-
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
-    
-    // Lấy shop_id từ UserRole với is_current = true
-    let shopId = null;
-    const currentUserRole = await UserRole.findOne({
-      user_id: adminUserId,
-      is_current: true,
-      shop_id: { $ne: null },
-      revoked_at: null,
-    }).lean();
-    if (currentUserRole?.shop_id) {
-      shopId = currentUserRole.shop_id;
-    }
 
+    // ✅ Upsert account - Tự động thêm user vào user_ids nếu account đã tồn tại
     const saved = await upsertOneAdAccount(
       {
         id: fbAcc.id,
@@ -465,7 +411,11 @@ export async function connectAdAccountCtrl(req, res) {
         currency: fbAcc.currency,
         timezone_name: fbAcc.timezone_name,
       },
-      { shopUserId, adminUserId, shopId }
+      { 
+        shopUserId, 
+        adminUserId, 
+        shopId: null 
+      }
     );
 
     syncEntitiesForAccount(fbAcc.id, accessToken).catch(err => {

@@ -39,33 +39,190 @@ export const getPaymentTransactions = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 20,
+      limit = 25,
       status,
       user_id,
       package_id,
+      method,
+      assigned_status,
+      search,
+      startDate,
+      endDate,
     } = req.query;
 
-    const filter = { deleted_at: null };
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    if (status) filter.status = status;
-    if (user_id) filter.user_id = user_id;
-    if (package_id) filter.package_id = package_id;
+    // Build aggregation pipeline
+    const pipeline = [
+      { $match: { deleted_at: null } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "_id",
+          as: "user_id",
+        },
+      },
+      { $unwind: { path: "$user_id", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "packages",
+          localField: "package_id",
+          foreignField: "_id",
+          as: "package_id",
+        },
+      },
+      { $unwind: { path: "$package_id", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "assigned_to",
+          foreignField: "_id",
+          as: "assigned_to",
+        },
+      },
+      { $unwind: { path: "$assigned_to", preserveNullAndEmptyArrays: true } },
+    ];
 
-    const transactions = await PaymentTransaction.find(filter)
-      .populate("user_id", "_id full_name email phone facebookId")
-      .populate("package_id", "name price planType")
-      .populate("assigned_to", "_id full_name email phone")
-      .sort({ created_at: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    // Build match stage for filters
+    const matchStage = { $match: {} };
 
-    const total = await PaymentTransaction.countDocuments(filter);
+    if (status) matchStage.$match.status = status;
+    if (user_id) {
+      if (mongoose.Types.ObjectId.isValid(user_id)) {
+        matchStage.$match["user_id._id"] = new mongoose.Types.ObjectId(user_id);
+      } else {
+        matchStage.$match["user_id._id"] = user_id;
+      }
+    }
+    if (method) {
+      // Match method case-insensitively because frontend may send different casing
+      matchStage.$match.method = { $regex: `^${method}$`, $options: 'i' };
+    }
+
+    // assigned_status filter: 'assigned' | 'unassigned'
+    if (assigned_status) {
+      if (String(assigned_status).toLowerCase() === 'assigned') {
+        matchStage.$match.assigned_to = { $ne: null };
+      } else if (String(assigned_status).toLowerCase() === 'unassigned') {
+        matchStage.$match.assigned_to = null;
+      }
+    }
+
+    // Handle package_id filter
+    if (package_id) {
+      if (mongoose.Types.ObjectId.isValid(package_id)) {
+        matchStage.$match["package_id._id"] = new mongoose.Types.ObjectId(package_id);
+      } else {
+        // Find package by name (case-insensitive match)
+        const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+        const pkg = await Package.findOne({ name: { $regex: `^${escapeRegex(package_id)}$`, $options: 'i' } });
+        if (!pkg) {
+          return res.status(200).json({
+            success: true,
+            total: 0,
+            page: pageNum,
+            pages: 0,
+            data: [],
+          });
+        }
+        matchStage.$match["package_id._id"] = pkg._id;
+      }
+    }
+
+    // Handle date range - parse dd/mm/yyyy format
+    if (startDate || endDate) {
+      matchStage.$match.payment_at = {};
+      
+      const parseDate = (dateStr) => {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        // Parse dd/mm/yyyy format
+        const parts = dateStr.trim().split('/');
+        if (parts.length !== 3) return null;
+        
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+        
+        const date = new Date(year, month - 1, day);
+        return date;
+      };
+      
+      if (startDate) {
+        const start = parseDate(startDate);
+        if (start && !isNaN(start)) {
+          start.setHours(0, 0, 0, 0);
+          matchStage.$match.payment_at.$gte = start;
+        }
+      }
+      
+      if (endDate) {
+        const end = parseDate(endDate);
+        if (end && !isNaN(end)) {
+          end.setHours(23, 59, 59, 999);
+          matchStage.$match.payment_at.$lte = end;
+        }
+      }
+    }
+
+    // Handle search
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      matchStage.$match.$or = [
+        { "user_id.full_name": searchRegex },
+        { "user_id.email": searchRegex },
+        { "user_id.phone": searchRegex },
+        { "provider_ref": searchRegex },
+        { "_id": mongoose.Types.ObjectId.isValid(search) ? new mongoose.Types.ObjectId(search) : null },
+      ].filter(cond => Object.values(cond)[1] !== null);
+    }
+
+    pipeline.push(matchStage);
+
+    // Add sort and pagination
+    pipeline.push({ $sort: { created_at: -1 } });
+    
+    // Get total count before pagination
+    const countResult = await PaymentTransaction.aggregate([
+      ...pipeline.slice(0, pipeline.length - 1), // Remove sort before counting
+      { $count: "total" },
+    ]);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    // Add pagination
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limitNum });
+
+    // Project to get only needed fields
+    pipeline.push({
+      $project: {
+        _id: 1,
+        user_id: { _id: 1, full_name: 1, email: 1, phone: 1, facebookId: 1 },
+        package_id: { _id: 1, name: 1, price: 1, planType: 1 },
+        assigned_to: { _id: 1, full_name: 1, email: 1, phone: 1 },
+        status: 1,
+        method: 1,
+        amount: 1,
+        currency: 1,
+        provider_ref: 1,
+        payment_at: 1,
+        created_at: 1,
+        updated_at: 1,
+        metadata: 1,
+      },
+    });
+
+    const transactions = await PaymentTransaction.aggregate(pipeline);
 
     res.status(200).json({
       success: true,
       total,
-      page: Number(page),
-      pages: Math.ceil(total / limit),
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
       data: transactions,
     });
   } catch (error) {
@@ -73,6 +230,56 @@ export const getPaymentTransactions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Lỗi lấy danh sách giao dịch",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * 🟢 Lấy danh sách giá trị filter (packages, methods, statuses)
+ */
+export const getPaymentTransactionFilters = async (req, res) => {
+  try {
+    // Lấy distinct packages
+    const packageIds = await PaymentTransaction.distinct("package_id", { deleted_at: null });
+    const packages = await Promise.all(
+      packageIds
+        .filter(id => id != null)
+        .map(id => 
+          PaymentTransaction.findOne({ package_id: id, deleted_at: null }).populate("package_id", "name")
+        )
+    );
+    const packageNames = packages
+      .filter(txn => txn?.package_id)
+      .map(txn => txn.package_id.name)
+      .filter((v, i, arr) => arr.indexOf(v) === i) // Remove duplicates
+      .sort();
+
+    // Lấy distinct payment methods
+    const methods = await PaymentTransaction.distinct("method", { deleted_at: null });
+    const methodsList = (methods || [])
+      .filter(m => m != null)
+      .sort();
+
+    // Lấy distinct statuses
+    const statuses = await PaymentTransaction.distinct("status", { deleted_at: null });
+    const statusesList = (statuses || [])
+      .filter(s => s != null)
+      .sort();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        packages: packageNames,
+        methods: methodsList,
+        statuses: statusesList,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi lấy filter values:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi lấy filter values",
       error: error.message,
     });
   }

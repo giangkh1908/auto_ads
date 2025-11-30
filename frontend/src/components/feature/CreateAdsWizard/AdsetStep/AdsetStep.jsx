@@ -44,6 +44,7 @@ import LeadsSchema from "./objectives/Leads";
 import SalesSchema from "./objectives/Sales";
 import AppPromotionSchema from "./objectives/AppPromotion";
 import HybridLocationSelector from "./LocationSelector/HybridLocationSelector";
+import DetailedTargetingSelector from "./DetailedTargetingSelector/DetailedTargetingSelector";
 
 const SCHEMA_MAP = {
   AWARENESS: AwarenessSchema,
@@ -709,6 +710,18 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
         />
       );
     }
+    case "detailed_targeting": {
+      // Detailed targeting for interests, behaviors, demographics
+      const uniqueKey = `${field.name}-${adset._id || adset.id || 'new'}`;
+      return (
+        <DetailedTargetingSelector
+          key={uniqueKey}
+          value={value || []}
+          onChange={handleChange}
+          placeholder={field.placeholder}
+        />
+      );
+    }
     case "info": {
       const content =
         typeof field.content === "function"
@@ -873,7 +886,7 @@ const AdsetStepInner = forwardRef(
                           alt={current?.name || "Facebook Page"}
                           className="page-logo"
                         />
-                        <div className="page-info">
+                        <div className="page-info-adset">
                           <div className="page-type">Trang Facebook</div>
                           <div className="page-name">
                             {current?.name || "Chưa chọn Page"}
@@ -907,7 +920,6 @@ const AdsetStepInner = forwardRef(
                           cursor: "pointer",
                           background:
                             adset.facebookPageId === p.id ? "#f3f4f6" : "white",
-                          zIndex: 9999,
                         }}
                       >
                         <img

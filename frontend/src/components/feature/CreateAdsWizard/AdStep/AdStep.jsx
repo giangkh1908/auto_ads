@@ -21,8 +21,6 @@ import { useToast } from "../../../../hooks/useToast";
 import { validateNonEmpty } from "../../../../utils/validation";
 import { CTA_OPTIONS } from "../../../../constants/ctaConstants";
 import { aiConfigService } from "../../../../services/aiConfigService";
-import { toast } from "sonner";
-
 function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -35,6 +33,11 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [aiPromptConfig, setAiPromptConfig] = useState(null);
   const [defaultConfigId, setDefaultConfigId] = useState(null);
+  const [aiPopupInputs, setAiPopupInputs] = useState({
+    personalization: '',
+    mainKeywords: '',
+    synonymousKeywords: '',
+  });
   const toast = useToast();
 
   const ensureContentAi = () => {
@@ -157,7 +160,6 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   // AI context tracking
   const [aiProvider, setAiProvider] = useState('openai');
   const [contextId, setContextId] = useState(null);
-  const [selectedConfigId, setSelectedConfigId] = useState(null);
   const [isGenerating, setIsGenerating] = useState({
     headline: false,
     primaryText: false,
@@ -559,6 +561,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
             isOpen={showAIConfig}
             onClose={() => setShowAIConfig(false)}
             defaultConfigId={defaultConfigId}
+            initialPersonalization={aiPopupInputs.personalization}
+            initialMainKeywords={aiPopupInputs.mainKeywords}
+            initialSynonymousKeywords={aiPopupInputs.synonymousKeywords}
+            onPersistInputs={(data) => setAiPopupInputs((prev) => ({
+              personalization: data?.personalization ?? prev.personalization,
+              mainKeywords: data?.mainKeywords ?? prev.mainKeywords,
+              synonymousKeywords: data?.synonymousKeywords ?? prev.synonymousKeywords,
+            }))}
             onConfirm={(config) => {
               const toArray = (v) =>
                 Array.isArray(v)
@@ -577,12 +587,6 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
               if (mainKeywords.length === 0 && !config.config_id) {
                 toast.warning("Vui lòng nhập ít nhất một từ khóa chính");
                 return;
-              }
-
-              if (config.config_id) {
-                setSelectedConfigId(config.config_id);
-              } else {
-                setSelectedConfigId(null);
               }
 
               const modelToSend = config.config_id 

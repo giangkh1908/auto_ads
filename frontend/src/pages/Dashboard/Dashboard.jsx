@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import facebook_icon from "../../assets/facebook.png";
 import { ROUTES, STORAGE_KEYS } from "../../constants/app.constants";
-import { Edit3, Pause, PlugZap, RefreshCcw, Repeat, Bell, Users, MessageCircle, Bot, Play, Calendar, Key, Store, Search as SearchIcon, Plus, Link2 } from "lucide-react";
+import { Edit3, Pause, PlugZap, RefreshCcw, Repeat, Bell, Users, MessageCircle, Bot, Play, Calendar, Key, Store, Search as SearchIcon, Plus, Link2, CheckCircle, XCircle } from "lucide-react";
 import profileService from "../../services/profileService";
 import shopService from "../../services/shopService";
 import { toast } from "sonner";
@@ -44,22 +44,53 @@ function Dashboard() {
   const loadPages = useCallback(async () => {
     try {
       const me = await profileService.getCurrentProfile();
-      const shop = me?.data?.shopUser || me?.shopUser;
+      // ✅ Lấy từ Shop model (nguồn chính) thay vì ShopUser
+      const shop = me?.data?.shop || me?.shop;
+      const shopUser = me?.data?.shopUser || me?.shopUser;
+      
+      if (!shop) {
+        toast.warning("No shop found in profile");
+        setConnectedPages([]);
+        return false;
+      }
+
+      // ✅ Lấy danh sách page mà user hiện tại có quyền truy cập
+      const shopUserPages = Array.isArray(shopUser?.facebook_pages)
+        ? shopUser.facebook_pages
+        : [];
+      const userAccessiblePageIds = new Set(
+        shopUserPages
+          .filter(
+            (p) =>
+              p.connected_status === "connected" &&
+              p.page_status !== "pause"
+          )
+          .map((p) => p.page_id)
+      );
+
+      // ✅ Lấy pages từ Shop.facebook_pages (nguồn chính trong DB)
       const pages = Array.isArray(shop?.facebook_pages)
         ? shop.facebook_pages
         : [];
+      
       const normalized = pages
         .filter((p) => p.connected_status === "connected")
         .map((p) => ({
           id: p.page_id,
-          name: p.page_info?.name || "Facebook Page",
+          // ✅ Shop model dùng page_info.name
+          name: p.page_info?.name || p.page_name || "Facebook Page",
           pageId: p.page_id,
-          link: `https://www.facebook.com/${p.id}`,
+          link: p.page_info?.link || `https://www.facebook.com/${p.page_id}`,
           avatar:
-            p.page_info?.picture_url ||
+            p.page_info?.picture_url || 
+            p.picture_url ||
             `https://graph.facebook.com/${p.page_id}/picture?type=square`,
           status: p.page_status || "active",
           followerCount: 0,
+          userHasAccess:
+            userAccessiblePageIds.size === 0
+              ? true
+              : userAccessiblePageIds.has(p.page_id),
         }));
       setConnectedPages(normalized);
       return true;
@@ -79,6 +110,18 @@ function Dashboard() {
     if (isRefreshing) return; // Prevent multiple clicks
     
     setIsRefreshing(true);
+    try {
+      await shopService.refreshUserPages();
+    } catch (error) {
+      console.error("Refresh user pages error:", error);
+      toast.error(
+        error?.message ||
+          error?.detail?.message ||
+          t("dashboard.refresh_error") ||
+          "Không thể đồng bộ quyền trang từ Facebook"
+      );
+    }
+
     const success = await loadPages();
     if (success) {
       toast.success(t("dashboard.refresh_success") || "Đã làm mới danh sách");
@@ -267,13 +310,13 @@ function Dashboard() {
               </div>
 
               <button 
-                className="btn-refresh" 
+                className="btn-refresh-dashboard" 
                 onClick={handleRefresh}
                 disabled={isRefreshing}
               >
                 <RefreshCcw 
                   size={16} 
-                  className={isRefreshing ? "spinning" : ""}
+                  className={isRefreshing ? "spinning-dashboard" : ""}
                 />
                 &nbsp;{t("dashboard.refresh_page")}
               </button>
@@ -328,7 +371,24 @@ function Dashboard() {
                       <img src={page.avatar} alt={page.name} />
                     </div>
                     <div className="page-info-dashboard">
-                      <h3 className="page-name-dashboard">{page.name}</h3>
+                      <div className="page-name-row">
+                        <h3 className="page-name-dashboard">{page.name}</h3>
+                        <span
+                          className={`page-access-indicator ${page.userHasAccess ? "has-access" : "no-access"}`}
+                          title={
+                            page.userHasAccess
+                              ? "Bạn có quyền quản lý trang này"
+                              : "Bạn chưa có quyền quảng cáo trên trang này"
+                          }
+                        >
+                          {page.userHasAccess ? (
+                            <CheckCircle size={14} />
+                          ) : (
+                            <XCircle size={14} />
+                          )}
+                        </span>
+                      </div>
+                      
                       <p className="page-id-dashboard">
                         <a
                           href={page.link}

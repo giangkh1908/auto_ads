@@ -10,6 +10,10 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROUTES } from "../../constants/app.constants";
 import leadService from "../../services/leadService";
 import { useToast } from "../../hooks/useToast";
+import messenger_icon from "../../assets/messenger.png";
+import zalo_icon from "../../assets/zalo.png";
+import website_icon from "../../assets/AAMS_2.png";
+import tryai_icon from "../../assets/chatbot.png";
 
 function Home({ onLoginClick }) {
   const [name, setName] = useState("");
@@ -156,25 +160,41 @@ function Home({ onLoginClick }) {
           <div className="platform-grid">
             <div className="platform-card">
               <div className="platform-icon messenger">
-                <MessageCircle size={32} />
+                <img
+                  src={messenger_icon}
+                  alt="Messenger"
+                  className="platform-icon-image"
+                />
               </div>
               <h3>{t("home.messenger")}</h3>
             </div>
             <div className="platform-card">
               <div className="platform-icon zalo">
-                <MessageSquare size={32} />
+                <img 
+                  src={zalo_icon}
+                  alt="Zalo"
+                  className="platform-icon-image"
+                />
               </div>
               <h3>{t("home.zalo")}</h3>
             </div>
             <div className="platform-card">
               <div className="platform-icon website">
-                <Globe size={32} />
+                <img
+                  src={website_icon}
+                  alt="Website"
+                  className="platform-icon-image"
+                />
               </div>
               <h3>{t("home.website")}</h3>
             </div>
             <div className="platform-card">
               <div className="platform-icon tryai">
-                <Settings size={32} />
+                <img
+                  src={tryai_icon}
+                  alt="AI Chatbot"
+                  className="platform-icon-image"
+                />
               </div>
               <h3>{t("home.tryai")}</h3>
             </div>
@@ -195,63 +215,54 @@ function Home({ onLoginClick }) {
                 <ShoppingCart size={28} />
               </div>
                 <h4>{t("home.buy_product")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <DollarSign size={28} />
               </div>
               <h4>{t("home.recharge")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <Package size={28} />
               </div>
               <h4>{t("home.order_tracking")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <TrendingUp size={28} />
               </div>
               <h4>{t("home.sales_capability")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <Users size={28} />
               </div>
               <h4>{t("home.sales_consulting")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <Briefcase size={28} />
               </div>
               <h4>{t("home.recruitment")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <Calendar size={28} />
               </div>
               <h4>{t("home.booking")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <Sparkles size={28} />
               </div>
               <h4>{t("home.viral")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
             <div className="template-card">
               <div className="template-icon">
                 <ShoppingBag size={28} />
               </div>
               <h4>{t("home.order_management")}</h4>
-              <p>{t("home.sales")}</p>
             </div>
           </div>
           <p className="templates-footer">{t("home.templates_footer")}</p>
@@ -273,56 +284,48 @@ function Home({ onLoginClick }) {
                 <Megaphone size={32} />
               </div>
               <h4>{t("home.campaign")}</h4>
-              <p>{t("home.campaign_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <MessageSquare size={32} />
               </div>
               <h4>{t("home.livechat")}</h4>
-              <p>{t("home.livechat_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <Reply size={32} />
               </div>
               <h4>{t("home.auto_reply")}</h4>
-              <p>{t("home.auto_reply_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <Bell size={32} />
               </div>
               <h4>{t("home.reminder")}</h4>
-              <p>{t("home.reminder_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <Key size={32} />
               </div>
               <h4>{t("home.keyword")}</h4>
-              <p>{t("home.keyword_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <List size={32} />
               </div>
               <h4>{t("home.sequence")}</h4>
-              <p>{t("home.sequence_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <ShoppingBag size={32} />
               </div>
               <h4>{t("home.order")}</h4>
-              <p>{t("home.order_desc")}</p>
             </div>
             <div className="automation-card">
               <div className="automation-icon">
                 <Truck size={32} />
               </div>
               <h4>{t("home.shipping")}</h4>
-              <p>{t("home.shipping_desc")}</p>
             </div>
           </div>
         </div>

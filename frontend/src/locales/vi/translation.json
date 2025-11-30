@@ -3,17 +3,19 @@
        "dashboard": "Dashboard",
        "facebook_ads": "Facebook Ads",
        "analytics": "Phân tích",
-       "shop": "Cửa hàng",
+       "shop": "Shop",
        "package": "Gói dịch vụ",
        "guide": "Hướng dẫn",
        "service": "Dịch vụ",
        "login": "Đăng nhập",
        "logout": "Đăng xuất",
        "profile": "Hồ sơ",
+       "user_transaction": "Lịch sử giao dịch",
        "languages": {
          "vi": "Tiếng Việt",
          "en": "Tiếng Anh"
-       }
+       },
+       "manage_shop": "Quản lý Shop"
      },
      "auth": {
        "login_title": "Đăng nhập",
@@ -104,7 +106,28 @@
       "phone_placeholder": "Số điện thoại",
       "contact_me": "LIÊN HỆ CHO TÔI",
       "call_me": "GỌI CHO TÔI",
-      "submitting": "Đang xử lý..."
+      "submitting": "Đang xử lý...",
+      "messenger": "Messenger",
+      "zalo": "Zalo",
+      "website": "Website",
+      "tryai": "AI Chatbot",
+      "buy_product": "MUA SẢN PHẨM",
+      "recharge": "NẠP TIỀN",
+      "order_tracking": "TRA CỨU ĐƠN HÀNG",
+      "sales_capability": "KHẢ NĂNG BÁN HÀNG",
+      "sales_consulting": "TƯ VẤN BÁN HÀNG",
+      "recruitment": "TUYỂN DỤNG NHÂN VIÊN",
+      "booking": "ĐẶT HÀNG VÀ ĐẶT CHỖ",
+      "viral": "VIRAL",
+      "order_management": "QUẢN LÝ ĐƠN HÀNG",
+      "campaign": "CHIẾN DỊCH",
+      "livechat": "LIVECHAT",
+      "auto_reply": "TRẢ LỜI TỰ ĐỘNG",
+      "reminder": "NHẮC NHỞ",
+      "keyword": "TỪ KHÓA",
+      "sequence": "CHUỖI TIN NHẮN",
+      "order": "ĐƠN HÀNG",
+      "shipping": "VẬN CHUYỂN"
     },
     "templates": {
       "shopping": "Mua hàng",
@@ -177,7 +200,7 @@
        "search_placeholder": "Tìm kiếm ID, tên tài khoản",
        "search": "Tìm",
        "searching": "Tìm...",
-       "refresh": "Refresh",
+       "refresh": "Làm mới chỉ số",
        "refreshing": "Refresh...",
        "add_account": "Thêm tài khoản",
        "no_accounts": "Không tìm thấy tài khoản quảng cáo nào",
@@ -215,7 +238,9 @@
        "archive": "Lưu trữ",
        "disconnect": "Gỡ kết nối",
        "sync_success": "Đồng bộ dữ liệu thành công!",
-       "sync_error": "Lỗi khi đồng bộ dữ liệu"
+       "sync_error": "Lỗi khi đồng bộ dữ liệu",
+       "sync_accounts": "Làm mới",
+       "syncing": "Đang đồng bộ..."
      },
     "ads_management": {
       "select_account": "Chọn tài khoản quảng cáo",
@@ -300,7 +325,12 @@
       "add": "Thêm",
       "remove": "Xóa",
       "select_all": "Chọn tất cả",
-      "deselect_all": "Bỏ chọn tất cả"
+      "deselect_all": "Bỏ chọn tất cả",
+      "all": "Tất cả",
+      "pending": "Chờ duyệt",
+      "total": "Tổng",
+      "dateRange": "Khoảng thời gian",
+      "noData": "Không có dữ liệu"
     },
      "errors": {
        "404_title": "Không tìm thấy trang",
@@ -317,8 +347,8 @@
        "filter_status": "Trạng thái",
        "filter_connected": "Đã kết nối",
        "filter_not_connected": "Chưa kết nối",
-       "pages_count": "{{count}} Trang",
-       "table_page_name": "Tên Trang",
+       "pages_count": "{{count}} Pages",
+       "table_page_name": "Tên Page",
        "table_role": "Quyền",
        "table_status": "Trạng thái",
        "status_connected": "Đã kết nối",
@@ -384,22 +414,22 @@
        "password_cannot_same": "Mật khẩu mới không được trùng với mật khẩu hiện tại"
      },
      "shop": {
-       "my_shop": "Cửa hàng",
+       "my_shop": "Shop",
        "employee": "Nhân viên",
        "history": "Lịch sử",
        "add_new_shop": "Thêm mới",
        "add_new_employee": "Thêm mới",
-       "shop_name": "Tên cửa hàng",
+       "shop_name": "Tên Shop",
        "package": "Gói dịch vụ",
        "employee_count": "Nhân viên",
-       "page_count": "Trang",
+       "page_count": "Page",
        "role": "Quyền",
        "expired": "Hết hạn",
        "status": "Trạng thái",
        "action": "Hành động",
        "name": "Tên",
        "email": "Email",
-       "loading_shops": "Đang tải cửa hàng...",
+       "loading_shops": "Đang tải Shop...",
        "loading_employees": "Đang tải nhân viên...",
        "search_email": "Tìm kiếm email...",
        "all_roles": "Tất cả",
@@ -411,8 +441,8 @@
        "deactivate": "Vô hiệu hóa",
        "upgrade": "Nâng cấp",
        "relinquish": "Chuyển giao",
-       "add_shop": "Thêm cửa hàng mới",
-       "update_shop": "Cập nhật cửa hàng",
+       "add_shop": "Thêm Shop mới",
+       "update_shop": "Cập nhật Shop",
        "phone_number": "Số điện thoại",
        "category": "Danh mục",
        "cancel": "Hủy",
@@ -587,6 +617,52 @@
         "sessionExpired": "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.",
         "error": "Có lỗi xảy ra. Vui lòng thử lại sau.",
         "timeout": "Đơn hàng đã bị hủy do hết thời gian thanh toán!"
+      }
+    },
+    "paymentManagement": {
+      "statuses": {
+        "pending": "Chờ duyệt",
+        "success": "Thành công",
+        "failed": "Thất bại",
+        "canceled": "Đã hủy",
+        "rejected": "Từ chối",
+        "initializing": "Đang khởi tạo"
+      }
+    },
+    "transactionHistory": {
+      "transactionId": "Mã giao dịch",
+      "packageName": "Tên gói",
+      "amount": "Số tiền",
+      "paymentMethod": "Phương thức thanh toán",
+      "status": "Trạng thái",
+      "createdAt": "Ngày tạo",
+      "action": "Hành động",
+      "viewInvoice": "Xem hóa đơn",
+      "download": "Tải xuống",
+      "search":"Tìm kiếm"
+    },
+    "invoice": {
+      "headerTitle": "HÓA ĐƠN",
+      "buyerInfo": {
+        "title": "Thông tin người mua",
+        "name": "Tên",
+        "email": "Email",
+        "phone": "Số điện thoại"
+      },
+      "invoiceDetails": {
+        "title": "Chi tiết hóa đơn",
+        "invoiceNo": "Số hóa đơn",
+        "invoiceDate": "Ngày hóa đơn",
+        "transactionId": "Mã giao dịch",
+        "paymentMethod": "Phương thức thanh toán",
+        "paymentTime": "Thời gian thanh toán",
+        "status": "Trạng thái"
+      },
+      "messages": {
+        "generatingPDF": "Đang tạo PDF...",
+        "loadError": "Không thể tải hóa đơn",
+        "downloadSuccess": "Tải xuống thành công!",
+        "downloadError": "Lỗi khi tải xuống"
       }
     }
   }

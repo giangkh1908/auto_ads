@@ -519,7 +519,18 @@
   border-radius: 3px;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .progress-popup {
+    max-width: 90%;
+  }
+}
+
+/* Mobile lớn (481px - 600px) */
 @media (max-width: 600px) {
   .progress-popup {
     width: 95%;
@@ -544,6 +555,7 @@
 
   .progress-footer {
     flex-direction: column-reverse;
+    gap: 8px;
   }
 
   .btn-cancel-progress,
@@ -551,6 +563,74 @@
   .btn-close-progress {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .progress-popup {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .progress-header {
+    padding: 16px 12px 10px;
+  }
+
+  .progress-title {
+    font-size: 15px;
+  }
+
+  .progress-bar-container,
+  .progress-result,
+  .progress-errors,
+  .progress-steps {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .progress-bar {
+    height: 6px;
+  }
+
+  .progress-steps {
+    gap: 8px;
+  }
+
+  .progress-step {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .progress-step-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  .progress-footer {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .btn-cancel-progress,
+  .btn-retry,
+  .btn-close-progress {
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+  .progress-errors {
+    max-height: 200px;
+  }
+
+  .error-item {
+    padding: 8px;
+    font-size: 12px;
   }
 }
 

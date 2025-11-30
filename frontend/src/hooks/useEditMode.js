@@ -5,6 +5,7 @@ import { extractObjectId, findIdInObject } from "../utils/wizardUtils";
 import { convertCountryCodesToNames, convertLocaleIdToLanguageCode } from "../utils/locationUtils";
 import { convertFacebookTypeToCTA } from "../utils/ctaUtils";
 import { parseGeoLocationsToFrontend } from "../utils/locationParseUtils";
+import { parseFlexibleSpecToFrontend } from "../utils/targetingParseUtils";
 
 /**
  * Custom hook để xử lý logic edit mode
@@ -228,14 +229,22 @@ export function useEditMode({
               ageMin: adsetDbData.targeting?.age_min || 18,
               ageMax: adsetDbData.targeting?.age_max || 65,
               // ✅ THÊM: Map gender và language từ DB
-              gender: adsetDbData.targeting?.genders?.[0] === 1 
-                    ? "male" 
-                    : adsetDbData.targeting?.genders?.[0] === 2 
-                    ? "female" 
-                    : adsetDbData.targeting?.gender || "all",
-              language: adsetDbData.targeting?.locales?.[0] 
-                    ? (convertLocaleIdToLanguageCode(adsetDbData.targeting.locales[0]) || adsetDbData.targeting.locales[0])
-                    : adsetDbData.targeting?.language || "all",
+              gender:
+                adsetDbData.targeting?.genders?.[0] === 1
+                  ? "male"
+                  : adsetDbData.targeting?.genders?.[0] === 2
+                  ? "female"
+                  : adsetDbData.targeting?.gender || "all",
+              language:
+                adsetDbData.targeting?.locales?.[0]
+                  ? convertLocaleIdToLanguageCode(
+                      adsetDbData.targeting.locales[0]
+                    ) || adsetDbData.targeting.locales[0]
+                  : adsetDbData.targeting?.language || "all",
+              // ✅ NEW: Parse flexible_spec -> detailed_targeting for edit mode
+              detailed_targeting: parseFlexibleSpecToFrontend(
+                adsetDbData.targeting?.flexible_spec
+              ),
               // Preserve other targeting fields if any
               ...(adsetDbData.targeting || {}),
             },

@@ -16,6 +16,8 @@ import {
   Gem,
   ChevronDown,
   Check,
+  Menu,
+  X,
 } from "lucide-react";
 import logo_1 from "../../../assets/Logo_Fchat.png";
 import logo_2 from "../../../assets/Logo_Fchat_2.png";
@@ -27,6 +29,7 @@ function Header({ onLoginClick }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const [openMenu, setOpenMenu] = useState(null); //"avatar", "user" || null
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [shops, setShops] = useState([]);
   const [selectedShop, setSelectedShop] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,7 @@ function Header({ onLoginClick }) {
   // Đóng dropdown khi chuyển trang
   useEffect(() => {
     setOpenMenu(null);
+    setIsMobileMenuOpen(false);
   }, [pathname]);
 
   // Đóng dropdown khi click ra ngoài
@@ -67,14 +71,23 @@ function Header({ onLoginClick }) {
       ) {
         setOpenMenu(null);
       }
+
+      // Đóng mobile menu khi click ra ngoài
+      if (
+        isMobileMenuOpen &&
+        !e.target.closest(".mobile-menu") &&
+        !e.target.closest(".hamburger-btn")
+      ) {
+        setIsMobileMenuOpen(false);
+      }
     };
 
-    if (openMenu) {
+    if (openMenu || isMobileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [openMenu]);
+  }, [openMenu, isMobileMenuOpen]);
 
   // FETCH SHOPS + TỰ ĐỘNG CHỌN SHOP HIỆN TẠI
   useEffect(() => {
@@ -330,19 +343,44 @@ function Header({ onLoginClick }) {
     }
   };
 
+  const isFacebookAdsActive =
+    pathname === ROUTES.ACCOUNT_MANAGEMENT ||
+    pathname === ROUTES.ADS_MANAGEMENT ||
+    pathname === ROUTES.ARCHIVE_ADS;
+
   return (
     <header className={`app-header ${isScrolled ? "scrolled" : ""}`}>
+      {/* Overlay khi mobile menu mở */}
+      {isMobileMenuOpen && (
+        <div
+          className={`mobile-menu-overlay ${isMobileMenuOpen ? "open" : ""}`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       <div className="header-content">
-        {/* Logo */}
-        <button onClick={() => navigate("/")}>
-          <h1 className="app-title">
-            <img
-              className="app-name"
-              src={isScrolled ? logo_2 : logo_1}
-              alt="Logo"
-            />
-          </h1>
-        </button>
+        {/* Logo và Hamburger Menu Button */}
+        <div className="logo-hamburger-group">
+          {/* Hamburger Menu Button - chỉ hiển thị trên mobile */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Logo */}
+          <button onClick={() => navigate("/")}>
+            <h1 className="app-title">
+              <img
+                className="app-name"
+                src={isScrolled ? logo_2 : logo_1}
+                alt="Logo"
+              />
+            </h1>
+          </button>
+        </div>
 
         {/* Nav khi không ở Home, Guide hoặc ở service-package đã login*/}
         {pathname !== "/" && pathname !== ROUTES.GUIDE && !(pathname === ROUTES.SERVICE_PACKAGE && !isAuthenticated) && (
@@ -356,9 +394,7 @@ function Header({ onLoginClick }) {
             </button>
 
             <button
-              className={`nav-btn ${
-                pathname === ROUTES.ACCOUNT_MANAGEMENT ? "active" : ""
-              }`}
+              className={`nav-btn ${isFacebookAdsActive ? "active" : ""}`}
               onClick={() => navigate(ROUTES.ACCOUNT_MANAGEMENT)}
             >
               <Megaphone size={18} />
@@ -421,6 +457,105 @@ function Header({ onLoginClick }) {
               >
                 <LayoutDashboard size={20} />
                 &nbsp;{t("header.dashboard")}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Menu Dropdown - Nav 1 */}
+        {(pathname !== "/" && pathname !== ROUTES.GUIDE && !(pathname === ROUTES.SERVICE_PACKAGE && !isAuthenticated)) && (
+          <div className={`mobile-menu ${isMobileMenuOpen ? "open" : ""}`}>
+            <button
+              className={`mobile-nav-btn ${pathname === ROUTES.DASHBOARD ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.DASHBOARD);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <LayoutDashboard size={20} />
+              <span>{t("header.dashboard")}</span>
+            </button>
+
+            <button
+              className={`mobile-nav-btn ${isFacebookAdsActive ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.ACCOUNT_MANAGEMENT);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <Megaphone size={20} />
+              <span>{t("header.facebook_ads")}</span>
+            </button>
+
+            <button
+              className={`mobile-nav-btn ${pathname === ROUTES.ANALYTICS ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.ANALYTICS);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <BarChart3 size={20} />
+              <span>{t("header.analytics")}</span>
+            </button>
+
+            <button
+              className={`mobile-nav-btn ${pathname.startsWith(ROUTES.SHOP) ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.SHOP);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <Store size={20} />
+              <span>{t("header.shop")}</span>
+            </button>
+
+            <button
+              className={`mobile-nav-btn ${pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.SERVICE_PACKAGE);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <Package size={20} />
+              <span>{t("header.package")}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Mobile Menu Dropdown - Nav 2 */}
+        {(pathname === "/" || pathname === ROUTES.GUIDE || (pathname === ROUTES.SERVICE_PACKAGE && !isAuthenticated)) && (
+          <div className={`mobile-menu ${isMobileMenuOpen ? "open" : ""}`}>
+            <button
+              className={`mobile-nav-btn ${pathname === ROUTES.GUIDE ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.GUIDE);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <BookOpen size={20} />
+              <span>{t("header.guide")}</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""}`}
+              onClick={() => {
+                navigate(ROUTES.SERVICE_PACKAGE);
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <Gem size={20} />
+              <span>{t("header.service")}</span>
+            </button>
+
+            {isAuthenticated && (
+              <button
+                className={`mobile-nav-btn ${pathname === ROUTES.DASHBOARD ? "active" : ""}`}
+                onClick={() => {
+                  navigate(ROUTES.DASHBOARD);
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <LayoutDashboard size={20} />
+                <span>{t("header.dashboard")}</span>
               </button>
             )}
           </div>
@@ -531,7 +666,7 @@ function Header({ onLoginClick }) {
                     className="btn-manage-shop"
                     onClick={() => navigate("/shop")}
                   >
-                    Quản lý cửa hàng
+                    {t("header.manage_shop")}
                   </button>
                 </div>
               )}
@@ -558,6 +693,7 @@ function Header({ onLoginClick }) {
                       <li onClick={() => navigate("/profile")}>
                         {t("header.profile")}
                       </li>
+                      <li onClick={() => navigate("/user-transaction")}>{t("header.user_transaction")}</li>
                       <li onClick={logout}>{t("header.logout")}</li>
                     </div>
                   </div>

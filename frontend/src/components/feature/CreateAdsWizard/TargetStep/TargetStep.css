@@ -192,3 +192,40 @@
     padding: 4px 8px;
   }
 }
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .objectives-panel {
+    padding: 12px;
+  }
+  
+  .objectives-sidebar {
+    padding-bottom: 10px;
+  }
+  
+  .objective-item {
+    padding: 8px 10px;
+  }
+  
+  .objective-name {
+    font-size: 12px;
+  }
+  
+  .placeholder-circle {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .objective-detail-title {
+    font-size: 16px;
+  }
+  
+  .objective-description {
+    font-size: 12px;
+  }
+  
+  .suitable-tag {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}

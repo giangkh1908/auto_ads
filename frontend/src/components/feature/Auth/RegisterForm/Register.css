@@ -20,4 +20,42 @@
     text-align: center;
 }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .captcha-box {
+    margin: 12px 0;
+    padding: 6px;
+  }
+
+  .captcha-box .g-recaptcha {
+    transform: scale(0.85);
+  }
+
+  .captcha-box .error-message {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .captcha-box {
+    margin: 10px 0;
+    padding: 4px;
+  }
+
+  .captcha-box .g-recaptcha {
+    transform: scale(0.75);
+  }
+
+  .captcha-box .error-message {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}
+
 

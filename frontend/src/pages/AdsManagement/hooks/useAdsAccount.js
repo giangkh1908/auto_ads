@@ -33,20 +33,34 @@ export function useAdsAccount() {
         if (response.data?.items) {
           setAdAccounts(response.data.items);
           
-          // Chỉ load tài khoản đã chọn từ localStorage nếu nó tồn tại trong danh sách
-          // Không tự động chọn account đầu tiên
           const savedAccountId = localStorage.getItem(STORAGE_KEY);
+          
           if (savedAccountId && !selectedAccountId) {
-            // Kiểm tra account có tồn tại trong danh sách không
+            // Kiểm tra account đã lưu có tồn tại trong danh sách không
             const account = response.data.items.find(
               (acc) => acc.external_id === savedAccountId
             );
             if (account) {
               setSelectedAccountId(savedAccountId);
             } else {
-              // Nếu account không tồn tại, xóa khỏi localStorage và không chọn gì
+              // Nếu account không tồn tại, xóa khỏi localStorage
               localStorage.removeItem(STORAGE_KEY);
+              // Tự động chọn account đầu tiên nếu có
+              if (response.data.items.length > 0) {
+                const firstAccount = response.data.items[0];
+                setSelectedAccountId(firstAccount.external_id);
+                localStorage.setItem(STORAGE_KEY, firstAccount.external_id);
+              }
             }
+          } else if (!selectedAccountId && response.data.items.length > 0) {
+            // Nếu chưa có selection, tự động chọn account đầu tiên
+            const firstAccount = response.data.items[0];
+            setSelectedAccountId(firstAccount.external_id);
+            localStorage.setItem(STORAGE_KEY, firstAccount.external_id);
+          } else if (response.data.items.length === 0) {
+            // Nếu không có account, clear selection
+            setSelectedAccountId("");
+            localStorage.removeItem(STORAGE_KEY);
           }
           
           setInitialized(true);

@@ -22,7 +22,7 @@ import ArchiveAds from "./pages/ArchiveAds/ArchiveAds.jsx";
 import Analytics from "./pages/Analytics/Analytics.jsx";
 import AutomationRule from "./pages/AutomationRule/AutomationRule.jsx";
 import ConnectPage from "./pages/ConnectPage/ConnectPage.jsx";
-import ConnectAdAccount from "./pages/ConnectAdAccount/ConnectAdAccount.jsx";
+// import ConnectAdAccount from "./pages/ConnectAdAccount/ConnectAdAccount.jsx"; // Removed: auto sync on login
 import ServicePackage from "./pages/ServicePackage/ServicePackage.jsx";
 import Order from "./pages/Order/Order.jsx";
 import CheckOut from "./pages/CheckOut/CheckOut.jsx";
@@ -30,6 +30,7 @@ import Bank from "./pages/CheckOut/Bank/Bank.jsx";
 import VerifyEmail from "./pages/VerifyEmail/VerifyEmail.jsx";
 import ResetPassword from "./pages/ResetPassword/ResetPassword.jsx";
 import Profile from "./pages/Profile/Profile.jsx";
+import TransactionHistory from "./pages/TransactionHistory/TransactionHistory.jsx";
 import MyShop from "./pages/Shop/MyShop.jsx";
 import Employee from "./pages/Shop/Employee.jsx";
 import History from "./pages/Shop/History.jsx";
@@ -366,6 +367,18 @@ function AppContentInner() {
           }
         />
 
+        {/* Route cho Transaction History */}
+        <Route
+          path={ROUTES.USER_TRANSACTION}
+          element={
+            <ProtectedRoute>
+              <main className="page-content">
+                <TransactionHistory />
+              </main>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Routes cho Shop */}
         <Route
           path={ROUTES.SHOP}
@@ -471,15 +484,15 @@ function AppContentInner() {
           } 
         />
 
-        {/* Route cho Connect Ad Account */}
-        <Route
+        {/* Route cho Connect Ad Account - Removed: auto sync on login */}
+        {/* <Route
           path={ROUTES.CONNECT_AD_ACCOUNT}
           element={
             <AdminRouteGuard>
               <ConnectAdAccount />
             </AdminRouteGuard>
           }
-        />
+        /> */}
 
         {/* Auth routes */}
         <Route

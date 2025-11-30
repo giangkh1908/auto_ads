@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import "./ReportPage.css";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Download } from "lucide-react";
+import Pagination from "../../../../components/common/Pagination/Pagination";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
 import paymentTransactionService from "../../../../services/paymentTransactionService";
 import { toast } from "sonner";
@@ -31,7 +32,14 @@ const methodMap = {
 export default function ReportPage() {
   const { t, i18n } = useTranslation("admin");
   const [transactions, setTransactions] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
   const [paymentMethod, setPaymentMethod] = useState(t("common.all"));
   const [dateRange, setDateRange] = useState("");
 
@@ -40,7 +48,7 @@ export default function ReportPage() {
     setLoading(true);
     try {
       // Chỉ lấy transactions thành công (success) để tính revenue
-      const params = { 
+      const params = {
         limit: 1000,
         status: "success" // Chỉ lấy transactions thành công
       };
@@ -69,7 +77,7 @@ export default function ReportPage() {
   }, [fetchTransactions]);
 
   // Tính toán report data từ transactions
-  const rows = useMemo(() => {
+  useEffect(() => {
     // Filter transactions theo payment method và date range
     let filteredTransactions = transactions;
 
@@ -132,9 +140,17 @@ export default function ReportPage() {
     });
 
     // Convert Map to Array và sort theo package name
-    return Array.from(packageMap.values()).sort((a, b) =>
+    const reportData = Array.from(packageMap.values()).sort((a, b) =>
       a.package.localeCompare(b.package)
     );
+    // Update rows and pagination
+    setRows(reportData);
+    setPagination(prev => ({
+      ...prev,
+      total: reportData.length,
+      totalPages: Math.ceil(reportData.length / prev.limit),
+      page: 1 // Reset page on filter change
+    }));
   }, [transactions, paymentMethod, dateRange, t]);
 
   // Dynamic payment methods list
@@ -180,6 +196,7 @@ export default function ReportPage() {
   return (
     <div className="acc-report-page">
       <div className="acc-report-toolbar">
+        <div className="acc-report-toolbar-right"></div>
         <div className="acc-report-toolbar-left">
           <div className="acc-report-filter-group">
             <label className="acc-report-filter-label">{t("reportPage.paymentMethod")}</label>
@@ -230,7 +247,7 @@ export default function ReportPage() {
           <div className="acc-report-col acc-report-col-transactions">{t("reportPage.columns.numberOfTransactions")}</div>
         </div>
 
-        {rows.map((row, index) => (
+        {rows.slice((pagination.page - 1) * pagination.limit, pagination.page * pagination.limit).map((row, index) => (
           <div className="acc-report-row" key={row.package || index}>
             <div className="acc-report-col acc-report-col-package">{row.package}</div>
             <div className="acc-report-col acc-report-col-revenue">
@@ -255,7 +272,16 @@ export default function ReportPage() {
           </div>
         </div>
       </div>
+
+      {/* <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        pageSize={pagination.limit}
+        onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+        onPageSizeChange={(limit) => setPagination(prev => ({ ...prev, limit, page: 1 }))}
+        pageSizeOptions={[25, 50, 75, 100]}
+      /> */}
     </div>
   );
 }
-

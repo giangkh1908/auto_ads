@@ -362,20 +362,78 @@
   margin-right: auto;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .confirmation-popup {
+    max-width: 90%;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .confirmation-popup {
+    width: 90%;
+    margin: 20px;
+  }
+
+  .confirmation-header {
+    padding: 16px 20px;
+  }
+
+  .confirmation-title {
+    font-size: 18px;
+  }
+
+  .confirmation-message {
+    font-size: 14px;
+  }
+
+  .confirmation-footer {
+    padding: 16px 20px;
+    gap: 10px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
 @media (max-width: 480px) {
   .confirmation-popup {
     width: 95%;
-    margin: 20px;
+    margin: 10px;
   }
-  
+
+  .confirmation-header {
+    padding: 12px 16px;
+  }
+
+  .confirmation-title {
+    font-size: 16px;
+  }
+
+  .confirmation-message {
+    font-size: 13px;
+    padding: 0 4px;
+  }
+
+  .confirmation-icon {
+    width: 40px;
+    height: 40px;
+  }
+
   .confirmation-footer {
     flex-direction: column;
+    padding: 12px 16px;
+    gap: 8px;
   }
   
   .btn-cancel,
   .btn-confirm {
     width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
   }
   
   .confirmation-footer.three-buttons {

@@ -319,10 +319,14 @@
   word-wrap: break-word;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
   .automation-rule-container {
-    padding: 16px;
+    padding: 20px;
   }
 
   .automation-rule-title {
@@ -330,6 +334,131 @@
   }
 
   .automation-rule-table-wrapper {
-    overflow-x: scroll;
+    overflow-x: auto;
+  }
+
+  .automation-rule-table {
+    min-width: 1000px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .automation-rule-container {
+    padding: 16px;
+  }
+
+  .automation-rule-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .automation-rule-title {
+    font-size: 20px;
+    width: 100%;
+  }
+
+  .automation-rule-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .btn-add-rule {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .automation-rule-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .automation-rule-table {
+    min-width: 900px;
+    font-size: 12px;
+  }
+
+  .automation-rule-table th,
+  .automation-rule-table td {
+    padding: 8px 10px;
+  }
+
+  .rule-toggle {
+    width: 40px;
+    height: 20px;
+  }
+
+  .rule-toggle::after {
+    width: 16px;
+    height: 16px;
+  }
+
+  .rule-toggle.on::after {
+    left: 22px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    width: 28px;
+    height: 28px;
+  }
+
+  .rule-status {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .automation-rule-container {
+    padding: 12px;
+  }
+
+  .automation-rule-header {
+    gap: 10px;
+    padding-bottom: 12px;
+  }
+
+  .automation-rule-title {
+    font-size: 18px;
+  }
+
+  .btn-back {
+    width: 36px;
+    height: 36px;
+  }
+
+  .automation-rule-actions {
+    gap: 10px;
+  }
+
+  .btn-add-rule {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .automation-rule-table {
+    min-width: 800px;
+    font-size: 11px;
+  }
+
+  .automation-rule-table th,
+  .automation-rule-table td {
+    padding: 6px 8px;
+  }
+
+  .rule-id-cell,
+  .action-condition-cell,
+  .rule-result-cell {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .empty-state {
+    padding: 32px 12px;
+    font-size: 13px;
   }
 }

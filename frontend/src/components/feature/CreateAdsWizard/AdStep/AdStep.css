@@ -496,7 +496,69 @@
   .auto-select-button {
     width: 100%;
   }
-  
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .media-buttons-container {
+    gap: 8px;
+  }
+
+  .media-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .ai-images-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 4px;
+    padding: 10px;
+  }
+
+  .ai-info-section {
+    gap: 10px;
+  }
+
+  .ai-prompt-popup {
+    padding: 10px;
+  }
+
+  .ai-prompt-container {
+    padding: 20px;
+    width: 95%;
+    max-width: 95%;
+  }
+
+  .prompt-header h4 {
+    font-size: 16px;
+  }
+
+  .prompt-input {
+    padding: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .prompt-footer {
+    gap: 8px;
+  }
+
+  .cancel-button,
+  .generate-button {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 2px;
+  }
+
+  .loading-wave-text {
+    font-size: 1rem;
+  }
 }
 
 /* Add these at the end of your existing CSS file */

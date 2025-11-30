@@ -21,16 +21,86 @@ export const getUsers = async (req, res) => {
 // 👥 Lấy danh sách customers (users không có internal_role hoặc internal_role là null)
 export const getCustomers = async (req, res) => {
   try {
-    const customers = await User.find({ 
+    const { page = 1, limit = 10, search = "", status, startDate, endDate } = req.query;
+
+    const query = {
       deleted_at: null,
       $or: [
         { internal_role: { $exists: false } },
         { internal_role: null },
         { internal_role: { $nin: ["System Admin", "CS Staff", "Accountant"] } }
       ]
-    }).select("-password -facebookAccessToken -facebookRefreshToken");
-    
-    res.status(200).json({ success: true, data: customers });
+    };
+
+    // Filter by status
+    if (status && status !== "All") {
+      query.status = status;
+    }
+
+    // Search by name, email, phone
+    if (search) {
+      const searchRegex = { $regex: search, $options: "i" };
+      query.$and = [
+        {
+          $or: [
+            { full_name: searchRegex },
+            { email: searchRegex },
+            { phone: searchRegex }
+          ]
+        }
+      ];
+    }
+
+    // Filter by date range
+    if (startDate && endDate) {
+      // Parse dd/mm/yyyy
+      const parseDate = (dateStr) => {
+        const [d, m, y] = dateStr.split("/").map(Number);
+        return new Date(y, m - 1, d);
+      };
+
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      query.created_at = {
+        $gte: start,
+        $lte: end
+      };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const customers = await User.find(query)
+      .select("-password -facebookAccessToken -facebookRefreshToken")
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(query);
+
+    // Calculate stats
+    const stats = await User.aggregate([
+      { $match: { role: "customer", deleted_at: null } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const formattedStats = {
+      total: await User.countDocuments({ role: "customer", deleted_at: null }),
+      active: stats.find(s => s._id === "active")?.count || 0,
+      inactive: stats.find(s => s._id === "inactive")?.count || 0,
+      banned: stats.find(s => s._id === "banned")?.count || 0
+    };
+
+    res.status(200).json({
+      success: true,
+      total,
+      stats: formattedStats,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      data: customers,
+    });
   } catch (error) {
     console.error("❌ Get customers error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
@@ -40,15 +110,102 @@ export const getCustomers = async (req, res) => {
 // 👥 Lấy danh sách internal staff (users có internal_role)
 export const getInternalStaff = async (req, res) => {
   try {
-    const internalStaff = await User.find({ 
+    const { page = 1, limit = 10, search = "", status, role, startDate, endDate } = req.query;
+
+    const filter = {
       deleted_at: null,
-      internal_role: { $in: ["System Admin", "CS Staff", "Accountant"] }
-    }).select("-password -facebookAccessToken -facebookRefreshToken");
-    
-    res.status(200).json({ success: true, data: internalStaff });
+      internal_role: { $in: ["System Admin", "CS Staff", "Accountant"] }, // Assuming a 'role' field is added to User model
+    };
+
+    // Filter by status
+    if (status && status !== "All") {
+      filter.status = status;
+    }
+
+    // Filter by role (internal_role)
+    if (role && role !== "All") {
+      filter.internal_role = role;
+    }
+
+    // Search by name, email, phone
+    if (search) {
+      const searchRegex = { $regex: search, $options: "i" };
+      filter.$or = [
+        { full_name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex }
+      ];
+    }
+
+    // Filter by date range
+    if (startDate && endDate) {
+      const parseDate = (dateStr) => {
+        const [d, m, y] = dateStr.split("/").map(Number);
+        return new Date(y, m - 1, d);
+      };
+
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      filter.created_at = {
+        $gte: start,
+        $lte: end
+      };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const staff = await User.find(filter)
+      .select("-password -facebookAccessToken -facebookRefreshToken")
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(filter);
+
+    // Calculate stats
+    const stats = await User.aggregate([
+      { $match: { role: "internal", deleted_at: null } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const formattedStats = {
+      total: await User.countDocuments({ role: "internal", deleted_at: null }),
+      active: stats.find(s => s._id === "active")?.count || 0,
+      inactive: stats.find(s => s._id === "inactive")?.count || 0,
+      banned: stats.find(s => s._id === "banned")?.count || 0
+    };
+
+    res.status(200).json({
+      success: true,
+      total,
+      stats: formattedStats,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      data: staff,
+    });
   } catch (error) {
     console.error("❌ Get internal staff error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
+  }
+};
+
+/**
+ * Lấy danh sách các giá trị `internal_role` có trong collection users
+ * Trả về mảng các string (ví dụ: ["System Admin", "CS Staff", "Accountant"])
+ */
+export const getInternalRoles = async (req, res) => {
+  try {
+    // Lấy distinct internal_role, loại bỏ null/undefined
+    const roles = await User.distinct('internal_role', { internal_role: { $ne: null } });
+    // Optionally filter out empty strings and sort
+    const cleaned = roles.filter(r => r && typeof r === 'string').sort();
+    res.status(200).json({ success: true, data: cleaned });
+  } catch (error) {
+    console.error('❌ Get internal roles error:', error);
+    res.status(500).json({ success: false, message: 'Không thể lấy danh sách internal roles.' });
   }
 };
 
@@ -68,7 +225,7 @@ export const getUserById = async (req, res) => {
 export const getUserShops = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Kiểm tra user có tồn tại không
     const user = await User.findById(id);
     if (!user) {
@@ -105,7 +262,7 @@ export const getUserShops = async (req, res) => {
       const exists = shopsWithRoles.some(
         (swr) => swr.shop_id && swr.shop_id.toString() === shop._id.toString()
       );
-      
+
       if (!exists) {
         // Tìm role "Shop Owner"
         const shopOwnerRole = await Role.findOne({ role_name: "Shop Owner" }).lean();
@@ -138,7 +295,7 @@ export const createUser = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ full_name, email, password: hashed, phone, status, provider: "local" });
-    
+
     // Log user creation (admin action)
     await saveSystemLog({
       category: 'admin',
@@ -154,7 +311,7 @@ export const createUser = async (req, res) => {
       user_agent: getUserAgent(req),
       success: true,
     });
-    
+
     res.status(201).json({ success: true, message: "Tạo user thành công!", data: user });
   } catch (error) {
     console.error("❌ Create user error:", error);
@@ -167,12 +324,12 @@ export const updateUser = async (req, res) => {
   try {
     // Kiểm tra quyền: System Admin hoặc user có quyền update
     const isSystemAdmin = req.user.internal_role === "System Admin";
-    
+
     if (!isSystemAdmin) {
       // Nếu không phải System Admin, kiểm tra quyền qua UserRole
       const shopId = req.headers['x-shop-id'] || req.query.shop_id || null;
       const hasPermission = await UserRole.hasPermission(req.user._id, shopId, "user", "update");
-      
+
       if (!hasPermission) {
         return res.status(403).json({
           success: false,
@@ -183,16 +340,16 @@ export const updateUser = async (req, res) => {
 
     const { id } = req.params;
     const { full_name, email, phone, password, status } = req.body;
-    
+
     // Get old user data to check status change
     const oldUser = await User.findById(id);
     if (!oldUser) return res.status(404).json({ success: false, message: "Không tìm thấy user." });
-    
+
     const data = { full_name, email, phone, status };
     if (password) data.password = await bcrypt.hash(password, 10);
     const user = await User.findByIdAndUpdate(id, data, { new: true }).select("-password");
     if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy user." });
-    
+
     // Log user update (admin action)
     const action = status && status !== oldUser.status ? 'USER_STATUS_UPDATED' : 'USER_UPDATED';
     await saveSystemLog({
@@ -213,7 +370,7 @@ export const updateUser = async (req, res) => {
         new_status: status || oldUser.status,
       },
     });
-    
+
     res.status(200).json({ success: true, message: "Cập nhật thành công!", data: user });
   } catch (error) {
     console.error("❌ Update user error:", error);
@@ -226,9 +383,9 @@ export const deleteUser = async (req, res) => {
   try {
     const oldUser = await User.findById(req.params.id);
     if (!oldUser) return res.status(404).json({ success: false, message: "Không tìm thấy user." });
-    
+
     const user = await User.findByIdAndUpdate(req.params.id, { deleted_at: new Date() }, { new: true });
-    
+
     // Log user deletion (admin action)
     await saveSystemLog({
       category: 'admin',
@@ -244,7 +401,7 @@ export const deleteUser = async (req, res) => {
       user_agent: getUserAgent(req),
       success: true,
     });
-    
+
     res.status(200).json({ success: true, message: "User đã được xóa (soft delete)." });
   } catch (error) {
     console.error("❌ Delete user error:", error);
@@ -381,7 +538,7 @@ export const createInternalStaff = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Create internal staff error:", error);
-    
+
     // Xử lý lỗi duplicate key (email)
     if (error.code === 11000) {
       return res.status(400).json({

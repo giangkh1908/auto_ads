@@ -914,11 +914,11 @@ function buildAdsetPayload(adset, campaign) {
     targeting: {
       age_min: adset.targeting.ageMin || 18,
       age_max: adset.targeting.ageMax || 65,
-      
+
       // NEW: Check if locations is object structure (new) or array (old)
-      ...(adset.targeting?.locations && 
-          typeof adset.targeting.locations === 'object' && 
-          !Array.isArray(adset.targeting.locations)
+      ...(adset.targeting?.locations &&
+      typeof adset.targeting.locations === "object" &&
+      !Array.isArray(adset.targeting.locations)
         ? {
             // New structure: Pass locations object to backend for transformation
             // DON'T set geo_locations here - let backend decide based on selected locations
@@ -928,21 +928,37 @@ function buildAdsetPayload(adset, campaign) {
             // Backward compatibility: old array format
             geo_locations: {
               countries: convertCountryNamesToCodes(
-                Array.isArray(adset.targeting?.locations) ? 
-                adset.targeting.locations : ["Viet Nam"]
+                Array.isArray(adset.targeting?.locations)
+                  ? adset.targeting.locations
+                  : ["Viet Nam"]
               ),
             },
-          }
-      ),
-      
+          }),
+
       // ✅ THÊM: Gender và language
       ...(adset.targeting?.gender && adset.targeting.gender !== "all" && {
-        genders: adset.targeting.gender === "male" ? [1] : adset.targeting.gender === "female" ? [2] : [],
+        genders:
+          adset.targeting.gender === "male"
+            ? [1]
+            : adset.targeting.gender === "female"
+            ? [2]
+            : [],
       }),
-      ...(adset.targeting?.language && adset.targeting.language !== "all" && (() => {
-        const localeId = convertLanguageCodeToLocaleId(adset.targeting.language);
-        return localeId ? { locales: [localeId] } : {};
-      })()),
+      ...(adset.targeting?.language &&
+        adset.targeting.language !== "all" &&
+        (() => {
+          const localeId = convertLanguageCodeToLocaleId(
+            adset.targeting.language
+          );
+          return localeId ? { locales: [localeId] } : {};
+        })()),
+
+      // ✅ THÊM: Detailed targeting (interests, behaviors, demographics)
+      ...(Array.isArray(adset.targeting?.detailed_targeting) &&
+        adset.targeting.detailed_targeting.length > 0 && {
+          detailed_targeting: adset.targeting.detailed_targeting,
+        }),
+
       targeting_automation: {
         advantage_audience: 0,
       },

@@ -79,3 +79,103 @@
 .error-button:active {
   transform: translateY(0);
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .error-boundary-content {
+    padding: 40px 28px;
+    max-width: 90%;
+  }
+
+  .error-title {
+    font-size: 28px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .error-boundary {
+    padding: 16px;
+  }
+
+  .error-boundary-content {
+    padding: 32px 24px;
+    border-radius: 12px;
+  }
+
+  .error-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+  }
+
+  .error-title {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .error-message {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .error-details {
+    margin: 20px 0;
+    padding: 12px;
+  }
+
+  .error-button {
+    padding: 12px 24px;
+    font-size: 14px;
+    width: 100%;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .error-boundary {
+    padding: 12px;
+  }
+
+  .error-boundary-content {
+    padding: 24px 20px;
+    border-radius: 8px;
+  }
+
+  .error-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .error-title {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .error-message {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .error-details {
+    margin: 16px 0;
+    padding: 10px;
+  }
+
+  .error-details summary {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .error-stack {
+    font-size: 11px;
+  }
+
+  .error-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+}

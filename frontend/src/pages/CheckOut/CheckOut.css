@@ -165,6 +165,7 @@
   justify-content: center;
   background: #f3f4f6;
   border-radius: 12px;
+  border: 1px solid #000000;
   color: #4b5563;
   flex-shrink: 0;
   transition: all 0.3s ease;
@@ -181,8 +182,8 @@
   color: white;
 }
 
-.co-payment-icon-momo {
-  background: linear-gradient(135deg, #a91079 0%, #d91c7a 100%);
+.co-payment-icon-vnpay {
+  background: linear-gradient(135deg, #003087 0%, #009cde 100%);
   color: white;
 }
 

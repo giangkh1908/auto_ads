@@ -318,6 +318,56 @@
   }
 }
 
+@media (max-width: 768px) {
+  .amu-internal {
+    padding: 8px 12px;
+  }
+
+  .amu-internal .amu-toolbar {
+    gap: 8px;
+  }
+
+  .amu-internal .amu-row {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
+  .amu-internal .amu-header {
+    display: none;
+  }
+
+  .amu-internal .amu-col {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+  }
+
+  .amu-internal .amu-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .amu-internal {
+    padding: 6px 8px;
+  }
+
+  .amu-internal .amu-toolbar {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .amu-internal .amu-col {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
 /* Add New Staff Modal */
 .amu-modal-overlay {
   position: fixed;

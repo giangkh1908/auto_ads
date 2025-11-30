@@ -8,6 +8,7 @@ import CustomerUpdate from "./CustomerUpdate";
 import axiosInstance from "../../../../../utils/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
+import Pagination from "../../../../../components/common/Pagination/Pagination";
 import {
   getEntityId,
 } from "../../../../../utils/noteUtils";
@@ -19,8 +20,34 @@ export default function CustomerPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState(t("common.all"));
-  const [dateRange, setDateRange] = useState(""); // demo input text "dd/mm/yyyy - dd/mm/yyyy"
+  const [dateRange, setDateRange] = useState("");
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 25,
+    total: 0,
+    totalPages: 0
+  });
+
+  // Stats state
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    banned: 0
+  });
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const STATUSES = useMemo(() => [
     t("common.all"),
@@ -44,36 +71,36 @@ export default function CustomerPage() {
       shop: "View", // Sẽ cần lấy shop info từ shop_id nếu có
       createdAt: customer.created_at
         ? new Date(customer.created_at)
-            .toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-            .replace(",", "")
+          .toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+          .replace(",", "")
         : "-",
       lastLogin: customer.last_login_at
         ? new Date(customer.last_login_at)
-            .toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-            .replace(",", "")
+          .toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+          .replace(",", "")
         : "-",
       status:
         customer.status === "active"
           ? t("common.active")
           : customer.status === "inactive"
-          ? t("common.inactive")
-          : customer.status === "banned"
-          ? t("customerPage.statuses.banned")
-          : t("common.inactive"),
+            ? t("common.inactive")
+            : customer.status === "banned"
+              ? t("customerPage.statuses.banned")
+              : t("common.inactive"),
       statusKey: customer.status || "inactive", // Lưu status gốc để dùng cho CSS class
     };
   }, [t]);
@@ -96,28 +123,59 @@ export default function CustomerPage() {
   });
 
   // Fetch customers từ API
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get(API_ENDPOINTS.USERS.CUSTOMERS);
+  // Fetch customers from API
+  const fetchCustomers = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        if (response.data.success) {
-          const customers = response.data.data;
-          setRawCustomers(customers);
-          // Format data để hiển thị trong table
-          const formattedCustomers = customers.map((customer) => mapCustomerData(customer));
-          setRows(formattedCustomers);
-        }
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-      } finally {
-        setLoading(false);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+        search: debouncedSearch,
+        startDate: dateRange.split("-")[0]?.trim(),
+        endDate: dateRange.split("-")[1]?.trim(),
+      };
+
+      // Map status filter to API value
+      if (status !== t("common.all")) {
+        if (status === t("common.active")) params.status = "active";
+        else if (status === t("common.inactive")) params.status = "inactive";
+        else if (status === t("customerPage.statuses.banned")) params.status = "banned";
       }
-    };
 
+      const response = await axiosInstance.get(API_ENDPOINTS.USERS.CUSTOMERS, { params });
+
+      if (response.data.success) {
+        const customers = response.data.data;
+        setRawCustomers(customers);
+
+        // Format data để hiển thị trong table
+        const formattedCustomers = customers.map((customer) => mapCustomerData(customer));
+        setRows(formattedCustomers);
+
+        // Update pagination info
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total,
+          totalPages: response.data.totalPages
+        }));
+
+        // Update stats if available
+        if (response.data.stats) {
+          setStats(response.data.stats);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error(t("customerPage.messages.fetchError"));
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.page, pagination.limit, debouncedSearch, status, dateRange, t, mapCustomerData]);
+
+  useEffect(() => {
     fetchCustomers();
-  }, [mapCustomerData]);
+  }, [fetchCustomers]);
 
   // Re-map data khi ngôn ngữ thay đổi
   useEffect(() => {
@@ -129,51 +187,10 @@ export default function CustomerPage() {
     }
   }, [i18n.language, rawCustomers, mapCustomerData, t]);
 
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return rows.filter((c) => {
-      // Search theo name/phone/email
-      const matchSearch =
-        !s ||
-        c.name.toLowerCase().includes(s) ||
-        (c.phone || "").toLowerCase().includes(s) ||
-        (c.email || "").toLowerCase().includes(s);
-      // Lọc theo status
-      const allValue = t("common.all");
-      const matchStatus = status === "All" || status === allValue ? true : c.status === status;
-      // Lọc theo khoảng ngày đơn giản (demo – cần thay bằng parser thật khi tích hợp)
-      let matchDate = true;
-      if (dateRange.includes("-")) {
-        const [from, to] = dateRange.split("-").map((v) => v.trim());
-        // Định dạng demo: dd/mm/yyyy
-        const parse = (d) => {
-          const [dd, mm, yyyy] = d.split("/").map((x) => parseInt(x));
-          if (!dd || !mm || !yyyy) return null;
-          return new Date(yyyy, mm - 1, dd).getTime();
-        };
-        const fromTs = parse(from);
-        const toTs = parse(to);
-        if (fromTs || toTs) {
-          // So sánh với createdAt (lấy phần ngày)
-          const createdDate = c.createdAt.split(" ")[0];
-          const createdTs = parse(createdDate);
-          if (createdTs) {
-            if (fromTs && createdTs < fromTs) matchDate = false;
-            if (toTs && createdTs > toTs) matchDate = false;
-          }
-        }
-      }
-      return matchSearch && matchStatus && matchDate;
-    });
-  }, [search, status, dateRange, rows, t]);
-
+  // Use stats from API for counters
   const counters = useMemo(() => {
-    const total = filtered.length;
-    const active = filtered.filter((c) => c.status === t("common.active")).length;
-    const inactive = filtered.filter((c) => c.status === t("common.inactive")).length;
-    const banned = filtered.filter((c) => c.status === t("customerPage.statuses.banned")).length;
-    return { total, active, inactive, banned };
-  }, [filtered, t]);
+    return stats;
+  }, [stats]);
 
   const handleAction = async (row, type) => {
     // Set loading state
@@ -186,7 +203,7 @@ export default function CustomerPage() {
       const deactivateText = t("customerPage.actions.deactivate");
       const banText = t("customerPage.actions.ban");
       const unbanText = t("customerPage.actions.unban");
-      
+
       if (type === activateText) {
         newStatus = "active";
       } else if (type === deactivateText) {
@@ -227,8 +244,8 @@ export default function CustomerPage() {
               inactive: t("common.inactive"),
               banned: t("customerPage.statuses.banned"),
             };
-            return { 
-              ...r, 
+            return {
+              ...r,
               status: statusMap[newStatus] || t("common.inactive"),
               statusKey: newStatus || "inactive"
             };
@@ -276,7 +293,7 @@ export default function CustomerPage() {
     const deactivateText = t("customerPage.actions.deactivate");
     const banText = t("customerPage.actions.ban");
     const unbanText = t("customerPage.actions.unban");
-    
+
     const actionConfig = {
       [activateText]: {
         type: "activate",
@@ -384,12 +401,12 @@ export default function CustomerPage() {
           <div style={{ padding: "20px", textAlign: "center" }}>
             {t("customerPage.messages.loading")}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
             {t("customerPage.messages.noData")}
           </div>
         ) : (
-          filtered.map((row) => (
+          rows.map((row) => (
             <div className="amu-row" key={row.id}>
               <div className="amu-col amu-col-name">{row.name}</div>
               {/* <div className="amu-col amu-col-phone">{row.phone}</div>
@@ -486,6 +503,18 @@ export default function CustomerPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        itemsPerPage={pagination.limit}
+        startIndex={(pagination.page - 1) * pagination.limit}
+        endIndex={Math.min(pagination.page * pagination.limit, pagination.total)}
+        onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+        onItemsPerPageChange={(limit) => setPagination(prev => ({ ...prev, limit, page: 1 }))}
+      />
 
       {/* Confirmation Popup */}
       <ConfirmationPopup

@@ -98,7 +98,7 @@ function CreateAdsWizard({
     setAd,
   } = useWizardData();
 
-  const facebookPages = useFacebookPages();
+  const { facebookPages } = useFacebookPages();
   const toast = useToast();
   const { hasFeature } = useMyPackage();
   const contentAiEnabled = hasFeature("content_ai");

@@ -2,7 +2,6 @@
 import express from "express";
 import {
   listAdSetsCtrl,
-  syncAdSetsCtrl,
   getAdSetsLiveCtrl,
   toggleAdsetStatusCtrl,
   deleteAdsetCascadeCtrl,
@@ -20,7 +19,6 @@ router.use(authenticate);
 // Đặt các routes cụ thể TRƯỚC route có tham số /:id
 router.get("/live", getAdSetsLiveCtrl);
 router.get("/database", getAdsetFromDatabase);
-router.get("/sync", syncAdSetsCtrl);
 router.get("/insights", getAdsetInsightsCtrl);
 router.get("/", listAdSetsCtrl);
 

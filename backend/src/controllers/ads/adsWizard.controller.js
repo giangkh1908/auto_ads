@@ -59,11 +59,7 @@ export async function publishAdsWizard(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -318,11 +314,7 @@ export async function publishCampaignController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -412,11 +404,7 @@ export async function publishAdsetController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -504,11 +492,7 @@ export async function publishAdController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -604,11 +588,7 @@ export async function publishFlexibleController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -724,11 +704,7 @@ export async function updateFlexibleController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {
@@ -825,11 +801,7 @@ export async function saveDraftController(req, res) {
     // Kiểm tra quyền sở hữu tài khoản quảng cáo
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
-      $or: [
-        { user: req.user._id },
-        { shop_admin_id: req.user._id },
-        { shop_user_id: req.user._id },
-      ],
+      user_ids: req.user._id,
     });
 
     if (!account) {

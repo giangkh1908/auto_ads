@@ -85,3 +85,91 @@
   color: #9ca3af;
   cursor: not-allowed;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .pagination-container {
+    padding: 0.875rem;
+  }
+
+  .pagination-controls {
+    gap: 0.875rem;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.75rem;
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    text-align: center;
+    font-size: 0.8125rem;
+  }
+
+  .pagination-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .pagination-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .pagination-button {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .items-per-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .items-per-page select {
+    width: 100%;
+    max-width: 200px;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .pagination-container {
+    padding: 0.625rem;
+    gap: 0.875rem;
+  }
+
+  .pagination-info {
+    font-size: 0.75rem;
+  }
+
+  .pagination-buttons {
+    gap: 0.125rem;
+  }
+
+  .pagination-button {
+    min-width: 2rem;
+    height: 2rem;
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
+
+  .items-per-page select {
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
+}

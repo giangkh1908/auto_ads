@@ -1,4 +1,3 @@
-// src/controllers/vnpayController.js
 import crypto from "crypto";
 import querystring from "qs";
 import axios from "axios";
@@ -10,186 +9,222 @@ const config = {
   vnp_TmnCode: process.env.VNPAY_TMN_CODE || "Y4DJ13B6",
   vnp_HashSecret: process.env.VNPAY_HASH_SECRET || "BIYMKPJPKLOEPMWRKCRWIXJLOIETVDUN",
   vnp_Url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-  vnp_ReturnUrl: `http://auto-ads-ai.vercel.app/dashboard`,
-  vnp_QueryUrl: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
-  vnp_IpAddr: process.env.VNPAY_IP_ADDR || "127.0.0.1",
+  vnp_ReturnUrl: process.env.VNPAY_RETURN_URL || "http://auto-ads-ai.vercel.app/dashboard",
 };
 
-/* ============== HÀM TẠO CHỮ KÝ CHUẨN MỚI 2025 ============== */
-function createSecureHash(dataString) {
-  return crypto.createHash("sha512").update(dataString, "utf8").digest("hex");
+/* ============== HÀM SORT OBJECT THEO THỨ TỰ A-Z (CHÍNH XÁC NHƯ DEMO VNPAY) ============== */
+function sortAndEncodeParams(obj) {
+  const sorted = {};
+  const keys = Object.keys(obj).sort();
+
+  for (const key of keys) {
+    // CHÍNH XÁC NHƯ DEMO: encodeURIComponent + %20 → +
+    sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, "+");
+  }
+  return sorted;
 }
 
-/* ============== TẠO URL THANH TOÁN ============== */
+/* ============== HÀM SORT OBJECT (DÙNG TRONG RETURN URL) ============== */
+function sortObject(obj) {
+  const sorted = {};
+  const keys = Object.keys(obj).sort();
+  for (const key of keys) {
+    sorted[key] = obj[key];
+  }
+  return sorted;
+}
+
 export const createVnpayPayment = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { orderData } = req.body;
 
-    const transaction = await PaymentTransaction.findById(orderId).populate("package_id");
+    const transaction = await PaymentTransaction.findById(orderId);
     if (!transaction || transaction.status !== "initializing") {
       return res.status(400).json({ success: false, message: "Giao dịch không hợp lệ" });
     }
 
-    const now = new Date();
-    const vnp_CreateDate = getVnpDateTime(); // GMT+7
-    const vnp_ExpireDate = new Date(Date.now() + 15 * 60 * 1000 + 7 * 60 * 60 * 1000) // +15 phút + 7h (đảm bảo GMT+7)
+    const ipAddr =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      req.connection.socket?.remoteAddress ||
+      "127.0.0.1";
+
+    const cleanIp = ipAddr.includes(":") ? "127.0.0.1" : ipAddr;
+
+    const createDate = new Date()
       .toISOString()
-      .replace(/[-:T.Z]/g, "")
+      .replace(/[-T:Z]/g, "")
       .slice(0, 14);
-    const vnp_TxnRef = `${vnp_CreateDate}_${orderId}`;
 
-    // DỮ LIỆU KÝ THEO THỨ TỰ MỚI (nối bằng |)
-    const signData = [
-      "2.1.0",                                  // vnp_Version
-      "pay",                                    // vnp_Command
-      config.vnp_TmnCode,                       // vnp_TmnCode
-      orderData.packagePricing * 100,           // vnp_Amount
-      vnp_CreateDate,                           // vnp_CreateDate
-      "VND",                                    // vnp_CurrCode
-      config.vnp_IpAddr,                        // vnp_IpAddr
-      "vn",                                     // vnp_Locale
-      `Thanh toan goi ${orderData.name || "Chatbot AI"}`, // vnp_OrderInfo
-      "250000",                                 // vnp_OrderType
-      config.vnp_ReturnUrl,                     // vnp_ReturnUrl
-      vnp_ExpireDate,                         // vnp_ExpireDate
-      vnp_TxnRef,                               // vnp_TxnRef
-    ].join("|");
+    const txnRef = `${createDate}_${orderId}`;
 
-    console.log("VNPay sign data:", signData);
-
-    const vnp_SecureHash = createSecureHash(signData);
-
-    const vnp_Params = {
+    let vnp_Params = {
       vnp_Version: "2.1.0",
       vnp_Command: "pay",
       vnp_TmnCode: config.vnp_TmnCode,
-      vnp_Amount: orderData.packagePricing * 100,
-      vnp_CreateDate: vnp_CreateDate,
+      vnp_Amount: String(orderData.packagePricing * 100),
+      vnp_CreateDate: createDate,
       vnp_CurrCode: "VND",
-      vnp_IpAddr: config.vnp_IpAddr,
+      vnp_IpAddr: cleanIp, // Đảm bảo IPv4
       vnp_Locale: "vn",
       vnp_OrderInfo: `Thanh toan goi ${orderData.name || "Chatbot AI"}`,
       vnp_OrderType: "250000",
       vnp_ReturnUrl: config.vnp_ReturnUrl,
-      vnp_ExpireDate: vnp_ExpireDate,
-      vnp_TxnRef: vnp_TxnRef,
-      vnp_SecureHash: vnp_SecureHash,
+      vnp_TxnRef: txnRef,
     };
-    console.log("VNPay params:", vnp_Params);
 
-    const paymentUrl = config.vnp_Url + "?" + querystring.stringify(vnp_Params, { encode: false });
+    // BƯỚC QUAN TRỌNG NHẤT: SORT + ENCODE CHUẨN VNPAY
+    vnp_Params = sortAndEncodeParams(vnp_Params);
+
+    // Tạo chuỗi ký
+    const signData = querystring.stringify(vnp_Params, { encode: false });
+
+    // HMAC-SHA512
+    const hmac = crypto.createHmac("sha512", config.vnp_HashSecret);
+    const vnp_SecureHash = hmac.update(signData, "utf-8").digest("hex");
+
+    vnp_Params.vnp_SecureHash = vnp_SecureHash;
+
+    // TẠO URL – encode = false để giữ nguyên "+" thay vì "%20"
+    const paymentUrl =
+      config.vnp_Url + "?" + querystring.stringify(vnp_Params, { encode: false });
 
     await PaymentTransaction.findByIdAndUpdate(orderId, {
-      vnp_txn_ref: vnp_TxnRef,
+      vnp_txn_ref: txnRef,
+vnp_create_date: createDate,
       status: "pending",
       payment_method: "vnpay",
     });
 
-    res.json({ success: true, data: { paymentUrl } });
+    return res.json({ success: true, paymentUrl });
   } catch (error) {
-    console.error("VNPay create error:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    console.error("VNPAY Error:", error);
+    return res.status(500).json({ success: false, message: "Lỗi hệ thống" });
   }
 };
 
-/* ============== RETURN URL ============== */
+/* ============== RETURN URL – CHỮ KÝ CHUẨN ============== */
 export const vnpayReturn = async (req, res) => {
-  const vnp_Params = req.query;
-  const secureHash = vnp_Params.vnp_SecureHash;
+  try {
+    let vnp_Params = req.query;
+    let secureHash = vnp_Params.vnp_SecureHash;
 
-  // Tái tạo chữ ký từ dữ liệu nhận được
-  const signData = [
-    vnp_Params.vnp_Amount,
-    vnp_Params.vnp_BankCode || "",
-    vnp_Params.vnp_BankTranNo || "",
-    vnp_Params.vnp_CardType || "",
-    vnp_Params.vnp_OrderInfo,
-    vnp_Params.vnp_PayDate,
-    vnp_Params.vnp_ResponseCode,
-    vnp_Params.vnp_TmnCode,
-    vnp_Params.vnp_TransactionNo,
-    vnp_Params.vnp_TransactionStatus,
-    vnp_Params.vnp_TxnRef,
-  ].join("|");
+    delete vnp_Params.vnp_SecureHash;
+    delete vnp_Params.vnp_SecureHashType;
 
-  const calculatedHash = createSecureHash(signData);
+    vnp_Params = sortObject(vnp_Params);
+    let signData = querystring.stringify(vnp_Params, { encode: false });
+    let hmac = crypto.createHmac("sha512", config.vnp_HashSecret);
+    let validHash = hmac.update(signData, "utf-8").digest("hex");
 
-  if (secureHash !== calculatedHash) {
-    return res.redirect(`${process.env.CLIENT_URL}/checkout?payment=failed&msg=checksum`);
-  }
+    console.log("vnpayReturn - secureHash:", secureHash);
+    console.log("vnpayReturn - validHash:", validHash);
+    console.log("vnpayReturn - match:", secureHash === validHash);
 
-  if (vnp_Params.vnp_ResponseCode === "00" && vnp_Params.vnp_TransactionStatus === "00") {
-    const realOrderId = vnp_Params.vnp_TxnRef.split("_")[1];
-    // ... xử lý kích hoạt gói như cũ
-    return res.redirect(`${process.env.CLIENT_URL}/dashboard?payment=success`);
-  } else {
-    return res.redirect(`${process.env.CLIENT_URL}/checkout?payment=failed`);
+    if (secureHash === validHash) {
+      if (vnp_Params.vnp_ResponseCode === "00" && vnp_Params.vnp_TransactionStatus === "00") {
+        // === KÍCH HOẠT GÓI CHO USER ===
+        const txnRef = vnp_Params.vnp_TxnRef;
+        const orderId = txnRef.split("_")[1];
+
+        console.log("Payment success! txnRef:", txnRef, "orderId:", orderId);
+
+        const transaction = await PaymentTransaction.findById(orderId).populate("user_id package_id");
+
+        if (!transaction) {
+          console.error("Transaction not found:", orderId);
+          return res.redirect(`${process.env.FRONTEND_URL}/checkout?payment=failed&msg=notfound`);
+        }
+
+        console.log("Current transaction status:", transaction.status);
+
+        if (transaction.status !== "success") {
+          const pkg = transaction.package_id;
+
+          if (!pkg) {
+            console.error("Package not found for transaction:", orderId);
+            return res.redirect(`${process.env.FRONTEND_URL}/checkout?payment=failed&msg=nopkg`);
+          }
+
+          // Tạo UserPackage
+          const userPackage = await UserPackage.create({
+            user_id: transaction.user_id._id,
+            package_id: pkg._id,
+            pages: pkg.pages,
+            employees: pkg.employees,
+            shops: pkg.shops,
+            from_date: new Date(),
+            to_date: new Date(Date.now() + pkg.duration_days * 86400000),
+            status: "active",
+            created_by: transaction.user_id._id,
+          });
+
+          console.log("UserPackage created:", userPackage._id);
+
+          // Update PaymentTransaction status
+          const updatedTransaction = await PaymentTransaction.findByIdAndUpdate(
+            orderId,
+            {
+              status: "success",
+              payment_at: new Date(),
+            },
+            { new: true }
+          );
+
+          console.log("PaymentTransaction updated - new status:", updatedTransaction.status);
+        }
+
+        return res.redirect(`${process.env.FRONTEND_URL}/dashboard?payment=success`);
+      }
+    }
+
+    console.log("Payment validation failed or wrong response code");
+    return res.redirect(`${process.env.FRONTEND_URL}/checkout?payment=failed`);
+  } catch (error) {
+    console.error("vnpayReturn error:", error);
+    return res.redirect(`${process.env.FRONTEND_URL}/checkout?payment=failed&msg=error`);
   }
 };
 
-/* ============== QUERYDR CHUẨN MỚI 2025 ============== */
-export async function queryVnpayTransaction(txnRef, transactionDate) {
+/* ============== QUERYDR – THEO DEMO CHÍNH THỨC (HMAC-SHA512 + SORT) ============== */
+export const queryVnpayTransaction = async (req, res) => {
   try {
-    const vnp_RequestId = Date.now().toString();
-    const vnp_CreateDate = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+    const { txnRef } = req.body;
+    const transaction = await PaymentTransaction.findOne({ vnp_txn_ref: txnRef });
+    if (!transaction?.vnp_create_date) {
+      return res.status(404).json({ success: false, message: "Không tìm giao dịch" });
+    }
 
-    const rawData = [
-      vnp_RequestId,
-      "2.1.0",
-      "querydr",
-      config.vnp_TmnCode,
-      txnRef,
-      transactionDate,
-      vnp_CreateDate,
-      process.env.VNPAY_IP_ADDR || "127.0.0.1",
-      "Kiem tra giao dich VNPAY",
-    ].join("|");
-
-    const vnp_SecureHash = createSecureHash(rawData);
-
-    const payload = {
-      vnp_RequestId,
+    let postData = {
       vnp_Version: "2.1.0",
       vnp_Command: "querydr",
       vnp_TmnCode: config.vnp_TmnCode,
       vnp_TxnRef: txnRef,
-      vnp_TransactionDate: transactionDate,
-      vnp_CreateDate,
-      vnp_IpAddr: process.env.VNPAY_IP_ADDR || req.ip || "127.0.0.1",
-      vnp_OrderInfo: "Kiem tra giao dich VNPAY",
-      vnp_SecureHash,
+      vnp_TransactionDate: transaction.vnp_create_date,
+      vnp_RequestId: Date.now().toString(),
+      vnp_CreateDate: new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14),
+      vnp_IpAddr: "127.0.0.1",
+      vnp_OrderInfo: "Kiem tra giao dich",
     };
 
-    const response = await axios.post(config.vnp_QueryUrl, payload, {
-      headers: { "Content-Type": "application/json" },
-    });
+    postData = sortObject(postData);
+    const signData = querystring.stringify(postData, { encode: false });
+    const hmac = crypto.createHmac("sha512", config.vnp_HashSecret);
+    postData.vnp_SecureHash = hmac.update(signData, "utf-8").digest("hex");
 
-    return {
+    const response = await axios.post(
+      "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+      postData,
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    return res.json({
       success: response.data.vnp_ResponseCode === "00",
       data: response.data,
-      message: response.data.vnp_Message,
-    };
+    });
   } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data || error.message,
-    };
+    return res.status(500).json({ success: false, error: error.message });
   }
-}
-
-const getVnpDateTime = () => {
-  const now = new Date();
-
-  // Cách đúng: Dùng getTimezoneOffset + thủ công cộng 7 tiếng (Việt Nam = UTC+7)
-  const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-
-  const year = vnTime.getUTCFullYear();
-  const month = String(vnTime.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(vnTime.getUTCDate()).padStart(2, "0");
-  const hours = String(vnTime.getUTCHours()).padStart(2, "0");
-  const minutes = String(vnTime.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(vnTime.getUTCSeconds()).padStart(2, "0");
-
-  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 };

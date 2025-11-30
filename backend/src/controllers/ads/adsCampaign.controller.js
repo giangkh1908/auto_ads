@@ -3,7 +3,7 @@ import User from "../../models/user.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
-import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
+
 
 // Helper function để extract string ID từ ObjectId format
 function extractObjectId(value) {
@@ -160,125 +160,24 @@ export async function getCampaignCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/campaigns/sync
- * Đồng bộ campaigns từ Facebook
- */
-export async function syncCampaignsCtrl(req, res) {
-  try {
-    const { account_id } = req.query;
-    
-    if (!account_id) {
-      return res.status(400).json({ message: "Thiếu account_id" });
-    }
-    
-    let accessToken = req.query.access_token;
 
-    if (!accessToken && req.user?._id) {
-      const user = await User.findById(req.user._id).select("+facebookAccessToken");
-      accessToken = user?.facebookAccessToken || null;
-    }
-    
-    if (!accessToken) {
-      return res.status(400).json({ 
-        message: "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
-        missingToken: true
-      });
-    }
-    
-    try {
-      await syncEntitiesForAccount(account_id, accessToken);
-
-      return res.status(200).json({
-        message: "Đã đồng bộ campaigns, adsets và ads từ Facebook",
-      });
-    } catch (syncError) {
-      if (syncError.response?.data?.error?.code === 190) {
-        return res.status(401).json({
-          message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
-          tokenExpired: true,
-        });
-      }
-
-      if (syncError.response?.data?.error?.code === 10) {
-        return res.status(403).json({
-          message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
-          permissionDenied: true,
-        });
-      }
-
-      throw syncError;
-    }
-  } catch (err) {
-    console.error("SYNC Campaigns error:", err);
-    return res.status(500).json({
-      message: "Lỗi khi đồng bộ chiến dịch từ Facebook",
-      error: err.message
-    });
-  }
-}
-
-/**
- * GET /api/campaigns/sync-all
- * ✅ Batch Sync: Đồng bộ tất cả entities (Campaigns, AdSets, Ads) trong một batch request
- * Giảm từ 3 API calls xuống 1 batch request → tăng hiệu suất đáng kể
- */
-export async function syncAllCtrl(req, res) {
-  try {
-    const { account_id } = req.query;
-    
-    if (!account_id) {
-      return res.status(400).json({ message: "Thiếu account_id" });
-    }
-    
-    let accessToken = req.query.access_token;
-    if (!accessToken && req.user?._id) {
-      const user = await User.findById(req.user._id).select("+facebookAccessToken");
-      accessToken = user?.facebookAccessToken || null;
-    }
-    
-    if (!accessToken) {
-      return res.status(400).json({ 
-        message: "Không tìm thấy Facebook access_token",
-        missingToken: true
-      });
-    }
-    
-    try {
-      await syncEntitiesForAccount(account_id, accessToken);
-      
-      return res.status(200).json({
-        message: "Đã đồng bộ tất cả entities (campaigns, adsets, ads) từ Facebook",
-      });
-    } catch (syncError) {
-      if (syncError.response?.data?.error?.code === 190) {
-        return res.status(401).json({
-          message: "Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
-          tokenExpired: true,
-        });
-      }
-
-      if (syncError.response?.data?.error?.code === 10) {
-        return res.status(403).json({
-          message: "Không có quyền truy cập quảng cáo. Vui lòng cấp thêm quyền.",
-          permissionDenied: true,
-        });
-      }
-
-      throw syncError;
-    }
-  } catch (err) {
-    console.error("SYNC All error:", err);
-    return res.status(500).json({
-      message: "Lỗi khi đồng bộ từ Facebook",
-      error: err.message
-    });
-  }
-}
 
 /**
  * GET /api/campaigns/live
  * Lấy danh sách campaigns trực tiếp từ Facebook (không lưu DB)
+ */
+import AdsAccount from "../../models/ads/adsAccount.model.js";
+
+function normalizeAccountPair(accountId) {
+  const hasPrefix = String(accountId).startsWith("act_");
+  const withPrefix = hasPrefix ? String(accountId) : `act_${accountId}`;
+  const withoutPrefix = hasPrefix ? String(accountId).substring(4) : String(accountId);
+  return { withPrefix, withoutPrefix };
+}
+
+/**
+ * GET /api/campaigns/live
+ * Lấy danh sách campaigns trực tiếp từ Facebook VÀ lưu vào DB
  */
 export async function getCampaignsLiveCtrl(req, res) {
   try {
@@ -299,7 +198,59 @@ export async function getCampaignsLiveCtrl(req, res) {
       });
     }
 
+    // 1. Lấy thông tin account từ DB để có _id và shop_id
+    const { withPrefix, withoutPrefix } = normalizeAccountPair(account_id);
+    const adsAccount = await AdsAccount.findOne({
+      external_id: { $in: [withPrefix, withoutPrefix] },
+    });
+
+    if (!adsAccount) {
+      // Nếu không tìm thấy account trong DB, vẫn trả về data từ FB nhưng không lưu (hoặc báo lỗi tùy logic)
+      // Ở đây ta chọn vẫn trả về data để UI không bị gãy, nhưng log warning
+      console.warn(`⚠️ getCampaignsLiveCtrl: Không tìm thấy AdsAccount ${account_id} trong DB. Sẽ không lưu data.`);
+    }
+
+    // 2. Fetch từ Facebook
     const data = await fetchCampaignsFromFacebook(accessToken, account_id);
+
+    // 3. Upsert vào DB nếu có account
+    if (adsAccount && data.length > 0) {
+      const bulkOps = data.map((c) => {
+        const campaignData = {
+          shop_id: adsAccount.shop_id || null,
+          account_id: adsAccount._id,
+          name: c.name,
+          status: c.status,
+          objective: c.objective,
+          external_id: c.id,
+          external_account_id: withoutPrefix,
+          effective_status: c.effective_status,
+          special_ad_categories: c.special_ad_categories,
+          daily_budget: c.daily_budget,
+          lifetime_budget: c.lifetime_budget,
+          start_time: c.start_time,
+          stop_time: c.stop_time,
+          insights: c.insights?.data?.[0] || {},
+        };
+
+        return {
+          updateOne: {
+            filter: { external_id: c.id },
+            update: { $set: campaignData },
+            upsert: true,
+          },
+        };
+      });
+
+      try {
+        await AdsCampaign.bulkWrite(bulkOps, { ordered: false });
+        console.log(`✅ Đã upsert ${data.length} campaigns từ Live API cho account ${account_id}`);
+      } catch (writeErr) {
+        console.error("❌ Lỗi bulkWrite campaigns:", writeErr);
+        // Không throw lỗi để vẫn trả về data cho client
+      }
+    }
+
     return res.status(200).json({ items: data, total: data.length });
   } catch (err) {
     console.error("GET Live Campaigns error:", err);

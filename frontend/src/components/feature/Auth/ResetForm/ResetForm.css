@@ -4,3 +4,37 @@
     text-align: center;
     margin-bottom: 30px;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .form-header-reset {
+    margin-bottom: 24px;
+  }
+
+  .form-header-reset h2 {
+    font-size: 20px;
+  }
+
+  .form-header-reset p {
+    font-size: 13px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .form-header-reset {
+    margin-bottom: 20px;
+  }
+
+  .form-header-reset h2 {
+    font-size: 18px;
+  }
+
+  .form-header-reset p {
+    font-size: 12px;
+  }
+}

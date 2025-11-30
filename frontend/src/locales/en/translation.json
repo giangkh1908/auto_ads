@@ -10,10 +10,12 @@
        "login": "Login",
        "logout": "Logout",
        "profile": "Profile",
+       "user_transaction": "Transaction History",
        "languages": {
          "vi": "Vietnamese",
          "en": "English"
-       }
+       },
+       "manage_shop": "Manage Shop"
      },
      "auth": {
        "login_title": "Login",
@@ -104,7 +106,29 @@
       "phone_placeholder": "Phone number",
       "contact_me": "CONTACT ME",
       "call_me": "CALL ME",
-      "submitting": "Submitting..."
+      "submitting": "Submitting...",
+      "messenger": "Messenger",
+      "zalo": "Zalo",
+      "website": "Website",
+      "tryai": "AI Chatbot",
+      "buy_product": "Buy Product",
+      "recharge": "Recharge",
+      "order_tracking": "Order Tracking",
+      "sales_capability": "Sales Capability",
+      "sales_consulting": "Sales Consulting",
+      "recruitment": "Recruitment",
+      "booking": "Booking & Reservation",
+      "viral": "Viral",
+      "order_management": "Order Management",
+      "category_sales": "Sales",
+      "campaign": "Campaign",
+      "livechat": "LiveChat",
+      "auto_reply": "Auto Reply",
+      "reminder": "Reminder",
+      "keyword": "Keyword",
+      "sequence": "Sequence",
+      "order": "Order",
+      "shipping": "Shipping"
     },
     "templates": {
       "shopping": "Shopping",
@@ -215,7 +239,9 @@
        "archive": "Archive",
        "disconnect": "Disconnect",
        "sync_success": "Data synced successfully!",
-       "sync_error": "Error syncing data"
+       "sync_error": "Error syncing data",
+       "sync_accounts": "Refresh",
+       "syncing": "Syncing..."
      },
     "ads_management": {
       "select_account": "Select ad account",
@@ -300,7 +326,12 @@
       "add": "Add",
       "remove": "Remove",
       "select_all": "Select All",
-      "deselect_all": "Deselect All"
+      "deselect_all": "Deselect All",
+      "all": "All",
+      "pending": "Pending",
+      "total": "Total",
+      "dateRange": "Date Range",
+      "noData": "No data"
     },
      "errors": {
        "404_title": "Page Not Found",
@@ -587,6 +618,52 @@
         "sessionExpired": "Session expired. Please login again.",
         "error": "An error occurred. Please try again later.",
         "timeout": "Order has been canceled due to timeout!"
+      }
+    },
+    "paymentManagement": {
+      "statuses": {
+        "pending": "Pending",
+        "success": "Success",
+        "failed": "Failed",
+        "canceled": "Canceled",
+        "rejected": "Rejected",
+        "initializing": "Initializing"
+      }
+    },
+    "transactionHistory": {
+      "transactionId": "Transaction ID",
+      "packageName": "Package Name",
+      "amount": "Amount",
+      "paymentMethod": "Payment Method",
+      "status": "Status",
+      "createdAt": "Created At",
+      "action": "Action",
+      "viewInvoice": "View Invoice",
+      "download": "Download",
+      "search": "Search"
+    },
+    "invoice": {
+      "headerTitle": "INVOICE",
+      "buyerInfo": {
+        "title": "Buyer Information",
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone"
+      },
+      "invoiceDetails": {
+        "title": "Invoice Details",
+        "invoiceNo": "Invoice No.",
+        "invoiceDate": "Invoice Date",
+        "transactionId": "Transaction ID",
+        "paymentMethod": "Payment Method",
+        "paymentTime": "Payment Time",
+        "status": "Status"
+      },
+      "messages": {
+        "generatingPDF": "Generating PDF...",
+        "loadError": "Cannot load invoice",
+        "downloadSuccess": "Downloaded successfully!",
+        "downloadError": "Error downloading"
       }
     }
   }

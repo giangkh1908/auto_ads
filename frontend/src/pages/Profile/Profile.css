@@ -290,28 +290,133 @@
   margin-top: 20px;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .profile-container {
+    max-width: 90%;
+    padding: 20px 16px;
+  }
+
+  .profile-content {
+    padding: 32px 24px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
 @media (max-width: 768px) {
   .profile-container {
     padding: 20px 16px;
+    margin-top: 55px;
   }
 
   .profile-content {
     padding: 24px 20px;
   }
 
+  .profile-tabs {
+    flex-wrap: wrap;
+  }
+
   .tab-button {
-    padding: 14px 16px;
+    padding: 12px 14px;
     font-size: 14px;
+    min-width: 120px;
   }
 
   .avatar-circle {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
   }
 
   .form-input,
-  .form-select {
+  .form-select,
+  .form-input-profile {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
+  .form-input-profile {
+    padding: 10px 14px 10px 40px;
+  }
+
+  .profile-form {
+    gap: 16px;
+  }
+
+  .radio-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .submit-button {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 15px;
+  }
+
+  .password-form {
+    max-width: 100%;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 16px 12px;
+    margin-top: 50px;
+  }
+
+  .profile-content {
+    padding: 20px 16px;
+  }
+
+  .tab-button {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-width: 100px;
+  }
+
+  .avatar-circle {
+    width: 70px;
+    height: 70px;
+    border-width: 3px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .form-input,
+  .form-select,
+  .form-input-profile {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .form-input-profile {
+    padding: 8px 12px 8px 36px;
+  }
+
+  .input-icon-profile {
+    left: 12px;
+  }
+
+  .edit-icon-btn,
+  .eye-icon-btn {
+    right: 8px;
+    padding: 2px;
+  }
+
+  .radio-label {
+    font-size: 13px;
+  }
+
+  .submit-button {
+    padding: 10px 20px;
     font-size: 14px;
   }
 }

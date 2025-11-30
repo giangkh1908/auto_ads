@@ -18,6 +18,18 @@ export const transformCampaign = (campaign) => ({
   objective: campaign.objective,
   buying_type: campaign.buying_type,
   created_by: campaign.created_by,
+  impressions: Number(campaign.insights?.impressions) || 0,
+  reach: Number(campaign.insights?.reach) || 0,
+  clicks: Number(campaign.insights?.clicks) || 0,
+  spend: Number(campaign.insights?.spend) || 0,
+  cpc: Number(campaign.insights?.cpc) || 0,
+  cpm: Number(campaign.insights?.cpm) || 0,
+  ctr: Number(campaign.insights?.ctr) || 0,
+  frequency: Number(campaign.insights?.frequency) || 0,
+  results: campaign.insights?.actions ? 
+    (Array.isArray(campaign.insights.actions) ? 
+      campaign.insights.actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0) : 0) : 0,
+  quality: campaign.insights?.quality_ranking || '-',
 });
 
 /**
@@ -38,6 +50,18 @@ export const transformAdset = (adset, campaignId = null) => ({
   bid_strategy: adset.bid_strategy,
   bid_amount: adset.bid_amount,
   created_by: adset.created_by,
+  impressions: Number(adset.insights?.impressions) || 0,
+  reach: Number(adset.insights?.reach) || 0,
+  clicks: Number(adset.insights?.clicks) || 0,
+  spend: Number(adset.insights?.spend) || 0,
+  cpc: Number(adset.insights?.cpc) || 0,
+  cpm: Number(adset.insights?.cpm) || 0,
+  ctr: Number(adset.insights?.ctr) || 0,
+  frequency: Number(adset.insights?.frequency) || 0,
+  results: adset.insights?.actions ? 
+    (Array.isArray(adset.insights.actions) ? 
+      adset.insights.actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0) : 0) : 0,
+  quality: adset.insights?.quality_ranking || '-',
 });
 
 /**
@@ -50,8 +74,20 @@ export const transformAd = (ad, adsetId = null) => ({
   adsetId: adsetId || ad.adset_id || ad.set_id,
   isChecked: false,
   enabled: ad.status === "ACTIVE",
-  budget: 0, // Ads don't have budget, it's inherited from adset
+  budget: 0,
   created_by: ad.created_by,
+  impressions: Number(ad.insights?.impressions) || 0,
+  reach: Number(ad.insights?.reach) || 0,
+  clicks: Number(ad.insights?.clicks) || 0,
+  spend: Number(ad.insights?.spend) || 0,
+  cpc: Number(ad.insights?.cpc) || 0,
+  cpm: Number(ad.insights?.cpm) || 0,
+  ctr: Number(ad.insights?.ctr) || 0,
+  frequency: Number(ad.insights?.frequency) || 0,
+  results: ad.insights?.actions ? 
+    (Array.isArray(ad.insights.actions) ? 
+      ad.insights.actions.reduce((sum, act) => sum + (Number(act.value) || 0), 0) : 0) : 0,
+  quality: ad.insights?.quality_ranking || '-',
 });
 
 /**
@@ -63,8 +99,14 @@ export const mergeInsights = (entity, insights) => {
   
   return {
     ...entity,
-    impressions: insights.impressions || 0,
-    reach: insights.reach || 0,
+    impressions: Number(insights.impressions) || 0,
+    reach: Number(insights.reach) || 0,
+    clicks: Number(insights.clicks) || 0,
+    spend: Number(insights.spend) || 0,
+    frequency: Number(insights.frequency) || 0,
+    cpc: Number(insights.cpc) || 0,
+    cpm: Number(insights.cpm) || 0,
+    ctr: Number(insights.ctr) || 0,
     results,
     quality: insights.quality_ranking || '-',
   };

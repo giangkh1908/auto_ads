@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import "./CustomerLog.css";
 import { Search } from "lucide-react";
@@ -6,87 +6,32 @@ import axiosInstance from "../../../../../utils/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 
-// Mock data demo UI – có thể thay bằng dữ liệu API sau
+// Mock data demo UI – fallback if API fails
 const MOCK_CUSTOMER_LOGS = [
-  {
-    id: "cl1",
-    user: "Vũ Quỳnh Lan",
-    userId: "56546as",
-    shopName: "87s4da8sd",
-    shopId: "4564ssad",
-    time: "01/08/2024 10:30:45",
-    role: "Marketer",
-    userStatus: "Active",
-    event: "",
-  },
-  {
-    id: "cl2",
-    user: "Kim Hồng Giang",
-    userId: "54645as",
-    shopName: "54654sasd",
-    shopId: "51564sada",
-    time: "22/07/2024 09:15:20",
-    role: "Marketing admin",
-    userStatus: "Inactive",
-    event: "",
-  },
-  {
-    id: "cl3",
-    user: "Nguyễn Thành Long",
-    userId: "56456as",
-    shopName: "541654asd",
-    shopId: "51456asd",
-    time: "11/10/2024 08:20:15",
-    role: "Shop Owner",
-    userStatus: "Banned",
-    event: "",
-  },
-  {
-    id: "cl4",
-    user: "Hà Anh Tuấn",
-    userId: "54564sda",
-    shopName: "51564asd",
-    shopId: "54565asda",
-    time: "04/09/2024 13:45:30",
-    role: "Marketer",
-    userStatus: "Active",
-    event: "",
-  },
-  {
-    id: "cl5",
-    user: "Nguyễn Trọng Hưng",
-    userId: "646asda",
-    shopName: "5446asd",
-    shopId: "4654asda",
-    time: "19/06/2024 11:20:10",
-    role: "Shop Owner",
-    userStatus: "Active",
-    event: "",
-  },
-  {
-    id: "cl6",
-    user: "Nguyễn Trung Kiên",
-    userId: "6446asd",
-    shopName: "5a4asd",
-    shopId: "6a45sda",
-    time: "07/05/2024 14:10:50",
-    role: "Marketer",
-    userStatus: "Active",
-    event: "",
-  },
+  // optional mock entries
 ];
 
 export default function CustomerLog() {
   const { t, i18n } = useTranslation("admin");
-  const [rawLogs, setRawLogs] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [rawLogs, setRawLogs] = useState([]); // original objects (for last id)
+  const [logs, setLogs] = useState([]); // mapped/formatted objects for UI
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState(""); // format: "dd/mm/yyyy - dd/mm/yyyy"
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dateRange, setDateRange] = useState(""); // "dd/mm/yyyy - dd/mm/yyyy"
+  const [limit] = useState(20);
+  const [hasMore, setHasMore] = useState(true);
+  const sentinelRef = useRef(null);
 
-  // Helper function để map log data với translation
+  // Debounce search input
+  useEffect(() => {
+    const tId = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(tId);
+  }, [search]);
+
+  // Map server log item to UI-ready object
   const mapLogData = useCallback((log) => {
-    // Map role với translation
     const roleMap = {
       "Marketer": t("customerLog.roles.marketer"),
       "Marketing Admin": t("customerLog.roles.marketingAdmin"),
@@ -94,8 +39,6 @@ export default function CustomerLog() {
       "Shop Owner": t("customerLog.roles.shopOwner"),
       "N/A": t("customerLog.roles.nA"),
     };
-
-    // Map userStatus với translation
     const statusMap = {
       "Active": t("customerLog.statuses.active"),
       "Inactive": t("customerLog.statuses.inactive"),
@@ -109,108 +52,95 @@ export default function CustomerLog() {
       shopName: log.shopName || "N/A",
       shopId: log.shopId || "N/A",
       time: log.time
-        ? new Date(log.time)
-            .toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-            .replace(",", "")
+        ? new Date(log.time).toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }).replace(",", "")
         : "-",
       timeRaw: log.time ? new Date(log.time).getTime() : 0,
       role: roleMap[log.role] || log.role || t("customerLog.roles.nA"),
       userStatus: statusMap[log.userStatus] || log.userStatus || t("customerLog.statuses.active"),
-      userStatusKey: (log.userStatus || "Active").toLowerCase(), // Lưu status gốc để dùng cho CSS class
+      userStatusKey: (log.userStatus || "Active").toLowerCase(),
       event: log.event || log.description || log.action || "-",
     };
   }, [t]);
 
-  // Fetch customer logs từ API
-  useEffect(() => {
-    const fetchCustomerLogs = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get(API_ENDPOINTS.LOGS.CUSTOMERS);
+  // Fetch logs from API. If lastId is provided, backend returns next batch.
+  const fetchLogs = useCallback(async (lastId = null, append = true) => {
+    try {
+      if (append) setLoadingMore(true); else setLoading(true);
 
-        if (response.data.success) {
-          const customerLogs = response.data.data;
-          setRawLogs(customerLogs);
+      const params = {
+        lastLogId: lastId || undefined,
+        limit,
+        search: debouncedSearch || undefined,
+        startDate: dateRange.split("-")[0]?.trim() || undefined,
+        endDate: dateRange.split("-")[1]?.trim() || undefined,
+      };
 
-          // Format data để hiển thị trong table
-          const formattedLogs = customerLogs.map((log) => mapLogData(log));
-
-          // Sort từ mới đến cũ (theo timeRaw)
-          formattedLogs.sort((a, b) => b.timeRaw - a.timeRaw);
-
-          setLogs(formattedLogs);
+      const res = await axiosInstance.get(API_ENDPOINTS.LOGS.CUSTOMERS, { params });
+      if (res.data && res.data.success) {
+        const items = res.data.data || [];
+        setRawLogs(prev => (append ? [...prev, ...items] : items));
+        setLogs(prev => (append ? [...prev, ...items.map(mapLogData)] : items.map(mapLogData)));
+        setHasMore(items.length === limit);
+      } else {
+        // if API returns success=false, treat as no data
+        if (!append) {
+          setRawLogs([]);
+          setLogs([]);
+          setHasMore(false);
         }
-      } catch (error) {
-        console.error("Error fetching customer logs:", error);
-        // Fallback về mock data nếu có lỗi - map với translation
-        const mappedMockLogs = MOCK_CUSTOMER_LOGS.map((log) => mapLogData(log));
-        mappedMockLogs.sort((a, b) => b.timeRaw - a.timeRaw);
-        setLogs(mappedMockLogs);
-        setRawLogs(MOCK_CUSTOMER_LOGS);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching customer logs:", err);
+      if (!append) {
+        const fall = MOCK_CUSTOMER_LOGS.map(mapLogData);
+        setRawLogs(MOCK_CUSTOMER_LOGS);
+        setLogs(fall);
+        setHasMore(false);
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [debouncedSearch, dateRange, limit, mapLogData]);
 
-    fetchCustomerLogs();
-  }, [mapLogData]);
+  // Initial load / reload when search or dateRange changes
+  useEffect(() => {
+    setRawLogs([]);
+    setLogs([]);
+    setHasMore(true);
+    fetchLogs(null, false);
+  }, [debouncedSearch, dateRange, fetchLogs]);
 
-  // Re-map data khi ngôn ngữ thay đổi
+  // Remap when language changes
   useEffect(() => {
     if (rawLogs.length > 0) {
-      const formattedLogs = rawLogs.map((log) => mapLogData(log));
-      // Sort từ mới đến cũ (theo timeRaw)
-      formattedLogs.sort((a, b) => b.timeRaw - a.timeRaw);
-      setLogs(formattedLogs);
+      setLogs(rawLogs.map(mapLogData));
     }
   }, [i18n.language, rawLogs, mapLogData]);
 
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    const filteredLogs = logs.filter((log) => {
-      // Search theo user, userId, shopName, shopId
-      const matchSearch =
-        !s ||
-        log.user.toLowerCase().includes(s) ||
-        log.userId.toLowerCase().includes(s) ||
-        log.shopName.toLowerCase().includes(s) ||
-        log.shopId.toLowerCase().includes(s);
-
-      // Lọc theo khoảng ngày
-      let matchDate = true;
-      if (dateRange.includes("-")) {
-        const [from, to] = dateRange.split("-").map((v) => v.trim());
-        // Định dạng: dd/mm/yyyy
-        const parse = (d) => {
-          const [dd, mm, yyyy] = d.split("/").map((x) => parseInt(x));
-          if (!dd || !mm || !yyyy) return null;
-          return new Date(yyyy, mm - 1, dd).getTime();
-        };
-        const fromTs = parse(from);
-        const toTs = parse(to);
-        if (fromTs || toTs) {
-          // So sánh với time (lấy phần ngày)
-          const logDate = log.time.split(" ")[0];
-          const logTs = parse(logDate);
-          if (logTs) {
-            if (fromTs && logTs < fromTs) matchDate = false;
-            if (toTs && logTs > toTs) matchDate = false;
-          }
+  // IntersectionObserver to load more
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && hasMore && !loadingMore && !loading) {
+          const last = rawLogs[rawLogs.length - 1];
+          const lastId = last ? (last._id || last.id) : null;
+          fetchLogs(lastId, true);
         }
-      }
-      return matchSearch && matchDate;
-    });
-
-    // Sort lại từ mới đến cũ sau khi filter
-    return filteredLogs.sort((a, b) => (b.timeRaw || 0) - (a.timeRaw || 0));
-  }, [search, dateRange, logs]);
+      });
+    }, { root: null, rootMargin: '200px', threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [rawLogs, hasMore, loadingMore, loading, fetchLogs]);
 
   return (
     <div className="customer-log">
@@ -225,9 +155,7 @@ export default function CustomerLog() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <span className="customer-log-search-icon">
-                <Search size={16} />
-              </span>
+              <span className="customer-log-search-icon"><Search size={16} /></span>
             </div>
           </div>
         </div>
@@ -247,60 +175,38 @@ export default function CustomerLog() {
         <div className="customer-log-row customer-log-header">
           <div className="customer-log-col customer-log-col-user">{t("customerLog.columns.user")}</div>
           <div className="customer-log-col customer-log-col-userid">{t("customerLog.columns.userId")}</div>
-          <div className="customer-log-col customer-log-col-shopname">
-            {t("customerLog.columns.shopName")}
-          </div>
+          <div className="customer-log-col customer-log-col-shopname">{t("customerLog.columns.shopName")}</div>
           <div className="customer-log-col customer-log-col-shopid">{t("customerLog.columns.shopId")}</div>
           <div className="customer-log-col customer-log-col-time">{t("customerLog.columns.time")}</div>
           <div className="customer-log-col customer-log-col-role">{t("customerLog.columns.role")}</div>
-          <div className="customer-log-col customer-log-col-status">
-            {t("customerLog.columns.userStatus")}
-          </div>
+          <div className="customer-log-col customer-log-col-status">{t("customerLog.columns.userStatus")}</div>
           <div className="customer-log-col customer-log-col-event">{t("customerLog.columns.event")}</div>
         </div>
 
-        {loading ? (
-          <div style={{ padding: "20px", textAlign: "center" }}>
-            {t("customerLog.messages.loading")}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: "20px", textAlign: "center" }}>
-            {t("customerLog.messages.noData")}
-          </div>
+        {loading && logs.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center" }}>{t("customerLog.messages.loading")}</div>
+        ) : logs.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center" }}>{t("customerLog.messages.noData")}</div>
         ) : (
-          filtered.map((log) => (
+          logs.map((log) => (
             <div className="customer-log-row" key={log.id}>
-              <div className="customer-log-col customer-log-col-user">
-                {log.user}
-              </div>
-              <div className="customer-log-col customer-log-col-userid">
-                {log.userId}
-              </div>
-              <div className="customer-log-col customer-log-col-shopname">
-                {log.shopName}
-              </div>
-              <div className="customer-log-col customer-log-col-shopid">
-                {log.shopId}
-              </div>
-              <div className="customer-log-col customer-log-col-time">
-                {log.time}
-              </div>
-              <div className="customer-log-col customer-log-col-role">
-                {log.role}
-              </div>
-              <div className="customer-log-col customer-log-col-status">
-                <span
-                  className={`customer-log-badge customer-log-badge-${log.userStatusKey || "active"}`}
-                >
-                  {log.userStatus}
-                </span>
-              </div>
-              <div className="customer-log-col customer-log-col-event">
-                {log.event || "-"}
-              </div>
+              <div className="customer-log-col customer-log-col-user">{log.user}</div>
+              <div className="customer-log-col customer-log-col-userid">{log.userId}</div>
+              <div className="customer-log-col customer-log-col-shopname">{log.shopName}</div>
+              <div className="customer-log-col customer-log-col-shopid">{log.shopId}</div>
+              <div className="customer-log-col customer-log-col-time">{log.time}</div>
+              <div className="customer-log-col customer-log-col-role">{log.role}</div>
+              <div className="customer-log-col customer-log-col-status"><span className={`customer-log-badge customer-log-badge-${log.userStatusKey || "active"}`}>{log.userStatus}</span></div>
+              <div className="customer-log-col customer-log-col-event">{log.event || "-"}</div>
             </div>
           ))
         )}
+
+        {/* sentinel to trigger loading more */}
+        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
+
+        {loadingMore && <div style={{ padding: "8px 0", textAlign: "center" }}>{t("customerLog.messages.loadingMore") || "Loading..."}</div>}
+        {!hasMore && logs.length > 0 && <div style={{ padding: "8px 0", textAlign: "center", color: "var(--muted)" }}>{t("customerLog.messages.noMore") || "No more logs"}</div>}
       </div>
     </div>
   );

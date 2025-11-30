@@ -2,8 +2,6 @@ import express from "express";
 import {
   listCampaignsCtrl,
   getCampaignCtrl,
-  syncCampaignsCtrl,
-  syncAllCtrl,
   getCampaignsLiveCtrl,
   toggleCampaignStatusCtrl,
   deleteCampaignCascadeCtrl,
@@ -27,8 +25,6 @@ router.get("/count", (req, res) => {
 // Đặt các routes cụ thể TRƯỚC route có tham số /:id
 router.get("/live", getCampaignsLiveCtrl);
 router.get("/database", getCampaignFromDatabase);
-router.get("/sync-all", syncAllCtrl); // ✅ Batch sync endpoint - ưu tiên trước sync riêng lẻ
-router.get("/sync", syncCampaignsCtrl);
 router.get("/insights", getCampaignInsightsCtrl);
 router.get("/", listCampaignsCtrl);
 

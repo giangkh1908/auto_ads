@@ -4,6 +4,7 @@ import "./SystemLog.css";
 import { Search, ChevronDown } from "lucide-react";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 import { getSystemLogs } from "../../../../../services/systemLogService.js";
+// Pagination replaced by infinite scroll
 
 /**
  * Format date from ISO string to "dd/mm/yyyy HH:mm:ss"
@@ -81,6 +82,9 @@ export default function SystemLog() {
     total: 0,
     totalPages: 0,
   });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const sentinelRef = useRef(null);
 
   // Debounced search ref to track search changes
   const searchTimeoutRef = useRef(null);
@@ -124,7 +128,8 @@ export default function SystemLog() {
     let isMounted = true;
 
     const fetchLogs = async () => {
-      setLoading(true);
+      // If loading next page, mark loadingMore
+      if (pagination.page > 1) setLoadingMore(true); else setLoading(true);
       setError(null);
       try {
         const response = await getSystemLogs({
@@ -138,25 +143,32 @@ export default function SystemLog() {
         if (!isMounted) return;
 
         if (response.success) {
-          setLogs(response.data || []);
+          const incoming = response.data || [];
+          // Append when page > 1, otherwise replace
+          setLogs(prev => (pagination.page > 1 ? [...prev, ...incoming] : incoming));
           setPagination((prev) => ({
             ...prev,
             total: response.pagination?.total || 0,
             totalPages: response.pagination?.totalPages || 0,
           }));
+          // Determine hasMore
+          const totalItems = response.pagination?.total || 0;
+          setHasMore((prevLogs) => {
+            const currentCount = (pagination.page > 1 ? (logs.length + incoming.length) : incoming.length);
+            return currentCount < totalItems;
+          });
         } else {
           setError(response.message || t("systemLog.messages.error"));
         }
       } catch (err) {
         if (!isMounted) return;
         console.error("Error fetching system logs:", err);
-        setError(
-          err.message || t("systemLog.messages.error")
-        );
-        setLogs([]);
+        setError(err.message || t("systemLog.messages.error"));
+        if (pagination.page === 1) setLogs([]);
       } finally {
         if (isMounted) {
           setLoading(false);
+          setLoadingMore(false);
         }
       }
     };
@@ -203,6 +215,21 @@ export default function SystemLog() {
       return prev;
     });
   };
+
+  // IntersectionObserver to load more pages
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !loading && !loadingMore && hasMore) {
+          setPagination(prev => ({ ...prev, page: prev.page + 1 }));
+        }
+      });
+    }, { root: null, rootMargin: '200px', threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loading, loadingMore, hasMore]);
 
   return (
     <div className="system-log">
@@ -301,58 +328,10 @@ export default function SystemLog() {
             </div>
           ))}
       </div>
-
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div
-          className="system-log-pagination"
-          style={{
-            padding: "16px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            {t("systemLog.pagination.showing")} {logs.length} {t("systemLog.pagination.of")} {pagination.total} {t("systemLog.pagination.logs")}
-          </div>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
-              }
-              disabled={pagination.page === 1 || loading}
-              style={{
-                padding: "8px 16px",
-                cursor: pagination.page === 1 || loading ? "not-allowed" : "pointer",
-                opacity: pagination.page === 1 || loading ? 0.5 : 1,
-              }}
-            >
-              {t("systemLog.pagination.previous")}
-            </button>
-            <span style={{ padding: "8px 16px" }}>
-              {t("systemLog.pagination.page")} {pagination.page} {t("systemLog.pagination.of")} {pagination.totalPages}
-            </span>
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-              }
-              disabled={pagination.page >= pagination.totalPages || loading}
-              style={{
-                padding: "8px 16px",
-                cursor:
-                  pagination.page >= pagination.totalPages || loading
-                    ? "not-allowed"
-                    : "pointer",
-                opacity:
-                  pagination.page >= pagination.totalPages || loading ? 0.5 : 1,
-              }}
-            >
-              {t("systemLog.pagination.next")}
-            </button>
-          </div>
-        </div>
-      )}
+        {/* sentinel for infinite scroll */}
+        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
+        {loadingMore && <div style={{ padding: "12px", textAlign: "center" }}>{t("systemLog.messages.loading")}</div>}
+        {!hasMore && logs.length > 0 && <div style={{ padding: "12px", textAlign: "center", color: "#666" }}>{t("systemLog.messages.noMore") || "No more logs"}</div>}
     </div>
   );
 }

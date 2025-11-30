@@ -354,4 +354,76 @@
   .hierarchy-label {
     font-size: 11px;
   }
+
+  /* Dropdown responsive */
+  .dropdown-content {
+    min-width: 140px;
+    max-width: calc(100vw - 40px);
+    right: 0;
+    margin-left: 0;
+  }
+
+  .dropdown-item {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .actions-menu {
+    min-width: 160px;
+    max-width: calc(100vw - 40px);
+    right: 0;
+    z-index: 1000;
+  }
+
+  .actions-menu-item {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .wizard-sidebar {
+    width: 180px;
+  }
+  
+  .hierarchy-container {
+    padding: 12px;
+  }
+  
+  .hierarchy-item {
+    padding: 6px 12px;
+  }
+  
+  .hierarchy-name {
+    font-size: 12px;
+  }
+  
+  .hierarchy-label {
+    font-size: 10px;
+  }
+
+  /* Dropdown responsive */
+  .dropdown-content {
+    min-width: 120px;
+    max-width: calc(100vw - 20px);
+    right: 0;
+  }
+
+  .dropdown-item {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .actions-menu {
+    min-width: 140px;
+    max-width: calc(100vw - 20px);
+    right: 0;
+    padding: 4px;
+  }
+
+  .actions-menu-item {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
 }

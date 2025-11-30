@@ -8,7 +8,9 @@ const router = express.Router();
 router.use(authenticate);
 
 // 📋 Log routes
-router.get("/customers", getCustomerLogs); // Lấy danh sách customer logs
+router.get("/customers", (req, res) => {
+    const { limit, lastLogId } = req.query; // Accept limit and lastLogId as query parameters
+    getCustomerLogs(req, res, limit, lastLogId); // Pass them to the controller
+}); // Lấy danh sách customer logs
 
 export default router;
-

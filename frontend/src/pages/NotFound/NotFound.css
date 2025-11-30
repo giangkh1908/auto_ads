@@ -338,4 +338,22 @@
   .buddha-body {
     font-size: 2rem;
   }
+
+  .speech-bubble {
+    top: -20px;
+    right: 5%;
+    font-size: 0.7rem;
+    padding: 8px 12px;
+    max-width: 150px;
+  }
+
+  .neural-circuits {
+    width: 200px;
+    top: -50px;
+  }
+
+  .circuit {
+    width: 40px;
+    height: 40px;
+  }
 }

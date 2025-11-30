@@ -58,7 +58,8 @@
       "approved": "Đã duyệt",
       "rejected": "Đã từ chối",
       "failed": "Thất bại",
-      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy",
+      "initializing": "Đang khởi tạo",
       "total": "Tổng cộng"
     },
     "search": "Tìm kiếm",
@@ -116,7 +117,7 @@
     "searchPlaceholder": "ID, Tên, Số điện thoại, Email",
     "package": "Gói dịch vụ",
     "segment": "Tình trạng",
-    "userStatus": "Trạng thái người dùng",
+    "userStatus": "Trạng thái User",
     "assignedStatus": "Trạng thái gán",
     "columns": {
       "name": "Tên",
@@ -126,7 +127,7 @@
       "purchasedDate": "Ngày mua",
       "expiredDate": "Ngày hết hạn",
       "segment": "Tình trạng",
-      "userStatus": "Trạng thái người dùng",
+      "userStatus": "Trạng thái User",
       "assignedStatus": "Trạng thái gán",
       "note": "Ghi chú"
     },
@@ -402,10 +403,10 @@
     "statuses": {
       "all": "Tất cả",
       "pending": "Chờ duyệt",
-      "success": "Thành công",
+      "success": "Đã duyệt",
       "failed": "Thất bại",
       "canceled": "Đã hủy",
-      "rejected": "Từ chối",
+      "rejected": "Đã từ chối",
       "initializing": "Đang khởi tạo"
     },
     "summary": {
@@ -468,7 +469,8 @@
       "approved": "Đã duyệt",
       "rejected": "Đã từ chối",
       "failed": "Thất bại",
-      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy",
+      "initializing": "Đang khởi tạo",
       "total": "Tổng cộng"
     },
     "actions": {

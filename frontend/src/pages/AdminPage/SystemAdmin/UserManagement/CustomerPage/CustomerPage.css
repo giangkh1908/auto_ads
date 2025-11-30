@@ -739,5 +739,63 @@
     width: 100%;
     justify-content: center;
   }
+
+  .amu-shop-details-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .amu-customer .amu-row {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
+  .amu-customer .amu-header {
+    display: none;
+  }
+
+  .amu-customer .amu-col {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+  }
+
+  .amu-customer .amu-col::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #6b7280;
+    font-size: 12px;
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .amu-customer {
+    padding: 6px 8px;
+  }
+
+  .amu-customer .amu-toolbar {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .amu-customer .amu-col {
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .amu-shop-details-modal {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .amu-customer-update-modal {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 

@@ -8,6 +8,7 @@ import NoteEditor from "../../../../../components/common/NoteEditor/NoteEditor";
 import axiosInstance from "../../../../../utils/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
+import Pagination from "../../../../../components/common/Pagination/Pagination";
 import {
   prepareNoteItems,
   createNotesMap,
@@ -21,9 +22,36 @@ export default function InternalPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState(t("common.all"));
   const [role, setRole] = useState(t("common.all"));
   const [dateRange, setDateRange] = useState("");
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 25,
+    total: 0,
+    totalPages: 0
+  });
+
+  // Stats state
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    banned: 0
+  });
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const [confirmationPopup, setConfirmationPopup] = useState({
     isOpen: false,
     type: "delete",
@@ -35,18 +63,43 @@ export default function InternalPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const STATUSES = useMemo(() => [t("common.all"), t("common.active"), t("common.inactive")], [t]);
-  const ROLES = useMemo(() => [
-    t("common.all"),
-    t("internalPage.roles.systemAdmin"),
-    t("internalPage.roles.csStaff"),
-    t("internalPage.roles.accountant")
-  ], [t]);
+  const [rolesList, setRolesList] = useState([t("common.all")]);
+
+  // role translation map to reuse when translating backend values
+  const roleTranslateMap = useMemo(() => ({
+    "System Admin": t("internalPage.roles.systemAdmin"),
+    "CS Staff": t("internalPage.roles.csStaff"),
+    "Accountant": t("internalPage.roles.accountant"),
+  }), [t]);
 
   // Reset filters khi đổi ngôn ngữ
   useEffect(() => {
     setStatus(t("common.all"));
     setRole(t("common.all"));
+    // Rebuild role list translations when language changes
+    setRolesList(prev => prev.map(r => (r === t("common.all") ? t("common.all") : roleTranslateMap[r] || r)));
   }, [i18n.language, t]);
+
+  // Fetch available internal roles from backend
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await axiosInstance.get(API_ENDPOINTS.USERS.INTERNAL_ROLES);
+        if (!mounted) return;
+        if (res.data && res.data.success) {
+          const backendRoles = Array.isArray(res.data.data) ? res.data.data.filter(r => r) : [];
+          // translate values where possible
+          const translated = backendRoles.map(r => roleTranslateMap[r] || r);
+          setRolesList([t("common.all"), ...translated]);
+        }
+      } catch (err) {
+        console.error('Error fetching internal roles:', err);
+        // leave default rolesList
+      }
+    })();
+    return () => { mounted = false; };
+  }, [roleTranslateMap, t]);
 
   // Helper function để map staff data với translation
   const mapStaffData = useCallback((user) => {
@@ -65,27 +118,27 @@ export default function InternalPage() {
       role: roleMap[user.internal_role] || user.internal_role || "N/A",
       createdAt: user.created_at
         ? new Date(user.created_at)
-            .toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-            .replace(",", "")
+          .toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+          .replace(",", "")
         : "-",
       lastLogin: user.last_login_at
         ? new Date(user.last_login_at)
-            .toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-            .replace(",", "")
+          .toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+          .replace(",", "")
         : "-",
       status: user.status === "active" ? t("common.active") : t("common.inactive"),
       statusKey: user.status || "inactive", // Lưu status gốc để dùng cho CSS class
@@ -95,53 +148,96 @@ export default function InternalPage() {
   }, [t]);
 
   // Fetch internal staff từ API
-  useEffect(() => {
-    const fetchInternalStaff = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get(API_ENDPOINTS.USERS.INTERNAL);
+  const fetchInternalStaff = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        if (response.data.success) {
-          const staff = response.data.data;
-          setRawStaff(staff);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+        search: debouncedSearch,
+        startDate: dateRange.split("-")[0]?.trim(),
+        endDate: dateRange.split("-")[1]?.trim(),
+      };
 
-          // Format data để hiển thị trong table
-          const formattedStaff = staff.map((user) => mapStaffData(user));
-
-          // Chuẩn bị items để query notes
-          const noteItems = prepareNoteItems(staff, "User");
-
-          // Fetch notes batch nếu có staff
-          if (noteItems.length > 0) {
-            const notesResponse = await axiosInstance.post(
-              API_ENDPOINTS.NOTES.BATCH,
-              { items: noteItems }
-            );
-
-            // Tạo Map để lookup notes
-            const notesMap = createNotesMap(notesResponse);
-
-            // Merge notes vào staff
-            const staffWithNotes = formattedStaff.map((staffMember) =>
-              mergeNoteToEntity(staffMember, "User", notesMap)
-            );
-
-            setRows(staffWithNotes);
-          } else {
-            setRows(formattedStaff);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching internal staff:", error);
-        // Fallback về mock data nếu có lỗi
-        setRows([]);
-      } finally {
-        setLoading(false);
+      // Map filters to API values
+      if (status !== t("common.all")) {
+        if (status === t("common.active")) params.status = "active";
+        else if (status === t("common.inactive")) params.status = "inactive";
       }
-    };
 
+      if (role !== t("common.all")) {
+        // Map UI role back to DB role if needed, or send as is if they match
+        // Based on mapStaffData, UI roles are translated. We need to send original roles or handle translation.
+        // The backend expects "System Admin", "CS Staff", "Accountant".
+        // We need to reverse map or just send the translated value if backend handles it?
+        // Backend expects exact string match for internal_role.
+        // So we need to find the key from the value.
+        const roleMap = {
+          "System Admin": t("internalPage.roles.systemAdmin"),
+          "CS Staff": t("internalPage.roles.csStaff"),
+          "Accountant": t("internalPage.roles.accountant"),
+        };
+        const originalRole = Object.keys(roleMap).find(key => roleMap[key] === role);
+        if (originalRole) params.role = originalRole;
+      }
+
+      const response = await axiosInstance.get(API_ENDPOINTS.USERS.INTERNAL, { params });
+
+      if (response.data.success) {
+        const staff = response.data.data;
+        setRawStaff(staff);
+
+        // Format data để hiển thị trong table
+        const formattedStaff = staff.map((user) => mapStaffData(user));
+
+        // Chuẩn bị items để query notes
+        const noteItems = prepareNoteItems(staff, "User");
+
+        // Fetch notes batch nếu có staff
+        if (noteItems.length > 0) {
+          const notesResponse = await axiosInstance.post(
+            API_ENDPOINTS.NOTES.BATCH,
+            { items: noteItems }
+          );
+
+          // Tạo Map để lookup notes
+          const notesMap = createNotesMap(notesResponse);
+
+          // Merge notes vào staff
+          const staffWithNotes = formattedStaff.map((staffMember) =>
+            mergeNoteToEntity(staffMember, "User", notesMap)
+          );
+
+          setRows(staffWithNotes);
+        } else {
+          setRows(formattedStaff);
+        }
+
+        // Update pagination info
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total,
+          totalPages: response.data.totalPages
+        }));
+
+        // Update stats if available
+        if (response.data.stats) {
+          setStats(response.data.stats);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching internal staff:", error);
+      // Fallback về mock data nếu có lỗi
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.page, pagination.limit, debouncedSearch, status, role, dateRange, t, mapStaffData]);
+
+  useEffect(() => {
     fetchInternalStaff();
-  }, [mapStaffData]);
+  }, [fetchInternalStaff]);
 
   // Re-map data khi ngôn ngữ thay đổi
   useEffect(() => {
@@ -174,58 +270,14 @@ export default function InternalPage() {
         setRows(formattedStaff);
       }
 
-      // Reset filters về "All" khi đổi ngôn ngữ
-      setStatus(t("common.all"));
-      setRole(t("common.all"));
+      // Note: do not reset filters here (would override user selection on each fetch)
     }
   }, [i18n.language, rawStaff, mapStaffData, t]);
 
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return rows.filter((c) => {
-      // Search theo name/phone/email
-      const matchSearch =
-        !s ||
-        c.name.toLowerCase().includes(s) ||
-        (c.phone || "").toLowerCase().includes(s) ||
-        (c.email || "").toLowerCase().includes(s);
-      // Lọc theo status
-      const allValue = t("common.all");
-      const matchStatus = status === "All" || status === allValue ? true : c.status === status;
-      // Lọc theo role
-      const matchRole = role === "All" || role === allValue ? true : c.role === role;
-      // Lọc theo khoảng ngày đơn giản (demo – cần thay bằng parser thật khi tích hợp)
-      let matchDate = true;
-      if (dateRange.includes("-")) {
-        const [from, to] = dateRange.split("-").map((v) => v.trim());
-        // Định dạng demo: dd/mm/yyyy
-        const parse = (d) => {
-          const [dd, mm, yyyy] = d.split("/").map((x) => parseInt(x));
-          if (!dd || !mm || !yyyy) return null;
-          return new Date(yyyy, mm - 1, dd).getTime();
-        };
-        const fromTs = parse(from);
-        const toTs = parse(to);
-        if (fromTs || toTs) {
-          // So sánh với createdAt (lấy phần ngày)
-          const createdDate = c.createdAt.split(" ")[0];
-          const createdTs = parse(createdDate);
-          if (createdTs) {
-            if (fromTs && createdTs < fromTs) matchDate = false;
-            if (toTs && createdTs > toTs) matchDate = false;
-          }
-        }
-      }
-      return matchSearch && matchStatus && matchRole && matchDate;
-    });
-  }, [search, status, role, dateRange, rows, t]);
-
+  // Use stats from API for counters
   const counters = useMemo(() => {
-    const total = filtered.length;
-    const active = filtered.filter((c) => c.status === t("common.active")).length;
-    const inactive = filtered.filter((c) => c.status === t("common.inactive")).length;
-    return { total, active, inactive };
-  }, [filtered, t]);
+    return stats;
+  }, [stats]);
 
   const handleAction = async (row, type) => {
     // Set loading state
@@ -272,8 +324,8 @@ export default function InternalPage() {
               active: t("common.active"),
               inactive: t("common.inactive"),
             };
-            return { 
-              ...r, 
+            return {
+              ...r,
               status: statusMap[newStatus] || t("common.inactive"),
               statusKey: newStatus || "inactive"
             };
@@ -436,7 +488,7 @@ export default function InternalPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                {ROLES.map((r) => (
+                {rolesList.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
@@ -490,12 +542,12 @@ export default function InternalPage() {
           <div style={{ padding: "20px", textAlign: "center" }}>
             {t("internalPage.messages.loading")}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
             {t("internalPage.messages.noData")}
           </div>
         ) : (
-          filtered.map((row) => (
+          rows.map((row) => (
             <div className="amu-row" key={row.id}>
               <div className="amu-col amu-col-name">{row.name}</div>
               <div className="amu-col amu-col-phone">{row.phone || "-"}</div>
@@ -557,6 +609,18 @@ export default function InternalPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        itemsPerPage={pagination.limit}
+        startIndex={(pagination.page - 1) * pagination.limit}
+        endIndex={Math.min(pagination.page * pagination.limit, pagination.total)}
+        onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+        onItemsPerPageChange={(limit) => setPagination(prev => ({ ...prev, limit, page: 1 }))}
+      />
 
       {/* Confirmation Popup */}
       <ConfirmationPopup

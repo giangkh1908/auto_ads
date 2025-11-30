@@ -65,6 +65,15 @@ class ShopService {
     }
   }
 
+  async refreshUserPages() {
+    try {
+      const res = await axiosInstance.post(API_ENDPOINTS.SHOP_FACEBOOK.REFRESH_USER_PAGES)
+      return res.data
+    } catch (error) {
+      throw this.handleError(error)
+    }
+  }
+
   handleError(error) {
     if (error?.response?.data) return error.response.data
     if (error?.message) return new Error(error.message)

@@ -29,9 +29,9 @@ export default function AdsTable({
   const { t } = useTranslation(['ads']);
 
   const getColSpan = () => {
-    if (activeTab === "adsets") return 13;
-    if (activeTab === "campaigns") return 12;
-    return 11;
+    if (activeTab === "adsets") return 17;
+    if (activeTab === "campaigns") return 16;
+    return 15;
   };
 
   return (
@@ -57,6 +57,10 @@ export default function AdsTable({
               <th>{t('management.impressions')}</th>
               <th>{t('management.reach')}</th>
               <th>{t('management.results')}</th>
+              <th>Spend</th>
+              <th>Clicks</th>
+              <th>CPC</th>
+              <th>CTR (%)</th>
               <th>{t('management.creator')}</th>
               <th>{t('management.actions')}</th>
             </tr>
@@ -154,6 +158,10 @@ export default function AdsTable({
                 <td className="text-center">{row.impressions || "0"}</td>
                 <td className="text-center">{row.reach || "0"}</td>
                 <td className="text-center">{row.results || "0"}</td>
+                <td className="text-center">{row.spend ? new Intl.NumberFormat('vi-VN').format(row.spend) : "0"}</td>
+                <td className="text-center">{row.clicks || "0"}</td>
+                <td className="text-center">{row.cpc ? new Intl.NumberFormat('vi-VN').format(row.cpc) : "0"}</td>
+                <td className="text-center">{row.ctr ? Number(row.ctr).toFixed(2) : "0.00"}</td>
                 <td className="text-center">
                   {row.created_by?.full_name || row.created_by?.email || t('labels.not_set')}
                 </td>

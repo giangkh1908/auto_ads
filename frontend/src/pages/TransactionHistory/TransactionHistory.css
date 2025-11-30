@@ -1,0 +1,381 @@
+.transaction-history-page {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: calc(100vh - 58px);
+  background-color: #f5f5f5;
+  margin-top: 50px;
+}
+
+.transaction-history-header {
+  background: white;
+  padding: 6px 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+}
+
+.transaction-history-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+}
+
+.transaction-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.summary-item {
+  font-size: 14px;
+  color: #666;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.summary-item strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.summary-item.total {
+  background: #337ab7;
+  color: white;
+}
+
+.summary-item.total strong {
+  color: white;
+}
+
+.transaction-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: white;
+  padding: 16px;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #000000;
+  margin: 0;
+}
+
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-input-transactions {
+  padding: 10px 35px 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 250px;
+  transition: border-color 0.2s;
+  background: white;
+}
+
+.filter-input-transactions:focus {
+  outline: none;
+  border-color: #337ab7;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  color: #666;
+  pointer-events: none;
+}
+
+.filter-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.filter-select-wrapper::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #666;
+  pointer-events: none;
+}
+
+.filter-select-transactions {
+  padding: 10px 30px 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  min-width: 180px;
+  transition: border-color 0.2s;
+  color: #000;
+  line-height: 1.2;
+}
+
+.filter-select-transactions:focus {
+  outline: none;
+  border-color: #337ab7;
+}
+
+.filter-select-transactions option {
+  font-weight: normal;
+  font-size: 14px;
+}
+
+/* Style cho DateRangePicker trong TransactionHistory */
+.filter-group .analytics-date-range-picker-wrapper {
+  width: 100%;
+}
+
+.filter-group .analytics-date-range-input {
+  padding: 10px 30px 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+  background: white;
+  min-width: 220px;
+  width: 100%;
+}
+
+.filter-group .analytics-date-range-input:focus {
+  outline: none;
+  border-color: #337ab7;
+  box-shadow: none;
+}
+
+.transaction-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.loading-state,
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+}
+
+.transaction-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e0e0;
+}
+
+.transaction-table thead {
+  background: #f8f9fa;
+}
+
+.transaction-table th {
+  padding: 16px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  align-items: center;
+}
+
+.transaction-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+  align-items: center;
+}
+
+.transaction-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.status-badge-transactions {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-canceled,
+.status-cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.status-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-initializing {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.action-buttons-transactions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn-transactions {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  background: transparent;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.action-btn-transactions.view {
+  color: #337ab7;
+  border-color: #337ab7;
+  background: rgb(255, 255, 255);
+}
+
+.action-btn-transactions.view:hover {
+  background: #ededed;
+  transform: scale(1.05);
+}
+
+.action-btn-transactions.download {
+  color: #28a745;
+  border-color: #28a745;
+  background: rgb(255, 255, 255);
+}
+
+.action-btn-transactions.download:hover {
+  background: #ededed;
+  transform: scale(1.05);
+}
+
+.action-btn-transactions svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .transaction-history-page {
+    padding: 16px;
+  }
+
+  .transaction-filters {
+    flex-direction: column;
+  }
+
+  .filter-input,
+  .filter-select,
+  .filter-group .analytics-date-range-input {
+    width: 100%;
+  }
+
+  .transaction-table {
+    font-size: 12px;
+  }
+
+  .transaction-table th,
+  .transaction-table td {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .transaction-history-header h1 {
+    font-size: 24px;
+  }
+
+  .transaction-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .transaction-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .transaction-table thead,
+  .transaction-table tbody,
+  .transaction-table tr,
+  .transaction-table td,
+  .transaction-table th {
+    display: block;
+  }
+
+  .transaction-table thead {
+    display: none;
+  }
+
+  .transaction-table tr {
+    margin-bottom: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .transaction-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+  }
+
+  .transaction-table td:before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: #333;
+  }
+}
+

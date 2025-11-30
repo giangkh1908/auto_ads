@@ -38,6 +38,21 @@ class PaymentTransactionService {
   }
 
   /**
+   * Get filter options (packages, methods, statuses)
+   * @returns {Promise} Response từ API
+   */
+  async getFilterOptions() {
+    try {
+      const response = await axiosInstance.get(
+        "/api/payment-transactions/filters/options"
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Update payment transaction
    * @param {String} id - Transaction ID
    * @param {Object} data - Update data
@@ -101,4 +116,3 @@ class PaymentTransactionService {
 }
 
 export default new PaymentTransactionService();
-

@@ -347,5 +347,45 @@
   .chip-content {
     width: 100%;
   }
+
+  /* Location suggestions dropdown responsive */
+  .location-suggestions {
+    max-height: calc(100vh - 300px);
+    z-index: 1001;
+  }
+
+  .location-suggestion-item {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .location-name {
+    font-size: 13px;
+  }
+
+  .location-type {
+    font-size: 11px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .location-suggestions {
+    max-height: calc(100vh - 250px);
+    z-index: 1001;
+  }
+
+  .location-suggestion-item {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .location-name {
+    font-size: 12px;
+  }
+
+  .location-type {
+    font-size: 10px;
+  }
 }
 

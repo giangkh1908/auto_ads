@@ -1,7 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import AdPerformance from "../../models/ads/adPerformance.model.js";
-import AdHourlyInsight from "../../models/ads/adHourlyInsight.model.js";
+// import AdHourlyInsight from "../../models/ads/adHourlyInsight.model.js"; // ❌ DISABLED: Feature removed
 import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
@@ -750,78 +750,15 @@ export const getTrendTool = tool(
         matchStage.campaign_id = null; // Default to account-level if no specific entity
       }
 
+      // ❌ HOURLY INSIGHTS FEATURE DISABLED
       if (granularity === "hour") {
-        const trend = await AdHourlyInsight.aggregate([
-          {
-            $match: {
-              account_id: accountObjId,
-              timestamp: {
-                $gte: new Date(date_from),
-                $lte: new Date(date_to),
-              },
-              ...(matchStage.campaign_id
-                ? { campaign_id: matchStage.campaign_id }
-                : {}),
-              ...(matchStage.set_id // Added for adset
-                ? { set_id: matchStage.set_id }
-                : {}),
-              ...(matchStage.ads_id // Added for ad
-                ? { ads_id: matchStage.ads_id }
-                : {}),
-            },
-          },
-          {
-            $group: {
-              _id: {
-                date: {
-                  $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
-                },
-                hour: { $hour: "$timestamp" },
-              },
-              avgMetric: { $avg: `$${metric}` },
-            },
-          },
-          { $sort: { "_id.date": 1, "_id.hour": 1 } },
-        ]);
-
-        const dataPoints = trend.map((t) => ({
-          timestamp: `${t._id.date} ${t._id.hour}:00`,
-          value: {
-            value: t.avgMetric,
-            formatted: formatMetric(metric, t.avgMetric),
-          },
-        }));
-
-        const firstValue = dataPoints[0]?.value.value || 0;
-        const lastValue =
-          dataPoints[dataPoints.length - 1]?.value.value || 0;
-        const changePercentage =
-          firstValue > 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
-
-        let trendDirection = "stable";
-        if (Math.abs(changePercentage) > 5) {
-          trendDirection = changePercentage > 0 ? "increasing" : "decreasing";
-        }
-
-        writer?.(`✅ Đã phân tích ${trend.length} điểm dữ liệu`);
-
+        writer?.(`⚠️ Hourly insights không còn khả dụng. Vui lòng sử dụng granularity='day' thay thế.`);
+        
         return JSON.stringify({
-          metric,
-          granularity: "hour",
-          period: { from: date_from, to: date_to },
-          data_points: dataPoints,
-          trend: {
-            direction: trendDirection,
-            change_percentage: changePercentage,
-            first_value: {
-              value: firstValue,
-              formatted: formatMetric(metric, firstValue),
-            },
-            last_value: {
-              value: lastValue,
-              formatted: formatMetric(metric, lastValue),
-            },
-          },
+          error: "FEATURE_DISABLED",
+          message: "Hourly insights feature has been disabled. Please use 'day' granularity instead.",
+          suggestion: "Try: analyze_metric_trend with granularity='day' for daily performance data.",
+          available_granularities: ["day"],
         });
       }
 

@@ -50,6 +50,12 @@
   gap: 30px; /* khoảng cách giữa các phần tử */
 }
 
+.platform-icon-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 10px;
+}
 
 .hero-text {
   animation: slideInLeft 1s ease-out;
@@ -310,22 +316,6 @@
   justify-content: center;
   color: #ffffff;
   transition: all 0.3s ease;
-}
-
-.platform-icon.messenger {
-  background: linear-gradient(135deg, #0084FF, #00C6FF);
-}
-
-.platform-icon.zalo {
-  background: linear-gradient(135deg, #0068FF, #0095FF);
-}
-
-.platform-icon.website {
-  background: linear-gradient(135deg, #667EEA, #764BA2);
-}
-
-.platform-icon.tryai {
-  background: linear-gradient(135deg, #F093FB, #F5576C);
 }
 
 .platform-card:hover .platform-icon {

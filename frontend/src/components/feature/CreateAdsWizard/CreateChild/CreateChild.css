@@ -273,4 +273,135 @@ select.form-input-child {
     padding: 6px 12px;
     font-size: 13px;
   }
+
+  /* ads-modal.child-tab responsive */
+  .ads-modal.child-tab {
+    width: 770px;
+    max-width: calc(100vw - 20px);
+   
+    max-height: 250px;
+  }
+
+  .ads-modal-header {
+    padding: 10px 16px;
+  }
+
+  .ads-modal-title {
+    font-size: 17px;
+  }
+
+  .ads-modal-body {
+    min-height: calc(90vh - 120px);
+  }
+
+  .wizard-content {
+    padding: 16px;
+  }
+
+  .tab-button-campaign {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .ads-modal-tabs {
+    gap: 8px;
+    padding: 0 16px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .create-child-modal {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+  
+  .create-child-header {
+    padding: 10px 12px;
+  }
+
+  .create-child-header h3 {
+    font-size: 16px;
+  }
+  
+  .create-child-content {
+    padding: 12px;
+    gap: 16px;
+  }
+  
+  .form-row-child {
+    gap: 6px;
+  }
+  
+  .create-child-footer {
+    padding: 10px 12px;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .create-child-footer button {
+    width: 100%;
+    min-width: auto;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  /* ads-modal.child-tab responsive */
+  .ads-modal.child-tab {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .ads-modal-header {
+    padding: 8px 12px;
+    flex-shrink: 0;
+  }
+
+  .ads-modal-title {
+    font-size: 16px;
+  }
+
+  .ads-modal-close {
+    font-size: 16px;
+    padding: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ads-modal-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .wizard-content {
+    padding: 12px;
+    min-height: 0;
+  }
+
+  .tab-button-campaign {
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .ads-modal-tabs {
+    gap: 4px;
+    padding: 0 12px;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ads-modal-tabs::-webkit-scrollbar {
+    display: none;
+  }
 }

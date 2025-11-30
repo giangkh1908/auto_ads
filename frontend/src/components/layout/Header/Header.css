@@ -26,6 +26,12 @@
   height: 100%;
 }
 
+.logo-hamburger-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
 .app-title {
   display: flex;
   align-items: center;
@@ -118,8 +124,8 @@ button:hover {
   padding: 0.5rem 0;
   margin: 0;
   z-index: 10;
-  width: 280px;
-  height: 168px;
+  width: 250px;
+  height: 205px;
   font-size: 14px;
 }
 
@@ -476,4 +482,415 @@ a {
   color: #ffa500;
   font-size: 12px;
   font-weight: 600;
+}
+
+/* Hamburger Button */
+.hamburger-btn {
+  display: none; /* Ẩn trên desktop */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #ffffff;
+  transition: all 0.2s ease;
+  z-index: 1001;
+  margin-right: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-header.scrolled .hamburger-btn {
+  color: #333;
+}
+
+.hamburger-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+/* Mobile Menu */
+.mobile-menu {
+  display: none; /* Ẩn trên desktop */
+  position: fixed;
+  top: 58px; /* Dưới header */
+  left: 0;
+  width: 100%;
+  max-width: 320px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-top: 1px solid #e5e7eb;
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  max-height: calc(100vh - 58px);
+  overflow-y: auto;
+}
+
+.mobile-menu.open {
+  transform: translateX(0);
+}
+
+.mobile-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-nav-btn:hover {
+  background: #f9fafb;
+  color: #667eea;
+}
+
+.mobile-nav-btn.active {
+  background: #eff6ff;
+  color: #667eea;
+  border-left: 3px solid #667eea;
+}
+
+.mobile-nav-btn svg {
+  flex-shrink: 0;
+}
+
+.mobile-nav-btn span {
+  flex: 1;
+}
+
+/* Overlay khi mobile menu mở */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 58px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .header-content {
+    padding: 12px 16px;
+  }
+
+  .app-nav {
+    gap: 12px;
+  }
+
+  .nav-btn,
+  .nav-btn-2 {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .app-title {
+    font-size: 18px;
+  }
+
+  .app-name {
+    font-size: 18px;
+    width: 100px;
+  }
+
+  .dropdown-avatar {
+    width: 260px;
+  }
+
+  .dropdown-shop {
+    min-width: 240px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .app-header {
+    height: 56px;
+  }
+
+  .header-content {
+    padding: 10px 12px;
+  }
+
+  /* Hiển thị hamburger button */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* Hiển thị mobile menu */
+  .mobile-menu {
+    display: block;
+    top: 56px;
+    max-height: calc(100vh - 56px);
+  }
+
+  .mobile-menu-overlay {
+    display: block;
+    top: 56px;
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .app-name {
+    font-size: 16px;
+    width: 90px;
+    height: 36px;
+  }
+
+  /* Ẩn navigation trên mobile - sẽ dùng mobile menu */
+  .app-nav {
+    display: none;
+  }
+
+  .app-nav-2 {
+    display: none;
+  }
+
+  /* Header actions stack */
+  .header-actions {
+    gap: 8px;
+  }
+
+  .user-menu {
+    gap: 8px;
+  }
+
+  /* User section responsive */
+  .user-greeting {
+    display: none; /* Ẩn greeting text trên mobile */
+  }
+
+  .user-name-header {
+    display: none;
+  }
+
+  .user-name-header-role {
+    display: none;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Dropdowns responsive */
+  .dropdown-avatar {
+    width: 240px;
+    max-width: calc(100vw - 20px);
+    right: -10px;
+    top: 100%;
+  }
+
+  .dropdown-language {
+    right: -10px;
+    width: 110px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .dropdown-language li {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .dropdown-shop {
+    min-width: 220px;
+    max-width: calc(100vw - 20px);
+    right: -10px;
+  }
+
+  .dropdown-shop-header b {
+    font-size: 14px;
+  }
+
+  .dropdown-shop-header small {
+    font-size: 12px;
+  }
+
+  .dropdown-shop-item {
+    padding: 10px 12px;
+  }
+
+  .btn-login {
+    width: 100px;
+    height: 32px;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .btn-language {
+    width: 28px;
+    height: 28px;
+  }
+
+  .dropdown-language img {
+    width: 20px;
+    height: 14px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .app-header {
+    height: 52px;
+  }
+
+  .header-content {
+    padding: 8px 10px;
+  }
+
+  .hamburger-btn {
+    padding: 6px;
+    margin-right: 8px;
+  }
+
+  .hamburger-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-menu {
+    top: 52px;
+    max-width: 280px;
+    max-height: calc(100vh - 52px);
+  }
+
+  .mobile-menu-overlay {
+    top: 52px;
+  }
+
+  .mobile-nav-btn {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+
+  .app-title {
+    font-size: 14px;
+  }
+
+  .app-name {
+    font-size: 14px;
+    width: 80px;
+    height: 32px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .user-menu {
+    gap: 6px;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .dropdown-avatar {
+    width: 200px;
+    max-width: calc(100vw - 20px);
+    height: auto;
+    max-height: calc(100vh - 70px);
+    right: -20px;
+  }
+
+  .dropdown-infor-avatar {
+    padding: 8px 12px;
+  }
+
+  .dropdown-infor-avatar b {
+    font-size: 15px;
+  }
+
+  .dropdown-option-avatar li {
+    padding: 6px 12px;
+    font-size: 15px;
+  }
+
+  .dropdown-language {
+    right: -20px;
+    width: 100px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .dropdown-language li {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .dropdown-language img {
+    width: 18px;
+    height: 12px;
+  }
+
+  .dropdown-shop {
+    min-width: 200px;
+    max-width: calc(100vw - 20px);
+    right: -20px;
+    max-height: calc(100vh - 70px);
+  }
+
+  .dropdown-shop-header {
+    padding: 8px 12px;
+  }
+
+  .dropdown-shop-header b {
+    font-size: 13px;
+  }
+
+  .dropdown-shop-header small {
+    font-size: 11px;
+  }
+
+  .dropdown-shop-item {
+    padding: 8px 12px;
+  }
+
+  .shop-item-name {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-login {
+    width: 80px;
+    height: 30px;
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .btn-language {
+    width: 26px;
+    height: 26px;
+  }
+
+  .btn-manage-shop {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .upgrade-badge {
+    font-size: 11px;
+  }
 }

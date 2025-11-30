@@ -1014,11 +1014,6 @@ body {
     height: 90vh;
   }
   
-  .ads-modal.child-tab {
-    width: 90vw;
-    height: 80vh;
-  }
-  
   .objectives-sidebar {
     width: 250px;
   }
@@ -1035,6 +1030,120 @@ body {
   
   .budget-input {
     width: 100%;
+  }
+
+  /* Radio dropdown responsive */
+  .radio-dropdown-header {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .radio-dropdown-menu {
+    max-height: calc(100vh - 200px);
+    z-index: 1001;
+  }
+
+  .radio-dropdown-group-title {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .radio-dropdown-option {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .radio-dropdown-option .option-title {
+    font-size: 13px;
+  }
+
+  .radio-dropdown-option .option-description {
+    font-size: 12px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .ads-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .objectives-sidebar {
+    width: 200px;
+  }
+  
+  .audience-fields {
+    gap: 10px;
+  }
+  
+  .budget-row {
+    gap: 10px;
+  }
+
+  /* Radio dropdown responsive */
+  .radio-dropdown-header {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .radio-dropdown-menu {
+    max-height: calc(100vh - 150px);
+    z-index: 1001;
+  }
+
+  .radio-dropdown-group-title {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .radio-dropdown-option {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .radio-dropdown-option .option-title {
+    font-size: 12px;
+  }
+
+  .radio-dropdown-option .option-description {
+    font-size: 11px;
+  }
+  
+  .guidance-banner {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .guidance-banner-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .guidance-banner-box {
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .guidance-banner-box-header {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  
+  .guidance-banner-requirement {
+    font-size: 12px;
+  }
+  
+  .guidance-banner-cta-box {
+    padding: 10px;
+    font-size: 12px;
+  }
+  
+  .guidance-banner-note {
+    font-size: 11px;
+    margin-top: 10px;
   }
 }
 

@@ -407,3 +407,195 @@
   padding: 0.5rem 0;
 }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .hybrid-tab-content {
+    min-height: 350px;
+  }
+
+  .mapbox-map-wrapper {
+    margin: 0.75rem 0;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .hybrid-location-selector {
+    gap: 0.75rem;
+  }
+
+  .hybrid-tabs {
+    gap: 0.25rem;
+    padding-bottom: 0.375rem;
+  }
+
+  .hybrid-tab {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .hybrid-tab-content {
+    min-height: 300px;
+  }
+
+  .admin-mode {
+    gap: 1.25rem;
+  }
+
+  .admin-label {
+    font-size: 0.8125rem;
+  }
+
+  .admin-select {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .district-search-input,
+  .mapbox-search-input {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.625rem 0.5rem 2.25rem;
+  }
+
+  .district-suggestions,
+  .mapbox-suggestions {
+    max-height: 180px;
+  }
+
+  .district-suggestion-item,
+  .mapbox-suggestion-item {
+    padding: 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .mapbox-map-wrapper {
+    margin: 0.625rem 0;
+  }
+
+  .district-chip,
+  .pin-chip {
+    padding: 0.625rem;
+  }
+
+  .chip-name {
+    font-size: 0.8125rem;
+  }
+
+  .radius-input {
+    width: 50px;
+    font-size: 0.6875rem;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .hybrid-location-selector {
+    gap: 0.625rem;
+  }
+
+  .hybrid-tabs {
+    flex-direction: column;
+    gap: 0.25rem;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .hybrid-tab {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    border-bottom: 2px solid transparent;
+    margin-bottom: 0;
+    border-radius: 4px;
+  }
+
+  .hybrid-tab.active {
+    border-bottom-color: transparent;
+    background-color: #eff6ff;
+  }
+
+  .hybrid-tab-content {
+    min-height: 250px;
+  }
+
+  .admin-mode {
+    gap: 1rem;
+  }
+
+  .admin-label {
+    font-size: 0.75rem;
+  }
+
+  .admin-select {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .district-search-input,
+  .mapbox-search-input {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.5rem 0.5rem 2rem;
+  }
+
+  .district-suggestions,
+  .mapbox-suggestions {
+    max-height: 150px;
+  }
+
+  .district-suggestion-item,
+  .mapbox-suggestion-item {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .mapbox-map-wrapper {
+    margin: 0.5rem 0;
+  }
+
+  .district-chip,
+  .pin-chip {
+    padding: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .chip-name {
+    font-size: 0.75rem;
+  }
+
+  .chip-radius {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .radius-input {
+    width: 60px;
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .location-counter {
+    padding: 0.625rem;
+    font-size: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .location-empty-state {
+    padding: 2rem 0.75rem;
+  }
+
+  .location-empty-state p {
+    font-size: 0.8125rem;
+  }
+
+  .empty-hint {
+    font-size: 0.6875rem;
+  }
+}
+

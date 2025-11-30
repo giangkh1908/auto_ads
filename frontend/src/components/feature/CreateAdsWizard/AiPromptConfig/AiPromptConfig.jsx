@@ -199,7 +199,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
               <h4 className="ai-prompt-section-title">Prompt</h4>
               
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title">## Nhân vật</h5>
+                <h5 className="ai-prompt-subsection-title" 
+                title="Cấu hình nhân vật giả tưởng cho prompt">
+                  # Nhân vật
+                </h5>
                 <textarea
                   className="ai-prompt-textarea"
                   value={character}
@@ -210,7 +213,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
               </div>
 
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title">### Kỹ năng</h5>
+                <h5 className="ai-prompt-subsection-title" 
+                title="Cấu hình kỹ năng mà nhân vật ấy sử dụng cho prompt">
+                  ## Kỹ năng
+                </h5>
                 <div className="ai-prompt-list">
                   {skills.map((skill, index) => (
                     <div key={index} className="ai-prompt-list-item">
@@ -238,7 +244,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
               </div>
 
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title">### Giới hạn</h5>
+                <h5 className="ai-prompt-subsection-title" 
+                title="Có giới hạn nào mà không cho phép nhân vật vượt quá?">
+                  ## Giới hạn
+                </h5>
                 <div className="ai-prompt-list">
                   {limitations.map((limitation, index) => (
                     <div key={index} className="ai-prompt-list-item">
@@ -391,13 +400,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
                           />
                           <span>Sử dụng Custom Templates</span>
                         </label>
-                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '10px'}}>
                           Khi bật, hệ thống sẽ dùng các template tùy chỉnh thay vì tự động build từ Character/Skills/Limitations
                         </div>
-                      </div>
-
-                      <div style={{ marginBottom: '12px' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#666'}}>
                           Các placeholders có thể dùng: {'{character}'}, {'{skills}'}, {'{limitations}'}, {'{language}'}, {'{tone}'}, {'{personalization}'}, {'{keywords}'}, {'{maxLen}'}
                         </div>
                       </div>

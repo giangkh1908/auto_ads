@@ -187,3 +187,128 @@
   overflow-y: auto;
 }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .prompt-preview-modal {
+    width: 85%;
+    max-width: 700px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .prompt-preview-modal {
+    width: 95%;
+    max-width: none;
+    max-height: 95vh;
+  }
+
+  .prompt-preview-header {
+    padding: 16px 20px;
+  }
+
+  .prompt-preview-header h3 {
+    font-size: 16px;
+  }
+
+  .prompt-preview-content {
+    padding: 20px;
+  }
+
+  .prompt-preview-target-selector {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .prompt-preview-target-selector select {
+    width: 100%;
+  }
+
+  .prompt-preview-section {
+    margin-bottom: 20px;
+  }
+
+  .prompt-preview-text {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .prompt-preview-full-prompt {
+    padding: 12px;
+    font-size: 12px;
+    max-height: 300px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .prompt-preview-modal {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .prompt-preview-header {
+    padding: 12px 16px;
+  }
+
+  .prompt-preview-header h3 {
+    font-size: 15px;
+  }
+
+  .prompt-preview-content {
+    padding: 16px;
+  }
+
+  .prompt-preview-target-selector {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .prompt-preview-target-selector label {
+    font-size: 13px;
+  }
+
+  .prompt-preview-target-selector select {
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+
+  .prompt-preview-section {
+    margin-bottom: 16px;
+  }
+
+  .prompt-preview-section h4 {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .prompt-preview-text {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .prompt-preview-list {
+    font-size: 12px;
+    padding-left: 16px;
+  }
+
+  .copy-button {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .prompt-preview-full-prompt {
+    padding: 10px;
+    font-size: 11px;
+    max-height: 250px;
+  }
+}
+

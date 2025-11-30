@@ -1,6 +1,6 @@
 // src/routes/ads/adsRoutes.js
 import express from "express";
-import { listAdsCtrl, syncAdsCtrl, getAdsLiveCtrl, toggleAdStatusCtrl, deleteAdCtrl, archiveAdCtrl, getAdFromDatabase, getAdsInsightsCtrl, copyAdCtrl } from "../../controllers/ads/ads.controller.js";
+import { listAdsCtrl, getAdsLiveCtrl, toggleAdStatusCtrl, deleteAdCtrl, archiveAdCtrl, getAdFromDatabase, getAdsInsightsCtrl, copyAdCtrl } from "../../controllers/ads/ads.controller.js";
 import { authenticate } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -20,8 +20,6 @@ router.get("/insights", getAdsInsightsCtrl);
 router.get("/database", getAdFromDatabase);
 router.post("/:id/copy", copyAdCtrl);
 router.post("/:id/archive", archiveAdCtrl);
-// Đồng bộ ads từ Facebook
-router.get("/sync", syncAdsCtrl);
 
 // List ads
 router.get("/", listAdsCtrl);

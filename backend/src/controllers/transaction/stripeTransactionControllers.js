@@ -138,7 +138,7 @@ export const stripeWebhook = async (req, res) => {
       // Kiểm tra đã xử lý event này chưa (chống gọi 2 lần)
       const alreadyProcessed = await PaymentTransaction.findOne({
         _id: orderId,
-        "webhook_events": eventId,
+        webhook_events: eventId,
       });
 
       if (alreadyProcessed) {

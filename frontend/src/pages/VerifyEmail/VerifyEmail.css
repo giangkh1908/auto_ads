@@ -109,3 +109,120 @@
 .btn-home:hover {
     background: #545b62;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .verify-email-container {
+    max-width: 90%;
+    padding: 35px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .verify-email-page {
+    padding: 15px;
+  }
+
+  .verify-email-container {
+    padding: 30px 25px;
+    max-width: 95%;
+  }
+
+  .verify-status h2 {
+    font-size: 22px;
+  }
+
+  .verify-status p {
+    font-size: 14px;
+  }
+
+  .success-icon,
+  .error-icon {
+    font-size: 50px;
+  }
+
+  .resend-section {
+    padding: 16px;
+  }
+
+  .input-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .input-group input {
+    width: 100%;
+  }
+
+  .input-group button {
+    width: 100%;
+  }
+
+  .btn-home {
+    width: 100%;
+    padding: 12px 24px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .verify-email-page {
+    padding: 10px;
+  }
+
+  .verify-email-container {
+    padding: 24px 20px;
+    border-radius: 8px;
+  }
+
+  .verify-status h2 {
+    font-size: 20px;
+    margin: 15px 0 8px;
+  }
+
+  .verify-status p {
+    font-size: 13px;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+  }
+
+  .success-icon,
+  .error-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+  }
+
+  .resend-section {
+    padding: 14px;
+    margin: 24px 0;
+  }
+
+  .resend-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .input-group input {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .input-group button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .btn-home {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}

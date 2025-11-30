@@ -130,7 +130,11 @@
   transform: translateY(-1px);
 }
 
-/* Responsive Design */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Mobile lớn (481px - 767px) */
 @media (max-width: 768px) {
   .ai-config-modal {
     width: 95%;
@@ -146,6 +150,44 @@
   
   .ai-config-header {
     padding: 12px 16px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .ai-config-modal {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+  
+  .ai-config-form {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .ai-config-header {
+    padding: 10px 12px;
+  }
+
+  .ai-config-header h3 {
+    font-size: 16px;
+  }
+
+  .keywords-container {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .keyword-tag {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .ai-config-button {
+    padding: 8px 14px;
+    font-size: 13px;
   }
 }
 

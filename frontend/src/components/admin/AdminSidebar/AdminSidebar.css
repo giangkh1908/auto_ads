@@ -57,20 +57,74 @@
   height: 18px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .admin-sidebar-nav {
+    top: 58px;
+    height: 48px;
+  }
+
   .admin-sidebar-tabs {
-    padding: 0 15px;
-    gap: 0;
+    padding: 0 20px;
   }
 
   .admin-sidebar-tab {
-    padding: 0 12px;
+    padding: 0 16px;
     font-size: 14px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .admin-sidebar-nav {
+    top: 56px;
+    height: 46px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-sidebar-tabs {
+    padding: 0 12px;
+    gap: 0;
+    justify-content: flex-start;
+    min-width: max-content;
+  }
+
+  .admin-sidebar-tab {
+    padding: 0 10px;
+    font-size: 13px;
+    flex-shrink: 0;
   }
 
   .admin-sidebar-tab svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .admin-sidebar-nav {
+    top: 52px;
+    height: 44px;
+  }
+
+  .admin-sidebar-tabs {
+    padding: 0 8px;
+  }
+
+  .admin-sidebar-tab {
+    padding: 0 8px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .admin-sidebar-tab svg {
+    width: 14px;
+    height: 14px;
   }
 }

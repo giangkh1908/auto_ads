@@ -1,6 +1,5 @@
 import AnalyticsSnapshot from "../models/analytics/analyticsSnapshot.model.js";
 import Ads from "../models/ads/ads.model.js";
-import AdPerformance from "../models/ads/adPerformance.model.js";
 
 /**
  * Sync analytics snapshots for an account
@@ -18,8 +17,8 @@ export async function syncAnalyticsSnapshots(account) {
 
     console.log(`[analyticsSnapshotService] 📊 Syncing analytics snapshots for account: ${account.name || accountId}`);
 
-    // AnalyticsSnapshot là bảng TỔNG HỢP - aggregate từ AdPerformance (không lấy từ Facebook Insights)
-    // Fetch all ads for this account
+    // ✅ SIMPLIFIED: Lấy insights trực tiếp từ Ads model (không cần aggregate AdPerformance nữa)
+    // Fetch all ads for this account with insights
     const normalizedAccountId = accountId.replace(/^act_/, '');
     let allAds = [];
     try {
@@ -27,8 +26,7 @@ export async function syncAnalyticsSnapshots(account) {
         $or: [
           { external_account_id: normalizedAccountId },
           { external_account_id: accountId }
-        ],
-        status: { $in: ["ACTIVE", "PAUSED"] }
+        ]
       })
         .populate({
           path: 'set_id',
@@ -46,71 +44,22 @@ export async function syncAnalyticsSnapshots(account) {
       return { synced: 0, errors: 0 };
     }
 
-    // Aggregate metrics from AdPerformance for ALL ads (tổng hợp tất cả ngày)
-    const adIds = allAds.filter(ad => ad?._id).map(ad => ad._id);
-    console.log(`[analyticsSnapshotService] 📊 Aggregating metrics from AdPerformance for ${adIds.length} ads...`);
+    // Count ads with/without insights
+    const adsWithInsights = allAds.filter(ad => ad.insights && Object.keys(ad.insights).length > 0);
+    const adsWithoutInsights = allAds.filter(ad => !ad.insights || Object.keys(ad.insights).length === 0);
     
-    // ✅ THÊM: Filter date range để loại bỏ data sai (future dates hoặc quá cũ)
-    const today = new Date();
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(today.getFullYear() - 2);
+    console.log(`[analyticsSnapshotService] 📊 ${adsWithInsights.length} ads have insights, ${adsWithoutInsights.length} ads have no insights`);
     
-    const performanceData = await AdPerformance.aggregate([
-      {
-        $match: {
-          ads_id: { $in: adIds },
-          // ✅ Bỏ account_id filter vì ads đã được filter theo account rồi
-          // ✅ THÊM: Chỉ lấy data trong 2 năm gần nhất và không phải tương lai
-          date: {
-            $gte: twoYearsAgo,
-            $lte: today
-          }
-        }
-      },
-      {
-        $group: {
-          _id: "$ads_id",
-          totalSpend: { $sum: "$spend" },
-          totalImpressions: { $sum: "$impressions" },
-          totalClicks: { $sum: "$clicks" },
-          totalReach: { $sum: "$reach" },
-          totalLinkClicks: { $sum: "$link_clicks" },
-          totalConversions: { $sum: "$conversions" },
-          totalPurchases: { $sum: "$website_purchases" },
-          totalLeads: { $sum: "$leads" },
-          totalPostEngagement: { $sum: "$post_engagement" },
-          totalMobileAppInstall: { $sum: "$mobile_app_install" },
-          avgFrequency: { $avg: "$frequency" },
-          avgCpc: { $avg: "$cpc" },
-          avgCpm: { $avg: "$cpm" },
-          avgCtr: { $avg: "$ctr" },
-          avgCostPerLead: { $avg: "$cost_per_lead" },
-          avgCostPerConversion: { $avg: "$cost_per_conversion" },
-          latestQualityRanking: { $last: "$quality_ranking" },
-          latestEngagementRateRanking: { $last: "$engagement_rate_ranking" },
-          recordCount: { $sum: 1 }
-        }
-      }
-    ]);
-    
-    const performanceMap = new Map();
-    performanceData.forEach(perf => {
-      performanceMap.set(perf._id.toString(), perf);
-    });
-    
-    console.log(`[analyticsSnapshotService] 📊 Found performance data for ${performanceMap.size} ads from AdPerformance`);
-
-    // Build page name cache from adsets/campaigns
-    const pageNameCache = new Map();
-    allAds.forEach(ad => {
-      if (ad.set_id?.external_id) {
-        const pageName = ad.set_id.page_name || ad.set_id.campaign_id?.page_name || "N/A";
-        pageNameCache.set(ad.set_id.external_id, pageName);
-      }
-    });
+    if (adsWithoutInsights.length > 0 && adsWithoutInsights.length <= 5) {
+      console.log(`[analyticsSnapshotService] ⚠️ Ads without insights:`);
+      adsWithoutInsights.forEach(ad => {
+        console.log(`  - ${ad.name} (${ad.external_id}) - Status: ${ad.status}`);
+      });
+    }
 
     let synced = 0;
     let errors = 0;
+    let skipped = 0;
 
     // Sync ALL ads - aggregate from AdPerformance
     const BATCH_SIZE = 500;
@@ -128,70 +77,54 @@ export async function syncAnalyticsSnapshots(account) {
       
       for (const ad of batch) {
         try {
+          // ⚠️ Skip ads without adset (orphaned ads)
           if (!ad.set_id) {
-            continue; // Skip ads without adset
+            skipped++;
+            continue;
           }
           
-          const campaignId = ad.set_id.campaign_id?._id || ad.set_id.campaign_id;
+          // ⚠️ Skip ads without insights data
+          if (!ad.insights || Object.keys(ad.insights).length === 0) {
+            skipped++;
+            continue;
+          }
+          
+          const campaignId = ad.set_id.campaign_id?._id || ad.set_id.campaign_id || null;
           const campaignObjective = ad.set_id.campaign_id?.objective || null;
           const pageName = ad.set_id.page_name || ad.set_id.campaign_id?.page_name || "N/A";
+          const adsetId = ad.set_id._id || ad.set_id;
+          const adsetName = ad.set_id.name || null;
+          const campaignName = ad.set_id.campaign_id?.name || null;
           
-          // Get aggregated metrics from AdPerformance
-          const perf = performanceMap.get(ad._id.toString());
-          const metrics = perf ? {
-            spend: perf.totalSpend || 0,
-            impressions: perf.totalImpressions || 0,
-            clicks: perf.totalClicks || 0,
-            reach: perf.totalReach || 0,
-            frequency: perf.avgFrequency || 0,
-            cpm: perf.avgCpm || (perf.totalImpressions > 0 ? (perf.totalSpend / perf.totalImpressions) * 1000 : 0),
-            cpc: perf.avgCpc || (perf.totalClicks > 0 ? perf.totalSpend / perf.totalClicks : 0),
-            ctr: perf.avgCtr || (perf.totalImpressions > 0 ? (perf.totalClicks / perf.totalImpressions) * 100 : 0),
-            link_clicks: perf.totalLinkClicks || 0,
-            conversions: perf.totalConversions || 0,
-            website_purchases: perf.totalPurchases || 0,
-            leads: perf.totalLeads || 0,
-            post_engagement: perf.totalPostEngagement || 0,
-            mobile_app_install: perf.totalMobileAppInstall || 0,
-            cost_per_lead: perf.avgCostPerLead || (perf.totalLeads > 0 ? perf.totalSpend / perf.totalLeads : 0),
-            cost_per_conversion: perf.avgCostPerConversion || (perf.totalConversions > 0 ? perf.totalSpend / perf.totalConversions : 0),
-            cost_per_inline_post_engagement: perf.totalPostEngagement > 0 ? perf.totalSpend / perf.totalPostEngagement : 0,
-            cost_per_mobile_app_install: perf.totalMobileAppInstall > 0 ? perf.totalSpend / perf.totalMobileAppInstall : 0,
-            quality_ranking: perf.latestQualityRanking || null,
-            engagement_rate_ranking: perf.latestEngagementRateRanking || null,
-            conversion_rate: perf.totalClicks > 0 ? (perf.totalConversions / perf.totalClicks) * 100 : 0,
-            link_ctr: perf.totalImpressions > 0 ? (perf.totalLinkClicks / perf.totalImpressions) * 100 : 0,
-            link_cpc: perf.totalLinkClicks > 0 ? (perf.totalSpend / perf.totalLinkClicks) : 0,
-            cost_per_result: perf.totalClicks > 0 ? perf.totalSpend / perf.totalClicks : 0,
-            website_purchase_roas: perf.totalPurchases > 0 && perf.totalSpend > 0 ? (perf.totalPurchases * 100) / perf.totalSpend : 0,
-            cost_per_action: perf.totalConversions > 0 ? perf.totalSpend / perf.totalConversions : 0,
-          } : {
-            spend: 0,
-            impressions: 0,
-            clicks: 0,
-            reach: 0,
-            frequency: 0,
-            cpm: 0,
-            cpc: 0,
-            ctr: 0,
-            link_clicks: 0,
-            conversions: 0,
-            website_purchases: 0,
-            leads: 0,
-            post_engagement: 0,
-            mobile_app_install: 0,
-            cost_per_lead: 0,
-            cost_per_conversion: 0,
-            cost_per_inline_post_engagement: 0,
-            cost_per_mobile_app_install: 0,
-            quality_ranking: null,
-            engagement_rate_ranking: null,
-            conversion_rate: 0,
-            link_ctr: 0,
-            link_cpc: 0,
-            cost_per_result: 0,
-            website_purchase_roas: 0,
-            cost_per_action: 0,
+          // ✅ Get metrics directly from ad.insights (already synced from Facebook)
+          const insights = ad.insights || {};
+          const metrics = {
+            spend: insights.spend || 0,
+            impressions: insights.impressions || 0,
+            clicks: insights.clicks || 0,
+            reach: insights.reach || 0,
+            frequency: insights.frequency || 0,
+            cpm: insights.cpm || 0,
+            cpc: insights.cpc || 0,
+            ctr: insights.ctr || 0,
+            link_clicks: insights.link_clicks || 0,
+            conversions: insights.conversions || 0,
+            website_purchases: insights.website_purchases || 0,
+            leads: insights.leads || 0,
+            post_engagement: insights.post_engagement || 0,
+            mobile_app_install: insights.mobile_app_install || 0,
+            cost_per_lead: insights.cost_per_lead || 0,
+            cost_per_conversion: insights.cost_per_conversion || 0,
+            cost_per_inline_post_engagement: insights.post_engagement > 0 ? (insights.spend || 0) / insights.post_engagement : 0,
+            cost_per_mobile_app_install: insights.cost_per_mobile_app_install || 0,
+            quality_ranking: insights.quality_ranking || null,
+            engagement_rate_ranking: insights.engagement_rate_ranking || null,
+            conversion_rate: insights.conversion_rate || 0,
+            link_ctr: insights.link_ctr || 0,
+            link_cpc: insights.link_cpc || 0,
+            cost_per_result: insights.cost_per_result || 0,
+            website_purchase_roas: insights.website_purchase_roas || 0,
+            cost_per_action: insights.conversions > 0 ? (insights.spend || 0) / insights.conversions : 0,
           };
           
           bulkOps.push({
@@ -203,10 +136,10 @@ export async function syncAnalyticsSnapshots(account) {
                   account_id: account._id,
                   external_account_id: accountId,
                   campaign_id: campaignId,
-                  campaign_name: ad.set_id.campaign_id?.name || null,
+                  campaign_name: campaignName,
                   campaign_objective: campaignObjective,
-                  adset_id: ad.set_id._id || ad.set_id,
-                  adset_name: ad.set_id.name || null,
+                  adset_id: adsetId,
+                  adset_name: adsetName,
                   ad_name: ad.name,
                   ad_status: ad.status,
                   page_name: pageName,
@@ -235,8 +168,8 @@ export async function syncAnalyticsSnapshots(account) {
       }
     }
 
-    console.log(`[analyticsSnapshotService] ✅ Synced ${synced} snapshots (aggregated from AdPerformance), ${errors} errors`);
-    return { synced, errors };
+    console.log(`[analyticsSnapshotService] ✅ Synced ${synced} snapshots (from Ads.insights), ${skipped} skipped (no insights/adset), ${errors} errors`);
+    return { synced, errors, skipped };
 
   } catch (error) {
     console.error(`[analyticsSnapshotService] ❌ Error syncing analytics snapshots:`, error.message);

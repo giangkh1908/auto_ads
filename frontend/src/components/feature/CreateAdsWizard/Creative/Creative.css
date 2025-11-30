@@ -429,4 +429,21 @@
   .engagement-bar {
     padding: 6px 12px 10px;
   }
+
+  .ad-details-panel {
+    padding: 12px;
+  }
+
+  .ad-details-section {
+    margin-bottom: 12px;
+  }
+
+  .ad-details-section h4 {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .ad-details-section p {
+    font-size: 12px;
+  }
 }

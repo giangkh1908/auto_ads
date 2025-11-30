@@ -278,7 +278,7 @@ function isValidFacebookKey(key) {
 }
 
 /**
- * Transform adset targeting object to include locations
+ * Transform adset targeting object to include locations and detailed targeting
  * This is the main function to call from adsWizardService
  * @param {Object} adset - Adset object from frontend
  * @param {string} accessToken - Facebook access token (optional, for Mapbox->Facebook key mapping)
@@ -292,6 +292,9 @@ export async function transformAdsetTargeting(adset, accessToken = null) {
     return adset;
   }
 
+  let newTargeting = { ...adset.targeting };
+
+  // === LOCATION TARGETING ===
   // Check if targeting has the new locations structure
   if (adset.targeting.locations) {
     console.log('✅ [transformAdsetTargeting] Found locations structure:', adset.targeting.locations);
@@ -305,7 +308,7 @@ export async function transformAdsetTargeting(adset, accessToken = null) {
       }
       
       // Build new targeting payload
-      const newTargeting = buildTargetingPayload(
+      newTargeting = buildTargetingPayload(
         {
           age_min: adset.targeting.age_min,
           age_max: adset.targeting.age_max,
@@ -319,23 +322,42 @@ export async function transformAdsetTargeting(adset, accessToken = null) {
 
       // Remove the temporary locations field before sending to Facebook
       delete newTargeting.locations;
-
-      const result = {
-        ...adset,
-        targeting: newTargeting,
-      };
-
-      console.log('✅ [transformAdsetTargeting] Final result:', JSON.stringify(result.targeting, null, 2));
-      return result;
     } catch (error) {
-      console.error('❌ [transformAdsetTargeting] Error:', error.message);
+      console.error('❌ [transformAdsetTargeting] Error with locations:', error.message);
       throw error;
     }
   }
 
-  // If no locations structure, return as-is (backward compatibility)
-  console.log('⚠️ [transformAdsetTargeting] No locations structure, returning as-is');
-  return adset;
+  // === DETAILED TARGETING (Interests, Behaviors, Demographics) ===
+  // Check if targeting has detailed_targeting array from frontend
+  if (adset.targeting.detailed_targeting && Array.isArray(adset.targeting.detailed_targeting)) {
+    console.log('✅ [transformAdsetTargeting] Found detailed_targeting:', adset.targeting.detailed_targeting);
+    
+    try {
+      // Build flexible_spec from detailed_targeting items
+      const flexibleSpec = buildFlexibleSpec(adset.targeting.detailed_targeting);
+      
+      if (flexibleSpec && flexibleSpec.length > 0) {
+        newTargeting.flexible_spec = flexibleSpec;
+        console.log('✅ [transformAdsetTargeting] Added flexible_spec:', JSON.stringify(flexibleSpec, null, 2));
+      }
+      
+      // Remove the temporary detailed_targeting field before sending to Facebook
+      delete newTargeting.detailed_targeting;
+    } catch (error) {
+      console.error('❌ [transformAdsetTargeting] Error with detailed_targeting:', error.message);
+      // Don't throw, just log - detailed targeting is optional
+      console.warn('⚠️ Continuing without detailed targeting');
+    }
+  }
+
+  const result = {
+    ...adset,
+    targeting: newTargeting,
+  };
+
+  console.log('✅ [transformAdsetTargeting] Final result:', JSON.stringify(result.targeting, null, 2));
+  return result;
 }
 
 /**
@@ -522,11 +544,234 @@ export function parseGeoLocationsToFrontend(geo_locations) {
   return locations;
 }
 
+/**
+ * Build flexible_spec for detailed targeting (interests, behaviors, demographics)
+ * Facebook API uses flexible_spec for OR logic within targeting groups
+ * @param {Array} targetingItems - Array of targeting items from frontend
+ *   Each item: { id: string, name: string, type: 'interest'|'behavior'|'life_event'|'family_status'|'work'|'education' }
+ * @returns {Array} Facebook flexible_spec format
+ * 
+ * @example
+ * Input: [
+ *   { id: "6003107902433", name: "Shopping", type: "interest" },
+ *   { id: "6002714895372", name: "Online shopping", type: "behavior" }
+ * ]
+ * Output: [
+ *   {
+ *     interests: [{ id: "6003107902433", name: "Shopping" }],
+ *     behaviors: [{ id: "6002714895372", name: "Online shopping" }]
+ *   }
+ * ]
+ */
+export function buildFlexibleSpec(targetingItems) {
+  if (!targetingItems || !Array.isArray(targetingItems) || targetingItems.length === 0) {
+    return undefined; // Don't include flexible_spec if empty
+  }
+
+  console.log('🎯 [buildFlexibleSpec] Input:', JSON.stringify(targetingItems, null, 2));
+
+  // Validate and filter items - only include items with valid numeric IDs
+  const validItems = targetingItems.filter(item => {
+    if (!item || !item.id) return false;
+    // Facebook IDs are numeric
+    const isValidId = /^\d+$/.test(String(item.id));
+    if (!isValidId) {
+      console.warn(`⚠️ [buildFlexibleSpec] Skipping invalid targeting ID: ${item.id} (${item.name})`);
+    }
+    return isValidId;
+  });
+
+  if (validItems.length === 0) {
+    console.log('⚠️ [buildFlexibleSpec] No valid targeting items after validation');
+    return undefined;
+  }
+
+  // Group items by type
+  const grouped = {
+    interests: [],
+    behaviors: [],
+    life_events: [],
+    family_statuses: [],
+    work_employers: [],
+    work_positions: [],
+    education_schools: [],
+  };
+
+  validItems.forEach(item => {
+    const fbItem = { id: String(item.id), name: item.name };
+    
+    switch (item.type) {
+      case 'interest':
+        grouped.interests.push(fbItem);
+        break;
+      case 'behavior':
+        grouped.behaviors.push(fbItem);
+        break;
+      case 'life_event':
+        grouped.life_events.push(fbItem);
+        break;
+      case 'family_status':
+        grouped.family_statuses.push(fbItem);
+        break;
+      case 'work':
+      case 'employer':
+        grouped.work_employers.push(fbItem);
+        break;
+      case 'job_title':
+      case 'position':
+        grouped.work_positions.push(fbItem);
+        break;
+      case 'education':
+      case 'school':
+        grouped.education_schools.push(fbItem);
+        break;
+      default:
+        // Default to interests if type unknown
+        console.warn(`⚠️ [buildFlexibleSpec] Unknown type "${item.type}" for "${item.name}", defaulting to interest`);
+        grouped.interests.push(fbItem);
+    }
+  });
+
+  // Build flexible_spec object - only include non-empty arrays
+  const flexibleSpecItem = {};
+  
+  if (grouped.interests.length > 0) {
+    flexibleSpecItem.interests = grouped.interests;
+  }
+  if (grouped.behaviors.length > 0) {
+    flexibleSpecItem.behaviors = grouped.behaviors;
+  }
+  if (grouped.life_events.length > 0) {
+    flexibleSpecItem.life_events = grouped.life_events;
+  }
+  if (grouped.family_statuses.length > 0) {
+    flexibleSpecItem.family_statuses = grouped.family_statuses;
+  }
+  if (grouped.work_employers.length > 0) {
+    flexibleSpecItem.work_employers = grouped.work_employers;
+  }
+  if (grouped.work_positions.length > 0) {
+    flexibleSpecItem.work_positions = grouped.work_positions;
+  }
+  if (grouped.education_schools.length > 0) {
+    flexibleSpecItem.education_schools = grouped.education_schools;
+  }
+
+  // If nothing was added, return undefined
+  if (Object.keys(flexibleSpecItem).length === 0) {
+    return undefined;
+  }
+
+  // flexible_spec is an array with one object for OR logic
+  const result = [flexibleSpecItem];
+  
+  console.log('✅ [buildFlexibleSpec] Output:', JSON.stringify(result, null, 2));
+  return result;
+}
+
+/**
+ * Parse flexible_spec from Facebook format back to frontend format
+ * Used for Edit Mode to populate DetailedTargetingSelector
+ * @param {Array} flexibleSpec - Facebook flexible_spec array
+ * @returns {Array} Frontend targeting items format
+ */
+export function parseFlexibleSpecToFrontend(flexibleSpec) {
+  if (!flexibleSpec || !Array.isArray(flexibleSpec) || flexibleSpec.length === 0) {
+    return [];
+  }
+
+  const items = [];
+
+  flexibleSpec.forEach(specGroup => {
+    // Parse interests
+    if (specGroup.interests && Array.isArray(specGroup.interests)) {
+      specGroup.interests.forEach(interest => {
+        items.push({
+          id: interest.id,
+          name: interest.name,
+          type: 'interest',
+        });
+      });
+    }
+
+    // Parse behaviors
+    if (specGroup.behaviors && Array.isArray(specGroup.behaviors)) {
+      specGroup.behaviors.forEach(behavior => {
+        items.push({
+          id: behavior.id,
+          name: behavior.name,
+          type: 'behavior',
+        });
+      });
+    }
+
+    // Parse life events
+    if (specGroup.life_events && Array.isArray(specGroup.life_events)) {
+      specGroup.life_events.forEach(event => {
+        items.push({
+          id: event.id,
+          name: event.name,
+          type: 'life_event',
+        });
+      });
+    }
+
+    // Parse family statuses
+    if (specGroup.family_statuses && Array.isArray(specGroup.family_statuses)) {
+      specGroup.family_statuses.forEach(status => {
+        items.push({
+          id: status.id,
+          name: status.name,
+          type: 'family_status',
+        });
+      });
+    }
+
+    // Parse work employers
+    if (specGroup.work_employers && Array.isArray(specGroup.work_employers)) {
+      specGroup.work_employers.forEach(employer => {
+        items.push({
+          id: employer.id,
+          name: employer.name,
+          type: 'work',
+        });
+      });
+    }
+
+    // Parse work positions
+    if (specGroup.work_positions && Array.isArray(specGroup.work_positions)) {
+      specGroup.work_positions.forEach(position => {
+        items.push({
+          id: position.id,
+          name: position.name,
+          type: 'job_title',
+        });
+      });
+    }
+
+    // Parse education schools
+    if (specGroup.education_schools && Array.isArray(specGroup.education_schools)) {
+      specGroup.education_schools.forEach(school => {
+        items.push({
+          id: school.id,
+          name: school.name,
+          type: 'education',
+        });
+      });
+    }
+  });
+
+  console.log('🔄 Parsed flexible_spec to frontend format:', items);
+  return items;
+}
+
 export default {
   buildTargetingPayload,
   validateTargeting,
   transformAdsetTargeting,
   parseGeoLocationsToFrontend,
   getTotalLocationCount,
+  buildFlexibleSpec,
+  parseFlexibleSpecToFrontend,
 };
 

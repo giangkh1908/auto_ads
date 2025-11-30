@@ -251,24 +251,193 @@
   background: #eaeaea;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .admin-header-content {
+    padding: 12px 20px;
+  }
+
   .admin-nav {
-    gap: 8px;
+    gap: 12px;
   }
 
   .admin-nav-btn {
-    font-size: 13px;
-    padding: 6px 8px;
+    font-size: 14px;
+    padding: 7px 10px;
+  }
+
+  .admin-app-title {
+    font-size: 18px;
+  }
+
+  .admin-app-name {
+    font-size: 18px;
+    width: 100px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .admin-header {
+    height: 56px;
+  }
+
+  .admin-header-content {
+    padding: 10px 12px;
+  }
+
+  .admin-app-title {
+    font-size: 16px;
+  }
+
+  .admin-app-name {
+    font-size: 16px;
+    width: 90px;
+    height: 36px;
+  }
+
+  .admin-nav {
+    gap: 6px;
+    left: 45%;
+    transform: translate(-50%, -50%);
+  }
+
+  .admin-nav-btn {
+    font-size: 12px;
+    padding: 5px 6px;
   }
 
   .admin-nav-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .admin-header-actions {
+    gap: 8px;
+  }
+
+  .admin-user-menu {
+    gap: 8px;
   }
 
   .admin-user-info {
     display: none; /* Ẩn user info trên mobile */
+  }
+
+  .admin-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .admin-btn-language {
+    width: 28px;
+    height: 28px;
+  }
+
+  .admin-dropdown-avatar {
+    width: 240px;
+    right: -10px;
+  }
+
+  .admin-dropdown-language {
+    right: -10px;
+    width: 110px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .admin-header {
+    height: 52px;
+  }
+
+  .admin-header-content {
+    padding: 8px 10px;
+  }
+
+  .admin-app-title {
+    font-size: 14px;
+  }
+
+  .admin-app-name {
+    font-size: 14px;
+    width: 80px;
+    height: 32px;
+  }
+
+  .admin-nav {
+    gap: 4px;
+    left: 40%;
+  }
+
+  .admin-nav-btn {
+    font-size: 11px;
+    padding: 4px 5px;
+  }
+
+  .admin-nav-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .admin-header-actions {
+    gap: 6px;
+  }
+
+  .admin-user-menu {
+    gap: 6px;
+  }
+
+  .admin-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .admin-btn-language {
+    width: 26px;
+    height: 26px;
+  }
+
+  .admin-dropdown-avatar {
+    width: 200px;
+    right: -20px;
+    min-height: 100px;
+  }
+
+  .admin-dropdown-infor-avatar {
+    padding: 8px 12px;
+  }
+
+  .admin-dropdown-infor-avatar b {
+    font-size: 15px;
+  }
+
+  .admin-dropdown-infor-avatar small {
+    font-size: 12px;
+  }
+
+  .admin-dropdown-option-avatar li {
+    padding: 6px 12px;
+    font-size: 15px;
+  }
+
+  .admin-dropdown-language {
+    right: -20px;
+    width: 100px;
+  }
+
+  .admin-dropdown-language li {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .admin-dropdown-language img {
+    width: 20px;
+    height: 14px;
   }
 }
 

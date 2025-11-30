@@ -27,23 +27,67 @@ export async function fbFetchAdAccounts(accessToken, afterCursor = null, limit =
   return { data, nextAfter };
 }
 
-/** Upsert 1 tài khoản */
+/** Upsert 1 tài khoản - Xử lý nhiều users có cùng account */
 export async function upsertOneAdAccount(fbAcc, { shopUserId, adminUserId, shopId = null }) {
-  return AdsAccount.findOneAndUpdate(
-    { external_id: fbAcc.id },
-    {
-      external_id: fbAcc.id,
-      name: fbAcc.name,
-      currency: fbAcc.currency,
-      timezone_name: fbAcc.timezone_name,
-      account_status: fbAcc.account_status, // enum số của FB (1=active,...)
-      shop_user_id: shopUserId || undefined,
-      shop_admin_id: adminUserId || undefined,
-      shop_id: shopId || undefined,
-      last_updated_at: new Date(),
-    },
-    { upsert: true, new: true }
-  );
+  const accountData = {
+    external_id: fbAcc.id,
+    name: fbAcc.name,
+    currency: fbAcc.currency,
+    timezone_name: fbAcc.timezone_name,
+    account_status: fbAcc.account_status,
+    last_updated_at: new Date(),
+  };
+
+  // Tìm account đã tồn tại
+  const existingAccount = await AdsAccount.findOne({ external_id: fbAcc.id });
+
+  if (existingAccount) {
+    // Account đã tồn tại → Thêm user vào danh sách nếu chưa có
+    const userIdToAdd = adminUserId || shopUserId;
+    
+    if (userIdToAdd && !existingAccount.user_ids.some(
+      id => id.toString() === userIdToAdd.toString()
+    )) {
+      // Thêm user vào array user_ids
+      existingAccount.user_ids.push(userIdToAdd);
+      
+      // Cập nhật thông tin account
+      existingAccount.name = accountData.name;
+      existingAccount.currency = accountData.currency;
+      existingAccount.timezone_name = accountData.timezone_name;
+      existingAccount.account_status = accountData.account_status;
+      existingAccount.last_updated_at = accountData.last_updated_at;
+      
+      // Nếu shop_id chưa có, có thể cập nhật (tùy logic business)
+      if (shopId && !existingAccount.shop_id) {
+        existingAccount.shop_id = shopId;
+      }
+      
+      await existingAccount.save();
+      return existingAccount;
+    } else {
+      // User đã có trong danh sách → chỉ cập nhật thông tin
+      existingAccount.name = accountData.name;
+      existingAccount.currency = accountData.currency;
+      existingAccount.timezone_name = accountData.timezone_name;
+      existingAccount.account_status = accountData.account_status;
+      existingAccount.last_updated_at = accountData.last_updated_at;
+      await existingAccount.save();
+      return existingAccount;
+    }
+  } else {
+    // Account chưa tồn tại → Tạo mới
+    accountData.shop_admin_id = adminUserId; // Owner đầu tiên
+    accountData.user_ids = [adminUserId]; // Thêm owner vào danh sách
+    if (shopUserId && shopUserId.toString() !== adminUserId?.toString()) {
+      accountData.user_ids.push(shopUserId);
+    }
+    accountData.shop_user_id = shopUserId || undefined;
+    accountData.shop_id = shopId || undefined;
+
+    const newAccount = await AdsAccount.create(accountData);
+    return newAccount;
+  }
 }
 
 /** Upsert danh sách tài khoản */
@@ -68,9 +112,7 @@ export async function upsertAdAccountsFromFacebook(accessToken, { shopUserId, ad
 
 /** List + filter + paginate */
 export async function listAdsAccounts({
-  userId,        // ID người dùng hiện tại
-  shopUserId,    // ID shop user nếu có
-  shopId,        // ID shop hiện tại (chỉ lấy accounts của shop này)
+  userId,        // ID người dùng hiện tại (BẮT BUỘC)
   q,
   status, 
   account_status, 
@@ -80,17 +122,9 @@ export async function listAdsAccounts({
 }) {
   const filter = {};
   
-  // Ưu tiên: Lọc theo shop_id nếu có (chỉ hiển thị accounts của current shop)
-  if (shopId) {
-    filter.shop_id = shopId;
-  } else {
-    // Nếu không có shop_id, lọc theo user (fallback)
-    if (userId) {
-      filter.$or = [
-        { shop_admin_id: userId },
-        { shop_user_id: shopUserId || userId }
-      ];
-    }
+  // ✅ Filter theo user_ids: Account phải có user này trong danh sách
+  if (userId) {
+    filter.user_ids = userId; // MongoDB sẽ match trong array
   }
 
   // Xử lý search query
@@ -100,24 +134,19 @@ export async function listAdsAccounts({
       { external_id: new RegExp(q, "i") },
     ];
     
-    if (filter.shop_id) {
-      // Nếu có shop_id, dùng $and để kết hợp với search
+    if (filter.user_ids) {
+      // Nếu có user_ids, dùng $and để kết hợp với search
       filter.$and = [
-        { shop_id: filter.shop_id },
+        { user_ids: filter.user_ids },
         { $or: searchFilter }
       ];
-      delete filter.shop_id;
-    } else if (filter.$or) {
-      // Nếu có $or từ user filter, gộp với search
-      filter.$and = [{ $or: filter.$or }, { $or: searchFilter }];
-      delete filter.$or;
+      delete filter.user_ids;
     } else {
       filter.$or = searchFilter;
     }
   }
   
   // Thêm các điều kiện khác (status, account_status)
-  // Nếu đã có $and, thêm vào $and; nếu không, thêm trực tiếp vào filter
   if (status) {
     if (filter.$and) {
       filter.$and.push({ status });
@@ -137,7 +166,8 @@ export async function listAdsAccounts({
   const skip = (Number(page) - 1) * Number(limit);
   const [items, total] = await Promise.all([
     AdsAccount.find(filter)
-      .populate('shop_id', 'shop_name status')
+      .populate('shop_admin_id', 'username email full_name')  // Owner
+      .populate('user_ids', 'username email full_name')  // Tất cả users có quyền
       .sort(sort)
       .skip(skip)
       .limit(Number(limit)),

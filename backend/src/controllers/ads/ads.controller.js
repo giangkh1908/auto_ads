@@ -234,49 +234,16 @@ export async function listAdsCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads/sync
- * Đồng bộ quảng cáo (Ads) từ Facebook
- */
-export async function syncAdsCtrl(req, res) {
-  try {
-    const { account_id } = req.query;
-    if (!account_id) {
-      return res.status(400).json({ message: "Thiếu account_id" });
-    }
-
-    let accessToken = req.query.access_token;
-    if (!accessToken) {
-      const user = await User.findById(req.user?._id).select(
-        "+facebookAccessToken"
-      );
-      accessToken = user?.facebookAccessToken || null;
-    }
-
-    if (!accessToken) {
-      return res.status(400).json({
-        message:
-          "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
-        missingToken: true,
-      });
-    }
-
-    await syncEntitiesForAccount(account_id, accessToken);
-    return res.status(200).json({
-      message: "Đã đồng bộ campaigns, adsets và ads từ Facebook",
-    });
-  } catch (err) {
-    console.error("SYNC Ads error:", err);
-    return res.status(500).json({
-      message: "Lỗi khi đồng bộ quảng cáo từ Facebook",
-      error: err.message,
-    });
-  }
+function normalizeAccountPair(accountId) {
+  const hasPrefix = String(accountId).startsWith("act_");
+  const withPrefix = hasPrefix ? String(accountId) : `act_${accountId}`;
+  const withoutPrefix = hasPrefix ? String(accountId).substring(4) : String(accountId);
+  return { withPrefix, withoutPrefix };
 }
 
 /**
  * GET /api/ads/live
- * Lấy danh sách quảng cáo (ads) trực tiếp từ Facebook (không lưu DB)
+ * Lấy danh sách quảng cáo (ads) trực tiếp từ Facebook VÀ lưu vào DB
  */
 export async function getAdsLiveCtrl(req, res) {
   try {
@@ -297,7 +264,67 @@ export async function getAdsLiveCtrl(req, res) {
       });
     }
 
+    // 1. Lấy thông tin account từ DB
+    const { withPrefix, withoutPrefix } = normalizeAccountPair(account_id);
+    const adsAccount = await AdsAccount.findOne({
+      external_id: { $in: [withPrefix, withoutPrefix] },
+    });
+
+    if (!adsAccount) {
+      console.warn(`getAdsLiveCtrl: Không tìm thấy AdsAccount ${account_id} trong DB. Sẽ không lưu data.`);
+    }
+
+    // 2. Fetch từ Facebook
     const data = await fetchAdsFromFacebook(accessToken, account_id);
+
+    // 3. Upsert vào DB nếu có account
+    if (adsAccount && data.length > 0) {
+      // Lấy danh sách adset_id (external) để tìm _id tương ứng trong DB
+      const adsetExternalIds = [...new Set(data.map((a) => a.adset_id).filter(Boolean))];
+      const adsets = await AdsSet.find({
+        external_id: { $in: adsetExternalIds },
+      }).select("_id external_id");
+      const adsetsMap = new Map(adsets.map((a) => [a.external_id, a._id]));
+
+      const bulkOps = [];
+
+      for (const a of data) {
+        const adsetId = adsetsMap.get(a.adset_id);
+        // Nếu không tìm thấy adset cha trong DB, skip
+        if (!adsetId) {
+          continue;
+        }
+
+        const adData = {
+          name: a.name,
+          status: a.status,
+          external_id: a.id,
+          external_account_id: withoutPrefix,
+          set_id: adsetId,
+          effective_status: a.effective_status,
+          creative: a.creative,
+          insights: a.insights?.data?.[0] || {},
+        };
+
+        bulkOps.push({
+          updateOne: {
+            filter: { external_id: a.id },
+            update: { $set: adData },
+            upsert: true,
+          },
+        });
+      }
+
+      if (bulkOps.length > 0) {
+        try {
+          await Ads.bulkWrite(bulkOps, { ordered: false });
+          console.log(`Đã upsert ${bulkOps.length}/${data.length} ads từ Live API cho account ${account_id}`);
+        } catch (writeErr) {
+          console.error("Lỗi bulkWrite ads:", writeErr);
+        }
+      }
+    }
+
     return res.status(200).json({ items: data, total: data.length });
   } catch (err) {
     console.error("GET Live Ads error:", err);
@@ -371,7 +398,7 @@ export async function deleteAdCtrl(req, res) {
     if (!ad)
       return res.status(404).json({ message: "Không tìm thấy quảng cáo." });
 
-    // ✅ Lấy access token từ user hoặc query (ưu tiên query)
+    // Lấy access token từ user hoặc query (ưu tiên query)
     let accessToken = req.user?.facebookAccessToken || req.query.access_token || null;
 
     // Nếu chưa có token trong user, thử lấy từ DB
@@ -381,24 +408,24 @@ export async function deleteAdCtrl(req, res) {
     }
 
     if (!accessToken) {
-      console.warn("⚠️ Không có Facebook access_token — chỉ xóa mềm trong DB, bỏ qua Facebook API.");
+      console.warn("Không có Facebook access_token — chỉ xóa mềm trong DB, bỏ qua Facebook API.");
     }
 
-    // ✅ Thực hiện xoá thật trên Facebook nếu có token & external_id
+    // Thực hiện xoá thật trên Facebook nếu có token & external_id
     if (accessToken && ad.external_id) {
       try {
         const deleted = await deleteEntity(ad.external_id, accessToken);
         if (deleted) {
-          console.log(`🧹 Đã xoá thật quảng cáo ${ad.name} (${ad.external_id}) trên Facebook`);
+          console.log(`Đã xoá thật quảng cáo ${ad.name} (${ad.external_id}) trên Facebook`);
         } else {
-          console.warn(`⚠️ Không thể xoá quảng cáo ${ad.name} trên Facebook (Facebook trả về false)`);
+          console.warn(`Không thể xoá quảng cáo ${ad.name} trên Facebook (Facebook trả về false)`);
         }
       } catch (fbErr) {
-        console.warn("⚠️ Lỗi khi xoá trên Facebook:", fbErr?.response?.data || fbErr.message);
+        console.warn("Lỗi khi xoá trên Facebook:", fbErr?.response?.data || fbErr.message);
       }
     }
 
-    // ✅ Xoá mềm trong DB (giữ lại record để không bị sync lại)
+    // Xoá mềm trong DB (giữ lại record để không bị sync lại)
     await Ads.findByIdAndUpdate(id, {
       status: "DELETED",
       deleted_at: new Date(),
@@ -409,7 +436,7 @@ export async function deleteAdCtrl(req, res) {
       message: `Đã xoá quảng cáo "${ad.name}" ${accessToken ? "(Facebook + DB)" : "(chỉ trong DB)"}.`,
     });
   } catch (err) {
-    console.error("❌ Xoá Ad lỗi:", err);
+    console.error("Xoá Ad lỗi:", err);
     return res.status(500).json({
       message: "Xoá thất bại",
       error: err.message,
@@ -428,7 +455,7 @@ export async function archiveAdCtrl(req, res) {
     if (!ad)
       return res.status(404).json({ message: "Không tìm thấy quảng cáo." });
 
-    // ✅ Lấy access token từ user hoặc query (ưu tiên query)
+    // Lấy access token từ user hoặc query (ưu tiên query)
     let accessToken = req.user?.facebookAccessToken || req.query.access_token || null;
 
     // Nếu chưa có token trong user, thử lấy từ DB
@@ -445,17 +472,17 @@ export async function archiveAdCtrl(req, res) {
       });
     }
 
-    // ✅ Thực hiện xóa trên Facebook nếu có token & external_id (giống delete)
+    // Thực hiện xóa trên Facebook nếu có token & external_id (giống delete)
     if (accessToken && ad.external_id) {
       try {
         await deleteEntity(ad.external_id, accessToken);
-        console.log(`📦 Đã xóa (archive) quảng cáo ${ad.name} (${ad.external_id}) trên Facebook`);
+        console.log(`Đã xóa (archive) quảng cáo ${ad.name} (${ad.external_id}) trên Facebook`);
       } catch (fbErr) {
-        console.warn("⚠️ Lỗi khi xóa (archive) trên Facebook:", fbErr?.response?.data || fbErr.message);
+        console.warn("Lỗi khi xóa (archive) trên Facebook:", fbErr?.response?.data || fbErr.message);
       }
     }
 
-    // ✅ Cập nhật status ARCHIVED trong DB
+    // Cập nhật status ARCHIVED trong DB
     await Ads.findByIdAndUpdate(id, {
       status: "ARCHIVED",
       updated_at: new Date(),
@@ -466,7 +493,7 @@ export async function archiveAdCtrl(req, res) {
       message: `Đã lưu trữ quảng cáo "${ad.name}".`,
     });
   } catch (err) {
-    console.error("❌ Archive Ad lỗi:", err);
+    console.error("Archive Ad lỗi:", err);
     return res.status(500).json({
       message: "Lưu trữ thất bại",
       error: err.message,
@@ -495,7 +522,7 @@ export async function copyAdCtrl(req, res) {
     });
     return res.status(201).json({ success: true, data: created });
   } catch (err) {
-    console.error('❌ Copy Ad lỗi:', err);
+    console.error('Copy Ad lỗi:', err);
     return res.status(500).json({ message: 'Copy thất bại', error: err.message });
   }
 }

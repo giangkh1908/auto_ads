@@ -193,23 +193,149 @@
     font-size: 16px;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+    .settings-container {
+        width: 80%;
+    }
+
+    .settings-content {
+        padding: 24px;
+    }
+}
+
+/* Mobile lớn (481px - 767px) */
 @media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
-        gap: 16px;
+    .settings-container {
+        width: 95%;
+        margin-top: 20px;
     }
 
     .settings-tabs {
         padding: 0 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .settings-tab {
         padding: 12px 16px;
         font-size: 13px;
+        flex-shrink: 0;
     }
 
     .settings-content {
         padding: 20px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .form-field label {
+        font-size: 13px;
+    }
+
+    .form-input,
+    .form-select {
+        font-size: 13px;
+        padding: 9px 11px;
+    }
+
+    .form-checkbox {
+        margin-bottom: 20px;
+        padding: 10px 0;
+    }
+
+    .form-checkbox label {
+        font-size: 13px;
+    }
+
+    .btn-save-settings {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+
+    .btn-delete-shop {
+        font-size: 13px;
+    }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+    .settings-page {
+        padding: 10px 0;
+        margin-top: 40px;
+    }
+
+    .settings-container {
+        width: 100%;
+        margin-top: 15px;
+        border-radius: 0;
+    }
+
+    .settings-tabs {
+        padding: 0 8px;
+    }
+
+    .settings-tab {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .settings-content {
+        padding: 16px;
+    }
+
+    .form-row {
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .form-field label {
+        font-size: 12px;
+    }
+
+    .form-input,
+    .form-select {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .form-checkbox {
+        margin-bottom: 16px;
+        padding: 8px 0;
+    }
+
+    .form-checkbox input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+    }
+
+    .form-checkbox label {
+        font-size: 12px;
+    }
+
+    .btn-save-settings {
+        padding: 9px 18px;
+        font-size: 12px;
+    }
+
+    .btn-delete-shop {
+        font-size: 12px;
+    }
+
+    .placeholder-content {
+        padding: 40px 16px;
+    }
+
+    .placeholder-content p {
+        font-size: 14px;
     }
 }

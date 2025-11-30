@@ -378,9 +378,26 @@
     font-size: 14px;
   }
   
-  /* Responsive */
-  @media (max-width: 768px) {
+  /* ============================================
+     RESPONSIVE DESIGN
+     ============================================ */
+
+  /* Tablet (768px - 1024px) */
+  @media (max-width: 1024px) {
     .connect-container {
+      max-width: 85%;
+      padding: 30px;
+    }
+  }
+
+  /* Mobile lớn (481px - 767px) */
+  @media (max-width: 768px) {
+    .connect-page {
+      padding: 15px;
+    }
+
+    .connect-container {
+      max-width: 95%;
       padding: 20px;
       margin: 10px;
     }
@@ -393,6 +410,7 @@
     
     .filter-section {
       justify-content: space-between;
+      flex-wrap: wrap;
     }
     
     .table-header,
@@ -425,6 +443,38 @@
     
     .col-select {
       justify-content: flex-end;
+    }
+  }
+
+  /* Mobile nhỏ (320px - 480px) */
+  @media (max-width: 480px) {
+    .connect-page {
+      padding: 10px;
+    }
+
+    .connect-container {
+      padding: 16px;
+      margin: 8px;
+    }
+
+    .search-filter-bar {
+      gap: 10px;
+    }
+
+    .filter-section {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .table-row {
+      padding: 12px;
+    }
+
+    .col-page-name,
+    .col-role,
+    .col-status,
+    .col-select {
+      font-size: 13px;
     }
   }
   

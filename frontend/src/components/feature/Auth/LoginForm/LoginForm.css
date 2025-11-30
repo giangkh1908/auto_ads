@@ -55,3 +55,125 @@
 .form-switch { text-align: center; color: #6b7280; font-size: 14px; }
 .form-switch .link { color: #2563eb; cursor: pointer; }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .auth-form {
+    gap: 10px;
+  }
+
+  .input-group-auth {
+    padding: 9px 11px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .auth-form {
+    gap: 10px;
+  }
+
+  .btn-fb {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .fb-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .input-group-auth {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .input-group-auth input {
+    font-size: 13px;
+  }
+
+  .input-icon {
+    left: 8px;
+    font-size: 16px;
+  }
+
+  .input-action {
+    font-size: 16px;
+  }
+
+  .error-message {
+    font-size: 11px;
+    padding-left: 8px;
+  }
+
+  .btn-login-form {
+    padding: 11px;
+    font-size: 14px;
+  }
+
+  .form-switch {
+    font-size: 13px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .auth-form {
+    gap: 8px;
+  }
+
+  .btn-fb {
+    padding: 9px 10px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .fb-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+  }
+
+  .form-sep {
+    font-size: 12px;
+    margin: 4px 0;
+  }
+
+  .input-group-auth {
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+  }
+
+  .input-group-auth input {
+    font-size: 12px;
+  }
+
+  .input-icon {
+    left: 8px;
+    font-size: 14px;
+  }
+
+  .input-action {
+    font-size: 14px;
+  }
+
+  .error-message {
+    font-size: 10px;
+    margin-top: 1px;
+    padding-left: 8px;
+  }
+
+  .btn-login-form {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .form-switch {
+    font-size: 12px;
+  }
+}
+

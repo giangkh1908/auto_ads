@@ -26,3 +26,43 @@
   color: #6b7280;
   font-size: 14px;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .protected-route-loading {
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border-width: 3px;
+  }
+
+  .protected-route-loading p {
+    font-size: 13px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .protected-route-loading {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border-width: 3px;
+  }
+
+  .protected-route-loading p {
+    font-size: 12px;
+  }
+}

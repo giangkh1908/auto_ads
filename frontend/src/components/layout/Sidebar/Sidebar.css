@@ -124,3 +124,153 @@
     opacity: 0;
     transform: translateX(-10px);
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .app-sidebar {
+    width: 70px;
+  }
+
+  .app-sidebar:not(.collapsed) {
+    width: 200px;
+  }
+
+  .app-sidebar.collapsed {
+    width: 70px;
+  }
+
+  .sidebar-item {
+    padding: 12px 12px;
+  }
+
+  .sidebar-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sidebar-label {
+    font-size: 14px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .app-sidebar {
+    top: 56px;
+    height: calc(100vh - 56px);
+    width: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
+    z-index: 800;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Sidebar mở trên mobile */
+  .app-sidebar:not(.collapsed),
+  .app-sidebar.mobile-open {
+    width: 250px;
+    transform: translateX(0);
+  }
+
+  .app-sidebar.collapsed {
+    width: 0;
+    transform: translateX(-100%);
+  }
+
+  /* Overlay khi sidebar mở trên mobile */
+  .sidebar-overlay {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 799;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .sidebar-nav ul {
+    padding: 8px;
+  }
+
+  .sidebar-item {
+    padding: 14px 16px;
+    margin: 4px 0;
+    border-bottom: 2px solid #0b0b0b14;
+  }
+
+  .sidebar-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sidebar-label {
+    font-size: 15px;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Hiển thị labels trên mobile khi sidebar mở */
+  .app-sidebar:not(.collapsed) .sidebar-label,
+  .app-sidebar.mobile-open .sidebar-label {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .sidebar-section-title {
+    font-size: 11px;
+    margin: 8px 0 4px 0;
+    padding: 0 16px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .app-sidebar {
+    top: 52px;
+    height: calc(100vh - 52px);
+  }
+
+  .app-sidebar:not(.collapsed),
+  .app-sidebar.mobile-open {
+    width: 220px;
+  }
+
+  .sidebar-overlay {
+    top: 52px;
+  }
+
+  .sidebar-nav ul {
+    padding: 6px;
+  }
+
+  .sidebar-item {
+    padding: 12px 14px;
+    margin: 3px 0;
+  }
+
+  .sidebar-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sidebar-label {
+    font-size: 14px;
+  }
+
+  .sidebar-section-title {
+    font-size: 10px;
+    padding: 0 14px;
+  }
+}

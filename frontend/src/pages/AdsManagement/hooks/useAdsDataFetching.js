@@ -13,7 +13,7 @@ import {
 } from "../services/adsCacheService";
 
 const BATCH_SIZE = 50;
-const CACHE_TTL = 120000;
+const CACHE_TTL = 21600000; // 6 giờ để hạn chế gọi backend và tránh rate limit
 
 /**
  * Custom hook to manage data fetching for campaigns, adsets, and ads
@@ -176,27 +176,6 @@ export function useAdsDataFetching(
           ...prev,
           campaigns: mapped,
         }));
-        
-        // Fetch insights async (không block UI)
-        const campaignIds = mapped.map((c) => c.external_id).filter(Boolean);
-        if (campaignIds.length > 0) {
-          fetchInsightsBatch(campaignIds, '/api/campaigns/insights', signal)
-            .then(insightsMap => {
-              if (signal?.aborted) return;
-              
-              setDatasets(prev => ({
-                ...prev,
-                campaigns: prev.campaigns.map(c => 
-                  mergeInsights(c, insightsMap[c.external_id] || {})
-                ),
-              }));
-            })
-            .catch(err => {
-              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-                console.warn('Campaigns insights fetch failed, but data is displayed', err);
-              }
-            });
-        }
       }
     } catch (error) {
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
@@ -263,34 +242,6 @@ export function useAdsDataFetching(
             adsets: [...otherAdsets, ...mapped]
           };
         });
-        
-        // Fetch insights async (không block UI)
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        if (adsetIds.length > 0) {
-          fetchInsightsBatch(adsetIds, '/api/adsets/insights', signal)
-            .then(insightsMap => {
-              if (signal?.aborted) return;
-              
-              setDatasets((prev) => {
-                const otherAdsets = prev.adsets.filter(
-                  a => String(a.campaignId) !== String(campaignId)
-                );
-                const updatedAdsets = prev.adsets
-                  .filter(a => String(a.campaignId) === String(campaignId))
-                  .map(a => mergeInsights(a, insightsMap[a.external_id] || {}));
-                
-                return {
-                  ...prev,
-                  adsets: [...otherAdsets, ...updatedAdsets]
-                };
-              });
-            })
-            .catch(err => {
-              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-                console.warn('Adsets insights fetch failed, but data is displayed', err);
-              }
-            });
-        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
@@ -365,34 +316,6 @@ export function useAdsDataFetching(
           };
         });
         
-        // Fetch insights async (không block UI)
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        if (adIds.length > 0) {
-          fetchInsightsBatch(adIds, '/api/ads/insights', signal)
-            .then(insightsMap => {
-              if (signal?.aborted) return;
-              
-              setDatasets((prev) => {
-                const otherAds = prev.ads.filter(
-                  a => String(a.adsetId) !== String(adsetId)
-                );
-                const updatedAds = prev.ads
-                  .filter(a => String(a.adsetId) === String(adsetId))
-                  .map(a => mergeInsights(a, insightsMap[a.external_id] || {}));
-                
-                return {
-                  ...prev,
-                  ads: [...otherAds, ...updatedAds]
-                };
-              });
-            })
-            .catch(err => {
-              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-                console.warn('Ads insights fetch failed, but data is displayed', err);
-              }
-            });
-        }
-        
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
       }
@@ -454,27 +377,6 @@ export function useAdsDataFetching(
           ...prev,
           adsets: mapped,
         }));
-        
-        // Fetch insights async (không block UI)
-        const adsetIds = mapped.map((a) => a.external_id).filter(Boolean);
-        if (adsetIds.length > 0) {
-          fetchInsightsBatch(adsetIds, '/api/adsets/insights', signal)
-            .then(insightsMap => {
-              if (signal?.aborted) return;
-              
-              setDatasets((prev) => ({
-                ...prev,
-                adsets: prev.adsets.map(a => 
-                  mergeInsights(a, insightsMap[a.external_id] || {})
-                ),
-              }));
-            })
-            .catch(err => {
-              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-                console.warn('Adsets insights fetch failed, but data is displayed', err);
-              }
-            });
-        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));
@@ -556,27 +458,6 @@ export function useAdsDataFetching(
         
         // Progressive loading: Hiển thị data ngay, insights load sau
         setDatasets((prev) => ({ ...prev, ads: mapped }));
-        
-        // Fetch insights async (không block UI)
-        const adIds = mapped.map((a) => a.external_id).filter(Boolean);
-        if (adIds.length > 0) {
-          fetchInsightsBatch(adIds, '/api/ads/insights', signal)
-            .then(insightsMap => {
-              if (signal?.aborted) return;
-              
-              setDatasets((prev) => ({
-                ...prev,
-                ads: prev.ads.map(a => 
-                  mergeInsights(a, insightsMap[a.external_id] || {})
-                ),
-              }));
-            })
-            .catch(err => {
-              if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-                console.warn('Ads insights fetch failed, but data is displayed', err);
-              }
-            });
-        }
         
         // Update cache
         setCache(prev => updateCacheTimestamp(prev, cacheKey));

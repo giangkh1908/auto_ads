@@ -7,10 +7,11 @@ import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const startAnalyticsSnapshotCron = () => {
-  // Run once daily at 4:00 AM (analytics data ít thay đổi, không cần sync thường xuyên)
-  cron.schedule("0 4 * * *", async () => {
-    const startTime = new Date().toISOString();
-    console.log(`[${startTime}] 🚀 Starting analytics snapshot sync job...`);
+  // Run every 4 hours at 1:00, 5:00, 9:00, 13:00, 17:00, 21:00 
+  // (1 hour after each Insights Sync to ensure Ads.insights is updated)
+  cron.schedule("0 1,5,9,13,17,21 * * *", async () => {
+    const startTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    console.log(`[${startTime}] 📈 Starting analytics snapshot sync job (copy from Ads.insights)...`);
 
     try {
       const activeAccounts = await AdsAccount.find({
@@ -43,23 +44,25 @@ export const startAnalyticsSnapshotCron = () => {
 
       let totalSynced = 0;
       let totalErrors = 0;
+      let totalSkipped = 0;
 
       for (let i = 0; i < eligibleAccounts.length; i++) {
         const account = eligibleAccounts[i];
         const accountStartTime = new Date().toISOString();
 
         console.log(
-          `[${accountStartTime}] 🔄 [${i + 1}/${eligibleAccounts.length}] Syncing account: ${account.name || account.external_id}`
+          `[${accountStartTime}] 🔄 [${i + 1}/${eligibleAccounts.length}] Syncing snapshots for: ${account.name || account.external_id}`
         );
 
         try {
           const result = await syncAnalyticsSnapshots(account);
           
-          totalSynced += result.synced;
-          totalErrors += result.errors;
+          totalSynced += result.synced || 0;
+          totalErrors += result.errors || 0;
+          totalSkipped += result.skipped || 0;
 
           console.log(
-            `[${accountStartTime}] ✅ Account ${account.name}: ${result.synced} synced, ${result.errors} errors`
+            `[${accountStartTime}] ✅ Account ${account.name}: ${result.synced || 0} synced, ${result.skipped || 0} skipped, ${result.errors || 0} errors`
           );
         } catch (error) {
           console.error(
@@ -69,15 +72,15 @@ export const startAnalyticsSnapshotCron = () => {
           totalErrors++;
         }
 
-        // Small delay to avoid overwhelming DB (aggregation is fast, but still good practice)
+        // Small delay to avoid overwhelming DB (copy operation is very fast)
         if (i < eligibleAccounts.length - 1) {
-          await delay(500); // Reduced from 2000ms since we're only aggregating from DB
+          await delay(200); // Very short delay since we're just copying Ads.insights
         }
       }
 
-      const endTime = new Date().toISOString();
+      const endTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       console.log(
-        `[${endTime}] 🎉 Analytics snapshot sync completed: ${totalSynced} total synced, ${totalErrors} total errors`
+        `[${endTime}] 🎉 Analytics snapshot sync completed: ${totalSynced} synced, ${totalSkipped} skipped (no insights), ${totalErrors} errors`
       );
     } catch (error) {
       console.error(
@@ -87,5 +90,5 @@ export const startAnalyticsSnapshotCron = () => {
     }
   });
 
-  console.log("✅ Analytics snapshot cron job registered (runs daily at 4:00 AM)");
+  console.log("✅ Analytics snapshot cron job registered (runs every 4 hours at 1:00, 5:00, 9:00, 13:00, 17:00, 21:00)");
 };

@@ -74,9 +74,103 @@
 }
 .tag-remove-btn:hover { color: #111827; }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Mobile lớn (481px - 767px) */
 @media (max-width: 768px) {
-  .config-section-datetime { flex-direction: column; gap: 16px; }
+  .config-section-datetime {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .traffic-destination-options {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .traffic-option {
+    padding: 0.875rem;
+  }
+
+  .optimization-select,
+  .text-input-pixel,
+  .conversion-event-select,
+  .bid-strategy-select,
+  .bid-strategy-input {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+
+  /* Targeting suggestions dropdown responsive */
+  .targeting-suggestions {
+    max-width: calc(100vw - 40px);
+    z-index: 1001;
+  }
+
+  .targeting-suggestion-item {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .config-section-datetime {
+    gap: 12px;
+  }
+
+  .traffic-destination-options {
+    gap: 0.625rem;
+  }
+
+  .traffic-option {
+    padding: 0.75rem;
+  }
+
+  .traffic-option-content {
+    font-size: 13px;
+    gap: 0.5rem;
+  }
+
+  .optimization-select,
+  .text-input-pixel,
+  .conversion-event-select,
+  .bid-strategy-select,
+  .bid-strategy-input {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .bid-amount-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .bid-strategy-input {
+    width: 100%;
+  }
+
+  .currency-suffix {
+    font-size: 12px;
+  }
+
+  .field-hint {
+    font-size: 11px;
+  }
+
+  /* Targeting suggestions dropdown responsive */
+  .targeting-suggestions {
+    max-width: calc(100vw - 20px);
+    z-index: 1001;
+  }
+
+  .targeting-suggestion-item {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 }
 
 /* Vùng chứa dropdown */

@@ -2,6 +2,7 @@ import express from "express";
 import {
   createPaymentTransaction,
   getPaymentTransactions,
+  getPaymentTransactionFilters,
   getPaymentTransactionById,
   updatePaymentTransaction,
   deletePaymentTransaction,
@@ -15,6 +16,9 @@ const router = express.Router();
 
 // Route công khai - không cần authenticate (user tạo transaction)
 router.post("/", createPaymentTransaction);
+
+// Lấy danh sách filter values
+router.get("/filters/options", getPaymentTransactionFilters);
 
 // Routes admin (cần authenticate và log)
 router.use(authenticate);

@@ -476,3 +476,43 @@
   }
 }
 
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .ai-config-manager-modal {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .ai-config-manager-toolbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .ai-config-manager-filters {
+    gap: 6px;
+  }
+
+  .config-item {
+    padding: 12px;
+  }
+
+  .config-item-header {
+    gap: 8px;
+  }
+
+  .config-item-title {
+    font-size: 14px;
+  }
+
+  .config-item-actions {
+    gap: 6px;
+  }
+
+  .config-item-actions button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+

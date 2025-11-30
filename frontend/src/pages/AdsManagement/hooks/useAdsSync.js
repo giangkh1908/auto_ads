@@ -68,12 +68,26 @@ export function useAdsSync(cache, setCache, activeTab) {
     syncingRef.current = true;
     
     try {
-      // Call new unified entity sync API (backend will auto-resolve access token)
-      await axiosInstance.post("/api/sync/entities", {
-        accountId: accountId,
-      });
+      // Sequential sync to ensure parent-child relationships (Campaign -> AdSet -> Ad)
+      // 1. Campaigns
+      if (needsSync.includes('campaigns') || forceSync) {
+        console.log("🔄 Syncing Campaigns...");
+        await axiosInstance.get("/api/campaigns/live", { params: { account_id: accountId } });
+      }
+
+      // 2. AdSets
+      if (needsSync.includes('adsets') || forceSync) {
+        console.log("🔄 Syncing AdSets...");
+        await axiosInstance.get("/api/adsets/live", { params: { account_id: accountId } });
+      }
+
+      // 3. Ads
+      if (needsSync.includes('ads') || forceSync) {
+        console.log("🔄 Syncing Ads...");
+        await axiosInstance.get("/api/ads/live", { params: { account_id: accountId } });
+      }
       
-      console.log(`✅ Entity sync completed (${needsSync.length} entities needed: ${needsSync.join(', ')})`);
+      console.log(`✅ Live sync completed for: ${needsSync.join(', ')}`);
       
       // Update cache for all synced entity types
       setCache(prev => {
@@ -90,14 +104,7 @@ export function useAdsSync(cache, setCache, activeTab) {
       });
     } catch (error) {
       const errorResponse = error.response?.data;
-      
-      if (errorResponse?.alreadySyncing) {
-        console.log("⏭️ Sync already in progress");
-      } else if (errorResponse?.rateLimitReached) {
-        console.warn(`⏳ Rate limit reached: ${errorResponse.message}`);
-      } else {
-        console.error("Sync error:", error);
-      }
+      console.error("Live sync error:", errorResponse || error.message);
       
       // Don't throw error to prevent breaking the UI
       // User can still use the app, data will be fetched from DB

@@ -29,6 +29,7 @@ import AdsToolbar from "./components/AdsToolbar";
 import AdsTabs from "./components/AdsTabs";
 import AdsTable from "./components/AdsTable";
 import AdsBreadcrumb from "./components/AdsBreadcrumb";
+import { RefreshCw } from "lucide-react";
 
 function AdsManagement() {
   const { t } = useTranslation(['ads']);
@@ -117,6 +118,8 @@ function AdsManagement() {
   // Action states
   const [refreshing, setRefreshing] = useState(false);
   const [togglingItems, setTogglingItems] = useState(new Set());
+  // Loading state when switching accounts
+  const [switchingAccount, setSwitchingAccount] = useState(false);
   const [confirmationPopup, setConfirmationPopup] = useState({
     isOpen: false,
     type: "delete",
@@ -141,6 +144,8 @@ function AdsManagement() {
 
   // Handle account change
   const handleAccountChange = (accountId) => {
+    // show loading animation while switching
+    setSwitchingAccount(true);
     handleAccountChangeBase(accountId);
     resetSelection();
     setActiveTab("campaigns");
@@ -148,6 +153,8 @@ function AdsManagement() {
     if (!accountId) {
       setDatasets({ campaigns: [], adsets: [], ads: [] });
       setCache({ lastSync: null, lastFetch: {} });
+      // no target account -> stop switching indicator
+      setSwitchingAccount(false);
     }
   };
 
@@ -173,76 +180,6 @@ function AdsManagement() {
     };
   }, []);
 
-  // Lazy load insights for visible items
-  useEffect(() => {
-    if (rows.length > 0 && !refreshing && selectedAccountId && !loadingInsightsRef.current) {
-      const loadInsights = async () => {
-        // Tạo key để track rows hiện tại (dựa trên external_ids)
-        const currentRowsKey = rows
-          .map(r => r.external_id)
-          .filter(Boolean)
-          .sort()
-          .join(',');
-        
-        // Check xem đã fetch insights cho rows này chưa
-        if (fetchedInsightsRef.current.has(currentRowsKey)) {
-          return; // Đã fetch rồi, skip
-        }
-
-        // Check xem có items nào cần fetch insights không
-        const needsInsights = rows.some(item =>
-          item.external_id && (!item.insights || Object.keys(item.insights || {}).length === 0)
-        );
-
-        if (!needsInsights) {
-          // Tất cả items đã có insights rồi, mark as fetched
-          fetchedInsightsRef.current.add(currentRowsKey);
-          return;
-        }
-
-        if (loadingInsightsRef.current) {
-          return; // Đang fetch rồi, skip
-        }
-
-        loadingInsightsRef.current = true;
-
-        try {
-          let endpoint = '';
-          if (activeTab === "ads") {
-            endpoint = '/api/ads/insights';
-          } else if (activeTab === "adsets") {
-            endpoint = '/api/adsets/insights';
-          } else if (activeTab === "campaigns") {
-            endpoint = '/api/campaigns/insights';
-          }
-
-          if (endpoint && abortControllerRef.current) {
-            await fetchInsightsForVisibleItems(rows, endpoint, abortControllerRef.current.signal);
-            // Mark as fetched sau khi thành công
-            fetchedInsightsRef.current.add(currentRowsKey);
-          }
-        } catch (error) {
-          if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
-            // Không log error để tránh spam console, chỉ skip
-          }
-        } finally {
-          loadingInsightsRef.current = false;
-        }
-      };
-
-      // Tăng debounce để tránh fetch quá nhiều khi switch tab
-      const timeoutId = setTimeout(loadInsights, 800);
-      return () => {
-        clearTimeout(timeoutId);
-        loadingInsightsRef.current = false;
-      };
-    }
-  }, [rows, activeTab, refreshing, selectedAccountId, fetchInsightsForVisibleItems]);
-
-  // Clear fetched insights cache khi tab/account thay đổi
-  useEffect(() => {
-    fetchedInsightsRef.current.clear();
-  }, [activeTab, selectedAccountId]);
 
   // Load data when tab or account changes
   useEffect(() => {
@@ -260,6 +197,8 @@ function AdsManagement() {
       }
 
       const fetchData = async () => {
+        // Ensure loading overlay is shown while we fetch data (covers cached-account load)
+        setSwitchingAccount(true);
         try {
           if (activeTab === "campaigns") {
             await fetchCampaignsForAccount(selectedAccountId, abortController.signal);
@@ -280,6 +219,9 @@ function AdsManagement() {
           if (error.name !== "AbortError" && error.name !== "CanceledError") {
             console.error("Error fetching data:", error);
           }
+        } finally {
+          // Ensure switching indicator is cleared when fetch completes (success/error)
+          setSwitchingAccount(false);
         }
       };
 
@@ -772,6 +714,10 @@ function AdsManagement() {
   const clickTimeoutRef = useRef(null);
 
   const handleCampaignClick = (campaign) => {
+    // show loading while switching to adsets view
+    setSwitchingAccount(true);
+    selectCampaign(campaign);
+    setActiveTab("adsets");
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
     }
@@ -879,12 +825,22 @@ function AdsManagement() {
 
   // Tab change handler
   const handleTabChange = (tab) => {
+    // show loading while switching tabs
+    setSwitchingAccount(true);
     setActiveTab(tab);
     resetSelection();
   };
 
   return (
     <div className="ads-management-layout">
+      {switchingAccount && (
+        <div className="account-switch-overlay">
+          <div className="account-switch-spinner">
+            <div className="spinner-icon"><RefreshCw size ={20}/></div>
+            <div className="spinner-text">Đang tải...</div>
+          </div>
+        </div>
+      )}
       <div className="ads-management-content">
         <div className="ads-management-center">
           <div className="ads-card">

@@ -59,6 +59,7 @@
       "rejected": "Rejected",
       "failed": "Failed",
       "cancelled": "Cancelled",
+      "initializing": "Initializing",
       "total": "Total"
     },
     "search": "Search",
@@ -468,7 +469,8 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "failed": "Failed",
-      "cancelled": "Cancelled",
+      "canceled": "Canceled",
+      "initializing": "Initializing",
       "total": "Total"
     },
     "actions": {

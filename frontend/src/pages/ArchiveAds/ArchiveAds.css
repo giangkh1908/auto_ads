@@ -531,3 +531,234 @@
   cursor: not-allowed;
 }
 
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .archive-ads-content {
+    margin-left: 84px;
+    padding: 12px 16px;
+  }
+
+  .archive-ads-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .archive-ads-main-tool {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filters input {
+    width: 180px;
+  }
+
+  .archive-ads-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .archive-ads-table {
+    min-width: 800px;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .archive-ads-content {
+    margin-left: 0;
+    padding: 12px;
+  }
+
+  .archive-ads-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .archive-ads-main-tool {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .account-select {
+    width: 100%;
+  }
+
+  .account-select select {
+    width: 100%;
+  }
+
+  .btn-refresh-ads {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .filters {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .filters input {
+    width: 100%;
+  }
+
+  .btn-filter {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .archive-ads-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 8px;
+  }
+
+  .tab {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .archive-ads-table-wrapper {
+    padding: 0 8px 8px;
+    overflow-x: auto;
+  }
+
+  .archive-ads-table {
+    min-width: 700px;
+    font-size: 12px;
+  }
+
+  .archive-ads-table th,
+  .archive-ads-table td {
+    padding: 8px;
+  }
+
+  .cell-name {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .name-cell {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .row-actions {
+    opacity: 1;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .breadcrumb-nav {
+    padding: 8px;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb-item {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .archive-ads-content {
+    padding: 8px;
+  }
+
+  .archive-ads-toolbar {
+    padding: 6px;
+  }
+
+  .archive-ads-tabs {
+    padding: 0 4px;
+  }
+
+  .tab {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .archive-ads-table {
+    min-width: 600px;
+    font-size: 11px;
+  }
+
+  .archive-ads-table th,
+  .archive-ads-table td {
+    padding: 6px;
+  }
+
+  .action-btn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .archive-ads-action-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .modal-content {
+    max-width: 95vw;
+    margin: 10px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 16px;
+  }
+
+  .modal-header h2 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 12px;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .modal-body {
+    font-size: 13px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
+}
+

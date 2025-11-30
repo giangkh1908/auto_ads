@@ -701,3 +701,189 @@
   align-items: center;
   gap: 4px;
 }
+/* Responsive */
+@media (max-width: 1200px) {
+  .analytics-main {
+    flex-direction: column;
+  }
+
+  .analytics-settings {
+    width: 100%;
+    max-height: 300px;
+  }
+
+  .analytics-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .analytics-header-right-controls {
+    justify-content: flex-start;
+  }
+}
+
+/* Mobile lớn (481px - 767px) */
+@media (max-width: 768px) {
+  .analytics-container {
+    padding: 100px 12px 24px 12px;
+  }
+
+  .analytics-header {
+    gap: 10px;
+  }
+
+  .analytics-header-left {
+    gap: 10px;
+  }
+
+  .analytics-header-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .analytics-header-right-controls {
+    flex-wrap: wrap;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .analytics-account-selector {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .analytics-account-dropdown {
+    width: 100%;
+    min-width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 200px);
+    left: 0;
+    right: 0;
+  }
+
+  .analytics-dropdown-item {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .analytics-search-box {
+    width: 100%;
+  }
+
+  .analytics-search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .analytics-date-range-wrapper {
+    width: 100%;
+  }
+
+  .analytics-date-range-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .analytics-title {
+    font-size: 20px;
+  }
+
+  .analytics-main {
+    flex-direction: column;
+    height: auto;
+    gap: 16px;
+  }
+
+  .analytics-settings {
+    width: 100%;
+    max-height: none;
+    order: -1;
+  }
+
+  .analytics-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .analytics-table {
+    min-width: 800px;
+  }
+
+  .analytics-breakdown-column {
+    min-width: 120px;
+  }
+}
+
+/* Mobile nhỏ (320px - 480px) */
+@media (max-width: 480px) {
+  .analytics-container {
+    padding: 90px 8px 16px 8px;
+  }
+
+  .analytics-title {
+    font-size: 18px;
+  }
+
+  .analytics-header-controls {
+    gap: 8px;
+  }
+
+  .analytics-account-selector,
+  .analytics-search-input,
+  .analytics-date-range-input {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .analytics-account-dropdown {
+    max-height: calc(100vh - 150px);
+  }
+
+  .analytics-dropdown-item {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  }
+
+  .analytics-refresh-button {
+    min-width: 32px;
+    height: 32px;
+    padding: 6px;
+  }
+
+  .analytics-settings {
+    padding: 16px;
+  }
+
+  .analytics-settings-title {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .analytics-settings-tab {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .analytics-table {
+    min-width: 700px;
+    font-size: 12px;
+  }
+
+  .analytics-table th,
+  .analytics-table td {
+    padding: 8px 12px;
+  }
+
+  .analytics-breakdown-column {
+    min-width: 100px;
+  }
+
+  .analytics-checkbox-label {
+    padding: 6px 0;
+  }
+
+  .analytics-checkbox-text {
+    font-size: 13px;
+  }

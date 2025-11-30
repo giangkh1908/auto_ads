@@ -21,4 +21,3 @@ router.put("/:id/status", updateLeadStatus);
 router.put("/:id/assign", assignLead);
 
 export default router;
-
