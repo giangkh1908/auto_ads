@@ -51,10 +51,12 @@ export const clearDatabase = async () => {
   try {
     const collections = mongoose.connection.collections;
     
-    for (const key in collections) {
-      const collection = collections[key];
-      await collection.deleteMany();
-    }
+    // Use Promise.all for parallel deletion for better performance
+    const deletePromises = Object.values(collections).map(collection => 
+      collection.deleteMany()
+    );
+    
+    await Promise.all(deletePromises);
   } catch (error) {
     console.error('Error clearing test database:', error);
     throw error;

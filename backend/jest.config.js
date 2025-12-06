@@ -4,7 +4,7 @@ export default {
   testMatch: ['**/tests/**/*.test.js'],
   transform: {},
   setupFilesAfterEnv: ['<rootDir>/tests/setup/testSetup.js'],
-  testTimeout: 30000,
+  testTimeout: 10000, // Reduced from 30s to 10s to encourage efficient tests
   verbose: true,
   forceExit: true,
   clearMocks: true,

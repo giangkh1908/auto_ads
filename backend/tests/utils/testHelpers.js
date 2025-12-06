@@ -8,7 +8,11 @@ import UserRole from '../../src/models/userRole.model.js';
  * Generate a test JWT token
  */
 export const generateTestToken = (userId, expiresIn = '1h') => {
-  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  // Use dedicated test secret to avoid using production secrets in tests
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'test_jwt_secret_key_for_testing_only';
+  if (!process.env.JWT_ACCESS_SECRET && !process.env.JWT_SECRET) {
+    console.warn('Warning: Using fallback test JWT secret. Set JWT_ACCESS_SECRET in .env.test');
+  }
   return jwt.sign({ id: userId }, secret, { expiresIn });
 };
 
@@ -16,7 +20,7 @@ export const generateTestToken = (userId, expiresIn = '1h') => {
  * Generate an expired token for testing
  */
 export const generateExpiredToken = (userId) => {
-  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'test_jwt_secret_key_for_testing_only';
   return jwt.sign({ id: userId }, secret, { expiresIn: '0s' });
 };
 
@@ -89,8 +93,17 @@ export const assignRoleToUser = async (userId, roleId, shopId = null) => {
 export const cleanupTestData = async () => {
   // Clean up test users (keep some basic data structure)
   await User.deleteMany({ email: { $regex: /test.*@example\.com/i } });
+  
+  // Get test role IDs to delete only test-related UserRole entries
+  const testRoles = await Role.find({ role_name: { $regex: /^Test Role/i } });
+  const testRoleIds = testRoles.map(role => role._id);
+  
   await Role.deleteMany({ role_name: { $regex: /^Test Role/i } });
-  await UserRole.deleteMany({});
+  
+  // Only delete UserRole entries associated with test roles
+  if (testRoleIds.length > 0) {
+    await UserRole.deleteMany({ role_id: { $in: testRoleIds } });
+  }
 };
 
 /**

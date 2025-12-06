@@ -178,19 +178,23 @@ describe('Password Security Tests (Standalone)', () => {
       const plainPassword = 'TestPassword123!';
       const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-      // Measure time for correct password
-      const start1 = Date.now();
+      // Measure time for correct password using high-resolution timer
+      const start1 = process.hrtime.bigint();
       await bcrypt.compare(plainPassword, hashedPassword);
-      const time1 = Date.now() - start1;
+      const time1 = process.hrtime.bigint() - start1;
 
       // Measure time for incorrect password
-      const start2 = Date.now();
+      const start2 = process.hrtime.bigint();
       await bcrypt.compare('WrongPassword123!', hashedPassword);
-      const time2 = Date.now() - start2;
+      const time2 = process.hrtime.bigint() - start2;
+
+      // Convert nanoseconds to milliseconds for comparison
+      const time1Ms = Number(time1) / 1_000_000;
+      const time2Ms = Number(time2) / 1_000_000;
 
       // Times should be similar (bcrypt has built-in timing attack protection)
       // Allow some variance but they should be in the same order of magnitude
-      const timeDifference = Math.abs(time1 - time2);
+      const timeDifference = Math.abs(time1Ms - time2Ms);
       expect(timeDifference).toBeLessThan(100); // Less than 100ms difference
     });
   });
