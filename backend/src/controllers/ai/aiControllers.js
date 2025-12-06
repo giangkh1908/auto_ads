@@ -8,23 +8,40 @@ import AIConfig from "../../models/ai/aiConfig.model.js";
 
 dotenv.config();
 
-// Khởi tạo clients
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization functions for AI clients
+let openai = null;
+let genAI = null;
+let geminiTextModel = null;
+let geminiImageModel = null;
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
-const geminiTextModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-const geminiImageModel = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash-image",
-});
+const getOpenAI = () => {
+  if (!openai && process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
-// Cấu hình Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const getGeminiModels = () => {
+  if (!genAI && process.env.GOOGLE_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    geminiTextModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    geminiImageModel = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-image",
+    });
+  }
+  return { geminiTextModel, geminiImageModel };
+};
+
+// Cấu hình Cloudinary (chỉ khi có credentials)
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 // Lưu trữ context trong memory
 const contexts = new Map();
@@ -79,11 +96,19 @@ export async function suggestKeywords(req, res) {
     let relatedKeywordsText = "";
 
     if (ai_provider === "gemini") {
-      const result = await geminiTextModel.generateContent(prompt);
+      const { geminiTextModel: textModel } = getGeminiModels();
+      if (!textModel) {
+        return res.status(503).json({ success: false, message: "Gemini AI chưa được cấu hình" });
+      }
+      const result = await textModel.generateContent(prompt);
       relatedKeywordsText = result.response.text();
     } else {
       // Mặc định là openai
-      const response = await openai.chat.completions.create({
+      const client = getOpenAI();
+      if (!client) {
+        return res.status(503).json({ success: false, message: "OpenAI chưa được cấu hình" });
+      }
+      const response = await client.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.5,
@@ -486,13 +511,21 @@ export async function generateText(req, res) {
 
     let generatedText = "";
     if (model.startsWith("gemini")) {
-      const resp = await geminiTextModel.generateContent(prompt);
+      const { geminiTextModel: textModel } = getGeminiModels();
+      if (!textModel) {
+        return res.status(503).json({ success: false, message: "Gemini AI chưa được cấu hình" });
+      }
+      const resp = await textModel.generateContent(prompt);
       const rawText = resp.response.text().trim();
       generatedText = cleanGeminiResponse(rawText);
       console.log("Gemini raw response:", rawText.substring(0, 200));
       console.log("Gemini cleaned response:", generatedText.substring(0, 200));
     } else {
-      const response = await openai.chat.completions.create({
+      const client = getOpenAI();
+      if (!client) {
+        return res.status(503).json({ success: false, message: "OpenAI chưa được cấu hình" });
+      }
+      const response = await client.chat.completions.create({
         model, // ví dụ: 'gpt-4o-mini' (giữ nguyên mặc định)
         messages: [
           {
@@ -616,9 +649,14 @@ async function generateSingleGeminiImage(prompt, imageIndex) {
   return retryWithBackoff(async () => {
     console.log(`🔄 Generating Gemini image ${imageIndex + 1}...`);
 
+    const { geminiImageModel: imageModel } = getGeminiModels();
+    if (!imageModel) {
+      throw new Error("Gemini AI chưa được cấu hình");
+    }
+
     const enhancedPrompt = `${prompt}\n\nGenerate a single high-quality image suitable for Facebook advertising. The image should be clear, professional, and visually appealing. Return the image data directly as base64.`;
 
-    const resp = await geminiImageModel.generateContent([
+    const resp = await imageModel.generateContent([
       {
         text: enhancedPrompt,
       },
@@ -765,7 +803,11 @@ Clear, eye-catching colors, brand-appropriate.`;
           )}. Professional style, no text.`;
           
           const fallbackResult = await retryWithBackoff(async () => {
-            const fallbackResp = await geminiImageModel.generateContent([
+            const { geminiImageModel: imageModel } = getGeminiModels();
+            if (!imageModel) {
+              throw new Error("Gemini AI chưa được cấu hình");
+            }
+            const fallbackResp = await imageModel.generateContent([
               {
                 text: fallbackPrompt,
               },
@@ -823,7 +865,12 @@ Clear, eye-catching colors, brand-appropriate.`;
     else {
       console.log("🎨 Generating OpenAI DALL-E images...");
 
-      const imagesResponse = await openai.images.generate({
+      const client = getOpenAI();
+      if (!client) {
+        return res.status(503).json({ success: false, message: "OpenAI chưa được cấu hình" });
+      }
+
+      const imagesResponse = await client.images.generate({
         model: "dall-e-2",
         prompt,
         size: "1024x1024", // DALL-E-2 chỉ hỗ trợ size vuông

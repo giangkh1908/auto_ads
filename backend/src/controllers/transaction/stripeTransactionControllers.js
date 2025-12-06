@@ -3,12 +3,27 @@ import PaymentTransaction from '../../models/paymentTransaction.model.js'; // Mo
 import UserPackage from '../../models/userPackage.model.js'; // Để tạo gói sau thanh toán
 import Package from '../../models/package.model.js'; // Model package gốc
 
-// Khởi tạo Stripe (dùng env)
-const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+// Lazy initialization for Stripe
+let stripeInstance = null;
+
+const getStripeInstance = () => {
+  if (!stripeInstance && process.env.STRIPE_SECRET_KEY) {
+    stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripeInstance;
+};
 
 // Tạo Checkout Session
 export const createCheckoutSession = async (req, res) => {
   try {
+    const stripeClient = getStripeInstance();
+    if (!stripeClient) {
+      return res.status(503).json({
+        success: false,
+        message: "Stripe chưa được cấu hình",
+      });
+    }
+
     const { orderId } = req.params;
     const { orderData, successUrl, cancelUrl } = req.body;
     console.log("Creating checkout session for orderId:", orderId);
@@ -69,7 +84,7 @@ export const createCheckoutSession = async (req, res) => {
     ];
 
     // 4. Tạo session
-    const session = await stripeInstance.checkout.sessions.create({
+    const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
@@ -103,12 +118,20 @@ export const createCheckoutSession = async (req, res) => {
 
 // Webhook để xử lý sau thanh toán (tạo UserPackage)
 export const stripeWebhook = async (req, res) => {
+  const stripeClient = getStripeInstance();
+  if (!stripeClient) {
+    return res.status(503).json({
+      success: false,
+      message: "Stripe chưa được cấu hình",
+    });
+  }
+
   const sig = req.headers["stripe-signature"];
   let event;
 
   // 1. Xác thực chữ ký từ Stripe
   try {
-    event = stripeInstance.webhooks.constructEvent(
+    event = stripeClient.webhooks.constructEvent(
       req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET

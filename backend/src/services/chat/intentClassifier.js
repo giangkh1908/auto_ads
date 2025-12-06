@@ -25,12 +25,23 @@ const IntentSchema = z.object({
 export class IntentClassifier {
   constructor() {
     const useOpenAI = !!process.env.OPENAI_API_KEY;
-    this.llm = useOpenAI
-      ? new ChatOpenAI({ 
-          modelName: "gpt-4o-mini", 
-          temperature: 0
-        })
-      : new ChatGoogleGenerativeAI({ modelName: "gemini-2.0-flash-exp", temperature: 0 });
+    const useGemini = !!process.env.GOOGLE_API_KEY;
+    
+    if (useOpenAI) {
+      this.llm = new ChatOpenAI({ 
+        modelName: "gpt-4o-mini", 
+        temperature: 0
+      });
+    } else if (useGemini) {
+      this.llm = new ChatGoogleGenerativeAI({ 
+        modelName: "gemini-2.0-flash-exp", 
+        temperature: 0 
+      });
+    } else {
+      // Fallback to a dummy LLM or throw error
+      console.warn("⚠️ No AI API key configured. IntentClassifier will not work properly.");
+      this.llm = null;
+    }
   }
 
   /**
@@ -41,6 +52,10 @@ export class IntentClassifier {
    * @returns {Promise<Object>} The classification result.
    */
   async classify(message, context = {}, history = []) {
+    if (!this.llm) {
+      throw new Error("AI service not configured. Please set OPENAI_API_KEY or GOOGLE_API_KEY.");
+    }
+    
     try {
       const systemPrompt = `
 You are an expert Intent Classifier for a Facebook Ads AI Agent.

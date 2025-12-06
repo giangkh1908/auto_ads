@@ -31,12 +31,29 @@ async function simpleEntityResolution(accountId, entityName, type) {
 export class AgentExecutor {
   constructor() {
     const useOpenAI = !!process.env.OPENAI_API_KEY;
-    this.llm = useOpenAI
-      ? new ChatOpenAI({ modelName: "gpt-4o-mini", temperature: 0.3 })
-      : new ChatGoogleGenerativeAI({ modelName: "gemini-2.0-flash-exp", temperature: 0.3 });
+    const useGemini = !!process.env.GOOGLE_API_KEY;
+    
+    if (useOpenAI) {
+      this.llm = new ChatOpenAI({ 
+        modelName: "gpt-4o-mini", 
+        temperature: 0.3 
+      });
+    } else if (useGemini) {
+      this.llm = new ChatGoogleGenerativeAI({ 
+        modelName: "gemini-2.0-flash-exp", 
+        temperature: 0.3 
+      });
+    } else {
+      console.warn("⚠️ No AI API key configured. AgentExecutor will not work properly.");
+      this.llm = null;
+    }
   }
 
   async processMessage(userId, accountId, message, conversationHistory = []) {
+    if (!this.llm) {
+      throw new Error("AI service not configured. Please set OPENAI_API_KEY or GOOGLE_API_KEY.");
+    }
+    
     try {
       // 1. Build Context
       let context;
