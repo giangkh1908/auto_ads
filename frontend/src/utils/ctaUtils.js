@@ -44,6 +44,6 @@ export function convertFacebookTypeToCTA(fbType) {
  */
 export function isValidCTA(cta) {
   if (!cta) return false;
-  return CTA_VI_TO_FB_TYPE.hasOwnProperty(cta) || CTA_FB_TYPE_TO_VI.hasOwnProperty(cta);
+  return Object.prototype.hasOwnProperty.call(CTA_VI_TO_FB_TYPE, cta) || Object.prototype.hasOwnProperty.call(CTA_FB_TYPE_TO_VI, cta);
 }
 

@@ -23,7 +23,7 @@ export default function AdsToolbar({
 }) {
   const { t } = useTranslation(['ads']);
   const navigate = useNavigate();
-  const { hasFeature, shopPkg, loading: pkgLoading } = useShopPackage();
+  const { hasFeature } = useShopPackage();
   const hasAdsAutoRun = hasFeature("ads_auto_run");
 
   return (

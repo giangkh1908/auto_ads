@@ -51,7 +51,7 @@ function CreateAdsWizard({
   const toUiObjective = (obj) => {
     if (!obj) return obj;
     if (ADSET_CONFIG_BY_OBJECTIVE[obj]) return obj; // already UI key
-    const entry = Object.entries(FB_OBJECTIVE_MAP).find(([ui, fb]) => fb === obj);
+    const entry = Object.entries(FB_OBJECTIVE_MAP).find(([, fb]) => fb === obj);
     return entry ? entry[0] : obj;
   };
   const contentRef = useRef(null);

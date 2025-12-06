@@ -353,8 +353,6 @@ function Analytics() {
 
     // Determine metric to highlight based on objective
     let metricKey = "";
-    // Map legacy objectives to current keys if needed, similar to getDefaultDataColumns
-    let objectiveKey = selectedObjective;
     if (selectedObjective === "OUTCOME_TRAFFIC" || selectedObjective === "LINK_CLICKS") {
       metricKey = "link_clicks";
     } else if (selectedObjective === "OUTCOME_AWARENESS" || selectedObjective === "BRAND_AWARENESS" || selectedObjective === "REACH") {

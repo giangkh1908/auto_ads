@@ -153,7 +153,7 @@ export default function SystemLog() {
           }));
           // Determine hasMore
           const totalItems = response.pagination?.total || 0;
-          setHasMore((prevLogs) => {
+          setHasMore(() => {
             const currentCount = (pagination.page > 1 ? (logs.length + incoming.length) : incoming.length);
             return currentCount < totalItems;
           });

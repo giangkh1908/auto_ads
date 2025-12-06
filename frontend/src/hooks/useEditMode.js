@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import axiosInstance from "../utils/axios";
 import { useToast } from "./useToast";
 import { extractObjectId, findIdInObject } from "../utils/wizardUtils";
-import { convertCountryCodesToNames, convertLocaleIdToLanguageCode } from "../utils/locationUtils";
+import { convertLocaleIdToLanguageCode } from "../utils/locationUtils";
 import { convertFacebookTypeToCTA } from "../utils/ctaUtils";
 import { parseGeoLocationsToFrontend } from "../utils/locationParseUtils";
 import { parseFlexibleSpecToFrontend } from "../utils/targetingParseUtils";

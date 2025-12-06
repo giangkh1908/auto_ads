@@ -87,8 +87,6 @@ function AdsManagement() {
   // Refs
   const abortControllerRef = useRef(null);
   const prevActiveTabRef = useRef(activeTab);
-  const loadingInsightsRef = useRef(false);
-  const fetchedInsightsRef = useRef(new Set()); // Track đã fetch insights cho rows nào
 
   // Sync hook
   const { syncData } = useAdsSync(cache, setCache, activeTab);
@@ -100,7 +98,6 @@ function AdsManagement() {
     fetchAdsForAdset,
     fetchAllAdsetsForAccount,
     fetchAllAdsForAccount,
-    fetchInsightsForVisibleItems,
   } = useAdsDataFetching(datasets, setDatasets, cache, setCache, setInitialSyncState);
 
   // Table state hook

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { aiConfigService } from '../../../../services/aiConfigService';
 import { useToast } from '../../../../hooks/useToast';
 import './AiPromptConfig.css';
 
-const AiPromptConfig = ({ isOpen, onClose, onSave, initialConfig = {}, configId = null }) => {
+const AiPromptConfig = ({ isOpen, onClose, onSave, initialConfig = {} }) => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('configuration');
   const [activePromptTab, setActivePromptTab] = useState('headline');
