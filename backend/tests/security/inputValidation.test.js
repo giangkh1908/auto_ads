@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { connectDB } from '../../src/config/db.js';
+import { connect, closeDatabase, clearDatabase } from '../setup/testDb.js';
 import User from '../../src/models/user.model.js';
 import {
   createTestUser,
@@ -9,15 +9,15 @@ import validator from 'validator';
 
 describe('Input Validation Security Tests', () => {
   beforeAll(async () => {
-    await connectDB();
+    await connect();
   });
 
   afterEach(async () => {
-    await cleanupTestData();
+    await clearDatabase();
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    await closeDatabase();
   });
 
   describe('SQL Injection Prevention', () => {

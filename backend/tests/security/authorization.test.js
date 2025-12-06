@@ -10,7 +10,7 @@ import {
   mockNext,
   cleanupTestData,
 } from '../utils/testHelpers.js';
-import { connectDB } from '../../src/config/db.js';
+import { connect, closeDatabase, clearDatabase } from '../setup/testDb.js';
 import Shop from '../../src/models/shops/shop.model.js';
 
 describe('Authorization Security Tests', () => {
@@ -20,7 +20,7 @@ describe('Authorization Security Tests', () => {
   let testRole;
 
   beforeAll(async () => {
-    await connectDB();
+    await connect();
   });
 
   beforeEach(async () => {
@@ -50,12 +50,11 @@ describe('Authorization Security Tests', () => {
   });
 
   afterEach(async () => {
-    await Shop.deleteMany({ shop_name: { $regex: /^Test Shop/i } });
-    await cleanupTestData();
+    await clearDatabase();
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    await closeDatabase();
   });
 
   describe('System Admin Bypass', () => {

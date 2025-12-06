@@ -11,7 +11,7 @@ import {
   mockNext,
   cleanupTestData,
 } from '../utils/testHelpers.js';
-import { connectDB } from '../../src/config/db.js';
+import { connect, closeDatabase, clearDatabase } from '../setup/testDb.js';
 import mongoose from 'mongoose';
 
 describe('Authentication Security Tests', () => {
@@ -19,7 +19,7 @@ describe('Authentication Security Tests', () => {
   let validToken;
 
   beforeAll(async () => {
-    await connectDB();
+    await connect();
   });
 
   beforeEach(async () => {
@@ -31,11 +31,11 @@ describe('Authentication Security Tests', () => {
   });
 
   afterEach(async () => {
-    await cleanupTestData();
+    await clearDatabase();
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    await closeDatabase();
   });
 
   describe('JWT Token Validation', () => {

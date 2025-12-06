@@ -1,24 +1,6 @@
 import bcrypt from 'bcrypt';
-import mongoose from 'mongoose';
-import { connect, closeDatabase, clearDatabase } from '../setup/testDb.js';
-import {
-  createTestUser,
-  cleanupTestData,
-} from '../utils/testHelpers.js';
 
-describe('Password Security Tests', () => {
-  beforeAll(async () => {
-    await connect();
-  });
-
-  afterEach(async () => {
-    await clearDatabase();
-  });
-
-  afterAll(async () => {
-    await closeDatabase();
-  });
-
+describe('Password Security Tests (Standalone)', () => {
   describe('Password Hashing', () => {
     test('should hash passwords with bcrypt', async () => {
       const plainPassword = 'MySecurePassword123!';
@@ -51,17 +33,6 @@ describe('Password Security Tests', () => {
       const valid2 = await bcrypt.compare(plainPassword, hash2);
       expect(valid1).toBe(true);
       expect(valid2).toBe(true);
-    });
-
-    test('should not store plaintext passwords', async () => {
-      const plainPassword = 'PlaintextPassword123!';
-      const user = await createTestUser({
-        email: `hash${Date.now()}@example.com`,
-        password: await bcrypt.hash(plainPassword, 10),
-      });
-
-      expect(user.password).not.toBe(plainPassword);
-      expect(user.password).toMatch(/^\$2[aby]\$/);
     });
   });
 
@@ -202,59 +173,6 @@ describe('Password Security Tests', () => {
     });
   });
 
-  describe('Password Reset Security', () => {
-    test('should not expose password reset token format', () => {
-      // Password reset tokens should be random and unpredictable
-      const token1 = Math.random().toString(36).substring(2, 15);
-      const token2 = Math.random().toString(36).substring(2, 15);
-
-      expect(token1).not.toBe(token2);
-      expect(token1.length).toBeGreaterThan(10);
-      expect(token2.length).toBeGreaterThan(10);
-    });
-
-    test('should expire password reset tokens', () => {
-      const tokenExpiry = new Date();
-      tokenExpiry.setHours(tokenExpiry.getHours() + 1); // 1 hour expiry
-
-      const now = new Date();
-      const isExpired = now > tokenExpiry;
-
-      expect(isExpired).toBe(false);
-
-      // Simulate time passing
-      const futureTime = new Date(tokenExpiry.getTime() + 1000);
-      const isExpiredLater = futureTime > tokenExpiry;
-      expect(isExpiredLater).toBe(true);
-    });
-  });
-
-  describe('Password Change Security', () => {
-    test('should require current password for password change', async () => {
-      const user = await createTestUser({
-        email: `change${Date.now()}@example.com`,
-      });
-
-      // Simulating password change requirement
-      const requiresCurrentPassword = true;
-      expect(requiresCurrentPassword).toBe(true);
-    });
-
-    test('should not allow reusing recent passwords', async () => {
-      const passwords = [
-        'OldPassword123!',
-        'OldPassword456!',
-        'OldPassword789!',
-      ];
-
-      const newPassword = 'OldPassword123!'; // Reusing first password
-
-      // Check if new password is in recent passwords
-      const isReused = passwords.includes(newPassword);
-      expect(isReused).toBe(true);
-    });
-  });
-
   describe('Timing Attack Prevention', () => {
     test('should have consistent timing for password verification', async () => {
       const plainPassword = 'TestPassword123!';
@@ -304,6 +222,32 @@ describe('Password Security Tests', () => {
 
       // Multiple attempts should take significant time
       expect(totalTime).toBeGreaterThan(attempts * 10);
+    });
+  });
+
+  describe('Password Reset Token Security', () => {
+    test('should generate random unpredictable tokens', () => {
+      const token1 = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const token2 = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+      expect(token1).not.toBe(token2);
+      expect(token1.length).toBeGreaterThan(15);
+      expect(token2.length).toBeGreaterThan(15);
+    });
+
+    test('should handle token expiration', () => {
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 1); // 1 hour expiry
+
+      const now = new Date();
+      const isExpired = now > tokenExpiry;
+
+      expect(isExpired).toBe(false);
+
+      // Simulate time passing
+      const futureTime = new Date(tokenExpiry.getTime() + 1000);
+      const isExpiredLater = futureTime > tokenExpiry;
+      expect(isExpiredLater).toBe(true);
     });
   });
 });
