@@ -14,25 +14,31 @@ import {
   changePassword,
 } from "../controllers/authControllers.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import {
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+  resendMailLimiter,
+} from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
 // 🧾 Auth routes
-router.post("/register", register);
-router.post("/login", login);
-router.post("/facebook", facebookLogin);
+router.post("/register", registerLimiter, register);
+router.post("/login", loginLimiter, login);
+router.post("/facebook", loginLimiter, facebookLogin);
 router.get("/verify/:token", verifyEmail);
 
 //Route xác nhận email
 router.get("/verify-email/:token", verifyEmail);
-router.post("/resend-verification", resendVerificationEmail);
+router.post("/resend-verification", resendMailLimiter, resendVerificationEmail);
 
 // 🔁 Token refresh + logout
 router.post("/refresh", refreshToken);
 router.post("/logout", authenticate, logout);
 
 // 🧠 Password management
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 
 // 👤 Profile
