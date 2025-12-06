@@ -226,6 +226,47 @@ This project is licensed under the MIT License.
 4. Test thoroughly
 5. Submit a pull request
 
+## 🔒 Security Testing
+
+This project includes comprehensive security testing infrastructure:
+
+### Test Coverage
+- ✅ **CORS Security** - 14 tests
+- ✅ **Rate Limiting** - 12 tests  
+- ✅ **Password Security** - 18 tests
+- ✅ **Authentication** - 20+ tests (JWT, tokens, sessions)
+- ✅ **Authorization** - 15+ tests (RBAC, permissions)
+- ✅ **Input Validation** - 25+ tests (XSS, injection prevention)
+
+### Running Security Tests
+
+```bash
+cd backend
+
+# Run all working tests (no database required)
+npm test -- tests/security/cors.test.js tests/security/rateLimiting.test.js tests/security/password.standalone.test.js
+
+# Run all security tests (requires MongoDB)
+npm run test:security
+
+# Run with coverage
+npm run test:coverage
+```
+
+### Documentation
+- **[SECURITY_TESTING.md](backend/SECURITY_TESTING.md)** - Comprehensive security testing guide
+- **[TESTING_SETUP.md](backend/TESTING_SETUP.md)** - Setup instructions for tests
+- **[tests/README.md](backend/tests/README.md)** - Test utilities and helpers
+
+### Security Features Tested
+- JWT authentication and token validation
+- Role-based access control (RBAC)
+- Input sanitization and validation
+- Rate limiting and brute force prevention
+- Password hashing with BCrypt
+- CORS configuration
+- XSS and injection attack prevention
+
 ## 📞 Support
 
 For support or questions, please open an issue in the repository.
