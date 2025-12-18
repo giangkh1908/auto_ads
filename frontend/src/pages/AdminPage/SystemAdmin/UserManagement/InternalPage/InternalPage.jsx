@@ -5,7 +5,7 @@ import { Play, Pause, Plus, ChevronDown, Search } from "lucide-react";
 import ConfirmationPopup from "../../../../../components/common/ConfirmationPopup/ConfirmationPopup";
 import AddNewStaff from "./AddNewStaff";
 import NoteEditor from "../../../../../components/common/NoteEditor/NoteEditor";
-import axiosInstance from "../../../../../utils/axios";
+import axiosInstance from "../../../../../utils/api/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 import Pagination from "../../../../../components/common/Pagination/Pagination";
@@ -14,7 +14,7 @@ import {
   createNotesMap,
   mergeNoteToEntity,
   getEntityId,
-} from "../../../../../utils/noteUtils";
+} from "../../../../../utils/business-logic/noteUtils";
 
 export default function InternalPage() {
   const { t, i18n } = useTranslation("admin");

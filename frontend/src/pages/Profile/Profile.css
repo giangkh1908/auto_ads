@@ -290,6 +290,17 @@
   margin-top: 20px;
 }
 
+/* Error Messages */
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.form-input-profile.error {
+  border-color: #ef4444;
+}
+
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */

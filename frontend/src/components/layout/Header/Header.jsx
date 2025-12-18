@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../../hooks/useAuth";
+import { useAuth } from "../../../hooks/auth/useAuth";
 import { STORAGE_KEYS, ROUTES } from "../../../constants/app.constants";
-import { saveShopCache, getShopCache, clearShopCache, onShopChange } from "../../../utils/shopCache";
+import { saveShopCache, getShopCache, clearShopCache, onShopChange } from "../../../utils/cache/shopCache";
 import "./Header.css";
 import avatar from "../../../assets/no-avatar.jpg";
 import {
@@ -100,16 +100,16 @@ function Header({ onLoginClick }) {
 
       try {
         setLoading(true);
-        
+
         // Kiểm tra cache trước
         const cachedShop = getShopCache();
         const savedShopId = localStorage.getItem("selectedShopId");
-        
+
         // Nếu có cache và shopId khớp → sử dụng cache
         if (cachedShop && cachedShop.id === savedShopId) {
           // Đảm bảo package là string hoặc null (không set "Basic")
-          const packageName = typeof cachedShop.package === 'string' 
-            ? cachedShop.package 
+          const packageName = typeof cachedShop.package === 'string'
+            ? cachedShop.package
             : (cachedShop.package?.name || null);
           const normalizedShop = {
             ...cachedShop,
@@ -217,8 +217,8 @@ function Header({ onLoginClick }) {
     const removeListener = onShopChange((newShop) => {
       if (newShop) {
         // Đảm bảo package là string hoặc null (không set "Basic")
-        const packageName = typeof newShop.package === 'string' 
-          ? newShop.package 
+        const packageName = typeof newShop.package === 'string'
+          ? newShop.package
           : (newShop.package?.name || null);
         const normalizedShop = {
           ...newShop,
@@ -284,17 +284,17 @@ function Header({ onLoginClick }) {
       if (data.success) {
         // Lấy shop cũ trước khi xóa cache
         const previousShop = selectedShop;
-        
+
         // Xóa cache cũ
         clearShopCache();
-        
+
         // Cập nhật localStorage
         localStorage.setItem("selectedShopId", shop.id);
 
         // Cập nhật state với package info từ API response
         // Đảm bảo package là string hoặc null (không set "Basic")
         const packageName = data.shop?.package?.name || data.shop?.package || shop.package || null;
-        const finalPackageName = typeof packageName === 'string' 
+        const finalPackageName = typeof packageName === 'string'
           ? (packageName !== "Basic" ? packageName : null)
           : (packageName?.name && packageName.name !== "Basic" ? packageName.name : null);
         const shopWithPackage = {
@@ -302,7 +302,7 @@ function Header({ onLoginClick }) {
           package: finalPackageName,
         };
         setSelectedShop(shopWithPackage);
-        
+
         // Lưu shop mới vào cache (bao gồm role và package)
         // Truyền previousShop để kiểm tra và xóa cache ads nếu shop thay đổi
         saveShopCache(shopWithPackage, previousShop);
@@ -410,9 +410,8 @@ function Header({ onLoginClick }) {
             </button>
 
             <button
-              className={`nav-btn ${
-                pathname.startsWith(ROUTES.SHOP) ? "active" : ""
-              }`}
+              className={`nav-btn ${pathname.startsWith(ROUTES.SHOP) ? "active" : ""
+                }`}
               onClick={() => navigate(ROUTES.SHOP)}
             >
               <Store size={18} />
@@ -420,9 +419,8 @@ function Header({ onLoginClick }) {
             </button>
 
             <button
-              className={`nav-btn ${
-                pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""
-              }`}
+              className={`nav-btn ${pathname === ROUTES.SERVICE_PACKAGE ? "active" : ""
+                }`}
               onClick={() => navigate(ROUTES.SERVICE_PACKAGE)}
             >
               <Package size={18} />
@@ -450,9 +448,8 @@ function Header({ onLoginClick }) {
 
             {isAuthenticated && (
               <button
-                className={`nav-btn-2 ${
-                  pathname === ROUTES.DASHBOARD ? "active" : ""
-                }`}
+                className={`nav-btn-2 ${pathname === ROUTES.DASHBOARD ? "active" : ""
+                  }`}
                 onClick={() => navigate(ROUTES.DASHBOARD)}
               >
                 <LayoutDashboard size={20} />
@@ -599,10 +596,10 @@ function Header({ onLoginClick }) {
                       <small className="shop-role">{selectedShop.role}</small>
                       {(() => {
                         // Lấy package name
-                        const packageName = typeof selectedShop.package === 'string' 
-                          ? selectedShop.package 
+                        const packageName = typeof selectedShop.package === 'string'
+                          ? selectedShop.package
                           : selectedShop.package?.name || '';
-                        
+
                         // Chỉ hiển thị nếu có package và không phải "Basic" hoặc empty
                         if (packageName && packageName !== 'Basic' && packageName.trim() !== '') {
                           return (
@@ -637,9 +634,8 @@ function Header({ onLoginClick }) {
                       shops.map((shop) => (
                         <div
                           key={shop.id}
-                          className={`shop-item ${
-                            selectedShop?.id === shop.id ? "active" : ""
-                          } ${switching ? "disabled" : ""}`}
+                          className={`shop-item ${selectedShop?.id === shop.id ? "active" : ""
+                            } ${switching ? "disabled" : ""}`}
                           onClick={() => !switching && handleShopSelect(shop)}
                           style={{
                             // opacity:

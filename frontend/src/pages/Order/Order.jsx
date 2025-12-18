@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import "./Order.css";
-import axiosInstance from '../../utils/axios';
+import axiosInstance from '../../utils/api/axios';
 import { toast } from 'sonner';
 
 
@@ -43,16 +43,16 @@ function Order() {
   const [pages, setPages] = useState(selectedPackageFromNav?.pages);
 
   const [employees, setEmployees] = useState(selectedPackageFromNav?.employees);
-  
+
   // Map duration từ planType (DB format) sang UI format
   const mapDurationFromPlanType = (planType) => {
     if (planType === "1year" || planType === "12months") return "12months";
     if (planType === "3months") return "3months";
     return "12months"; // default
   };
-  
+
   const [duration, setDuration] = useState(() => {
-    const initialDuration = selectedPackageFromNav?.duration 
+    const initialDuration = selectedPackageFromNav?.duration
       ? mapDurationFromPlanType(selectedPackageFromNav.duration)
       : "12months";
     return initialDuration;
@@ -298,7 +298,7 @@ function Order() {
             <div className="or-form-row">
               <label className="or-label">{t("order.labels.unitPrice")}</label>
               <div className="or-price-display" style={{ fontWeight: 'bold', fontSize: '16px', color: '#2563eb' }}>
-                {packagePricing[packageType]?.[duration] 
+                {packagePricing[packageType]?.[duration]
                   ? `${(packagePricing[packageType][duration]).toLocaleString("vi-VN")}đ ${t("order.price.perMonth")}`
                   : `0đ ${t("order.price.perMonth")}`}
               </div>

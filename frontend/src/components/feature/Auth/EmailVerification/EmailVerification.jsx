@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Mail } from 'lucide-react'
-import { useAuth } from '../../../../hooks/useAuth'
+import { useAuth } from '../../../../hooks/auth/useAuth'
 import './EmailVerification.css'
 
 function EmailVerification({ email, onBack, title = "Xác nhận email của bạn" }) {
@@ -28,26 +28,26 @@ function EmailVerification({ email, onBack, title = "Xác nhận email của b�
                 <div className="verification-icon"><Mail size={32} /></div>
                 <h3>{title}</h3>
                 <p>
-                    Chúng tôi đã gửi một email xác nhận đến <strong>{email}</strong>. 
+                    Chúng tôi đã gửi một email xác nhận đến <strong>{email}</strong>.
                     Vui lòng kiểm tra hộp thư và nhấp vào liên kết để kích hoạt tài khoản.
                 </p>
                 <p className="verification-note">
                     Nếu bạn không thấy email, hãy kiểm tra thư mục spam hoặc nhấn nút bên dưới để gửi lại.
                 </p>
-                
+
                 <div className="verification-actions">
-                    <button 
-                        type="button" 
-                        className="btn-resend" 
+                    <button
+                        type="button"
+                        className="btn-resend"
                         onClick={handleResendEmail}
                         disabled={resendLoading}
                     >
                         {resendLoading ? 'Đang gửi...' : 'Gửi lại email'}
                     </button>
-                    
-                    <button 
-                        type="button" 
-                        className="btn-back" 
+
+                    <button
+                        type="button"
+                        className="btn-back"
                         onClick={onBack}
                     >
                         Quay lại

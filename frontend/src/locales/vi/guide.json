@@ -1,0 +1,343 @@
+{
+    "title": "Hướng dẫn sử dụng",
+    "searchPlaceholder": "Tìm kiếm...",
+    "tableOfContents": "Mục lục",
+    "sections": {
+        "overview": {
+            "title": "Tổng quan hệ thống",
+            "description": "Hệ thống Quản lý Quảng cáo Tự động là một nền tảng toàn diện giúp bạn quản lý các chiến dịch quảng cáo Facebook, tự động hóa quy trình, và theo dõi hiệu suất một cách hiệu quả.",
+            "features": {
+                "adsManagement": {
+                    "title": "Quản lý Quảng cáo",
+                    "description": "Tạo, chỉnh sửa và quản lý các chiến dịch, ad sets và quảng cáo Facebook"
+                },
+                "analytics": {
+                    "title": "Phân tích & Báo cáo",
+                    "description": "Theo dõi hiệu suất quảng cáo với các báo cáo chi tiết và biểu đồ trực quan"
+                },
+                "automation": {
+                    "title": "Tự động hóa",
+                    "description": "Thiết lập các quy tắc tự động để tối ưu hóa chiến dịch quảng cáo"
+                },
+                "shopManagement": {
+                    "title": "Quản lý Shop",
+                    "description": "Quản lý nhiều cửa hàng, nhân viên và kết nối Facebook Pages"
+                }
+            }
+        },
+        "gettingStarted": {
+            "title": "Bắt đầu sử dụng",
+            "register": {
+                "title": "1. Đăng ký tài khoản",
+                "steps": [
+                    "Truy cập trang chủ và nhấn nút \"Đăng ký\"",
+                    "Điền đầy đủ thông tin: Họ tên, Email, Số điện thoại, Mật khẩu",
+                    "Xác nhận email qua link được gửi đến hộp thư",
+                    "Đăng nhập với tài khoản vừa tạo"
+                ]
+            },
+            "login": {
+                "title": "2. Đăng nhập",
+                "steps": [
+                    "Nhấn nút \"Đăng nhập\" ở góc trên bên phải",
+                    "Nhập Email và Mật khẩu",
+                    "Nhấn \"Đăng nhập\" để truy cập hệ thống",
+                    "Hoặc đăng nhập với Facebook sẽ không cần phải đăng ký tài khoản",
+                    "Nếu quên mật khẩu, sử dụng chức năng \"Quên mật khẩu\""
+                ]
+            },
+            "buyPackage": {
+                "title": "3. Mua gói dịch vụ",
+                "steps": [
+                    "Vào \"Gói dịch vụ\" từ menu",
+                    "Chọn gói phù hợp (Chatbot, Chatbot AI)",
+                    "Chọn thời hạn: 3 tháng hoặc 12 tháng",
+                    "Chọn số lượng Pages, Employees, và Shops cần thiết",
+                    "Thanh toán qua Bank transfer, VNPAY",
+                    "Chờ admin duyệt giao dịch"
+                ]
+            }
+        },
+        "dashboard": {
+            "title": "Dashboard - Quản lý Facebook Pages",
+            "description": "Dashboard là trang chính để quản lý các Facebook Pages đã kết nối và theo dõi trạng thái của chúng.",
+            "connectPage": {
+                "title": "Kết nối Facebook Page mới",
+                "steps": [
+                    "Vào \"Dashboard\" từ menu chính",
+                    "Nhấn nút \"Connect New Page\" (nếu chưa đạt giới hạn)",
+                    "Chọn Page từ danh sách Facebook Pages của bạn",
+                    "Xác nhận quyền truy cập",
+                    "Page sẽ xuất hiện trong danh sách sau khi kết nối thành công"
+                ]
+            },
+            "managePages": {
+                "title": "Quản lý Pages",
+                "features": [
+                    "Xem danh sách: Tất cả Pages đã kết nối hiển thị dưới dạng cards",
+                    "Lọc theo trạng thái: All, Active, Inactive",
+                    "Tìm kiếm: Sử dụng thanh search để tìm Page theo tên",
+                    "Xem chi tiết: Click vào Page để xem thông tin chi tiết",
+                    "Ngắt kết nối: Sử dụng menu dropdown để ngắt kết nối Page"
+                ]
+            },
+            "note": "Lưu ý: Số lượng Pages có thể kết nối phụ thuộc vào gói dịch vụ đã mua. Kiểm tra giới hạn trong phần \"Gói dịch vụ\"."
+        },
+        "shopManagement": {
+            "title": "Quản lý Shop",
+            "description": "Quản lý Shop cho phép bạn tạo và quản lý nhiều cửa hàng, mỗi shop có thể có nhiều nhân viên và Facebook Pages.",
+            "createShop": {
+                "title": "Tạo Shop mới",
+                "steps": [
+                    "Vào \"Shop\" từ menu chính",
+                    "Nhấn nút \"Thêm Shop\"",
+                    "Điền thông tin:",
+                    "  - Tên Shop",
+                    "  - Email liên hệ",
+                    "  - Số điện thoại",
+                    "  - Danh mục (Category)",
+                    "Nhấn \"Lưu\" để tạo Shop"
+                ]
+            },
+            "manageEmployees": {
+                "title": "Quản lý Nhân viên",
+                "steps": [
+                    "Chọn Shop từ danh sách",
+                    "Vào tab \"Nhân viên\"",
+                    "Nhấn \"Thêm nhân viên\"",
+                    "Nhập email của nhân viên (phải đã đăng ký trong hệ thống)",
+                    "Chọn quyền: Admin hoặc Employee",
+                    "Nhấn \"Thêm\" để hoàn tất"
+                ]
+            },
+            "activityHistory": {
+                "title": "Lịch sử hoạt động",
+                "features": [
+                    "Xem lịch sử các thao tác trong Shop",
+                    "Lọc theo ngày, người thực hiện, hoặc loại hành động",
+                    "Xuất báo cáo nếu cần"
+                ]
+            },
+            "note": "Lưu ý: Số lượng Shops và Employees có thể tạo phụ thuộc vào gói dịch vụ. Mỗi Shop có thể kết nối nhiều Facebook Pages."
+        },
+        "adsManagement": {
+            "title": "Quản lý Quảng cáo",
+            "description": "Quản lý Quảng cáo là nơi bạn tạo, chỉnh sửa và quản lý tất cả các chiến dịch quảng cáo Facebook của mình.",
+            "structure": {
+                "title": "Cấu trúc Quảng cáo",
+                "items": [
+                    "Campaign (Chiến dịch): Cấp cao nhất, chứa nhiều Ad Sets",
+                    "Ad Set (Nhóm quảng cáo): Chứa nhiều Ads, định nghĩa đối tượng và ngân sách",
+                    "Ad (Quảng cáo): Cấp thấp nhất, chứa creative (hình ảnh, video, text)"
+                ]
+            },
+            "createCampaign": {
+                "title": "Tạo Chiến dịch mới",
+                "steps": [
+                    "Vào \"Quản lý Quảng cáo\" từ menu",
+                    "Chọn tài khoản quảng cáo từ dropdown (nếu có nhiều tài khoản)",
+                    "Nhấn nút \"Tạo mới\" hoặc \"Create Campaign\"",
+                    "Điền thông tin Campaign:",
+                    "  - Tên Campaign",
+                    "  - Mục tiêu (Objective): Traffic, Conversions, Engagement, etc.",
+                    "  - Ngân sách (Budget)",
+                    "Tiếp tục tạo Ad Set:",
+                    "  - Chọn đối tượng (Audience)",
+                    "  - Thiết lập ngân sách Ad Set",
+                    "  - Chọn vị trí đặt quảng cáo (Placements)",
+                    "Cuối cùng, tạo Ad:",
+                    "  - Chọn format: Single Image, Video, Carousel, etc.",
+                    "  - Upload hình ảnh/video",
+                    "  - Nhập nội dung quảng cáo (Ad Text)",
+                    "  - Thêm Call-to-Action (CTA) button",
+                    "Xem lại và nhấn \"Publish\" để xuất bản"
+                ]
+            },
+            "manageAds": {
+                "title": "Quản lý Quảng cáo",
+                "features": [
+                    "Xem danh sách: Chuyển đổi giữa tabs Campaigns, Ad Sets, Ads",
+                    "Chỉnh sửa: Click vào item để chỉnh sửa",
+                    "Bật/Tắt: Sử dụng toggle để bật/tắt Campaign, Ad Set, hoặc Ad",
+                    "Xóa: Chọn item và nhấn nút Xóa (có xác nhận)",
+                    "Lưu trữ: Archive để ẩn khỏi danh sách chính",
+                    "Đồng bộ: Nhấn nút Sync để đồng bộ dữ liệu từ Facebook"
+                ]
+            },
+            "searchFilter": {
+                "title": "Tìm kiếm và Lọc",
+                "features": [
+                    "Sử dụng thanh search để tìm theo tên",
+                    "Lọc theo trạng thái: Active, Paused, Archived",
+                    "Lọc theo ngày tạo hoặc ngày chỉnh sửa"
+                ]
+            }
+        },
+        "analytics": {
+            "title": "Phân tích & Báo cáo",
+            "description": "Analytics cung cấp các báo cáo chi tiết về hiệu suất quảng cáo với nhiều metrics và breakdown options.",
+            "viewReports": {
+                "title": "Xem Báo cáo",
+                "steps": [
+                    "Vào \"Analytics\" từ menu",
+                    "Chọn tài khoản quảng cáo",
+                    "Chọn khoảng thời gian (Date Range)",
+                    "Chọn các metrics muốn xem:",
+                    "  - Amount Spent (Chi phí)",
+                    "  - Impressions (Lượt hiển thị)",
+                    "  - Reach (Lượt tiếp cận)",
+                    "  - Results (Kết quả)",
+                    "  - CPC, CPM, CTR (Các chỉ số hiệu quả)",
+                    "Chọn breakdown columns:",
+                    "  - Campaign Name, Ad Set Name, Ad Name",
+                    "  - Page Name, Date, Age Range, etc.",
+                    "Xem bảng dữ liệu và biểu đồ"
+                ]
+            },
+            "exportReports": {
+                "title": "Xuất Báo cáo",
+                "features": [
+                    "Xuất dữ liệu ra file Excel/CSV",
+                    "Lưu các cấu hình báo cáo yêu thích",
+                    "Lên lịch gửi báo cáo tự động"
+                ]
+            }
+        },
+        "automation": {
+            "title": "Tự động hóa Quảng cáo",
+            "description": "Automation Rules cho phép bạn thiết lập các quy tắc tự động để tối ưu hóa chiến dịch quảng cáo dựa trên hiệu suất.",
+            "createRule": {
+                "title": "Tạo Quy tắc Tự động",
+                "steps": [
+                    "Vào \"Automation Rule\" từ menu",
+                    "Nhấn \"Tạo quy tắc mới\"",
+                    "Đặt tên và mô tả cho quy tắc",
+                    "Chọn điều kiện (Conditions):",
+                    "  - Khi CPC > X VND",
+                    "  - Khi CTR < Y%",
+                    "  - Khi Results < Z",
+                    "  - Khi Amount Spent > W VND",
+                    "Chọn hành động (Actions):",
+                    "  - Pause Campaign/Ad Set/Ad",
+                    "  - Increase Budget",
+                    "  - Decrease Budget",
+                    "  - Send Notification",
+                    "Thiết lập lịch kiểm tra (Schedule)",
+                    "Kích hoạt quy tắc"
+                ]
+            },
+            "manageRules": {
+                "title": "Quản lý Quy tắc",
+                "features": [
+                    "Xem danh sách tất cả quy tắc",
+                    "Bật/Tắt quy tắc",
+                    "Chỉnh sửa hoặc xóa quy tắc",
+                    "Xem lịch sử thực thi quy tắc"
+                ]
+            },
+            "note": "Lưu ý: Quy tắc tự động sẽ chạy theo lịch đã thiết lập. Đảm bảo tài khoản quảng cáo đã được kết nối và có quyền truy cập."
+        },
+        "servicePackage": {
+            "title": "Gói dịch vụ & Thanh toán",
+            "description": "Hệ thống cung cấp các gói dịch vụ với các mức giới hạn khác nhau về Pages, Employees, và Shops.",
+            "packageTypes": {
+                "title": "Các loại Gói dịch vụ",
+                "items": [
+                    "Chatbot: Gói cơ bản với giới hạn Pages, Employees, Shops",
+                    "Chatbot AI: Gói nâng cao với nhiều tính năng và giới hạn cao hơn"
+                ]
+            },
+            "buyPackage": {
+                "title": "Mua Gói dịch vụ",
+                "steps": [
+                    "Vào \"Gói dịch vụ\" từ menu",
+                    "Xem thông tin các gói có sẵn",
+                    "Chọn gói và thời hạn (3/6/12 tháng)",
+                    "Chọn số lượng:",
+                    "  - Pages (Facebook Pages)",
+                    "  - Employees (Nhân viên)",
+                    "  - Shops (Cửa hàng)",
+                    "Nhấn \"Đặt hàng\"",
+                    "Chọn phương thức thanh toán:",
+                    "  - Momo",
+                    "  - VietQR",
+                    "  - Chuyển khoản ngân hàng",
+                    "Hoàn tất thanh toán",
+                    "Chờ admin duyệt giao dịch"
+                ]
+            },
+            "viewCurrentPackage": {
+                "title": "Xem Gói hiện tại",
+                "features": [
+                    "Xem thông tin gói đang sử dụng",
+                    "Kiểm tra giới hạn và mức sử dụng hiện tại",
+                    "Xem ngày hết hạn",
+                    "Nâng cấp gói nếu cần"
+                ]
+            }
+        },
+        "adAccount": {
+            "title": "Quản lý Tài khoản Quảng cáo",
+            "description": "Kết nối và quản lý các tài khoản quảng cáo Facebook để sử dụng trong hệ thống.",
+            "connect": {
+                "title": "Kết nối Tài khoản Quảng cáo",
+                "steps": [
+                    "Vào \"Kết nối Tài khoản Quảng cáo\" từ menu",
+                    "Nhấn nút \"Kết nối\"",
+                    "Đăng nhập Facebook và cấp quyền truy cập",
+                    "Chọn tài khoản quảng cáo muốn kết nối",
+                    "Xác nhận kết nối",
+                    "Tài khoản sẽ xuất hiện trong danh sách"
+                ]
+            },
+            "manage": {
+                "title": "Quản lý Tài khoản",
+                "features": [
+                    "Xem danh sách: Tất cả tài khoản đã kết nối",
+                    "Ngắt kết nối: Xóa tài khoản khỏi hệ thống",
+                    "Đồng bộ: Đồng bộ dữ liệu từ Facebook",
+                    "Chọn tài khoản mặc định: Chọn tài khoản để sử dụng khi tạo quảng cáo"
+                ]
+            },
+            "note": "Lưu ý: Đảm bảo tài khoản Facebook của bạn có quyền quản lý tài khoản quảng cáo. Sau khi ngắt kết nối, tất cả dữ liệu liên quan sẽ bị xóa."
+        },
+        "profile": {
+            "title": "Hồ sơ & Cài đặt",
+            "description": "Quản lý thông tin cá nhân và cài đặt tài khoản của bạn.",
+            "updateInfo": {
+                "title": "Cập nhật Thông tin",
+                "steps": [
+                    "Vào \"Hồ sơ\" từ menu",
+                    "Cập nhật thông tin:",
+                    "  - Họ và tên",
+                    "  - Email",
+                    "  - Số điện thoại",
+                    "  - Ảnh đại diện",
+                    "Nhấn \"Lưu\" để cập nhật"
+                ]
+            },
+            "changePassword": {
+                "title": "Đổi Mật khẩu",
+                "steps": [
+                    "Vào phần \"Đổi mật khẩu\" trong Hồ sơ",
+                    "Nhập mật khẩu hiện tại",
+                    "Nhập mật khẩu mới",
+                    "Xác nhận mật khẩu mới",
+                    "Nhấn \"Đổi mật khẩu\""
+                ]
+            },
+            "otherSettings": {
+                "title": "Cài đặt Khác",
+                "features": [
+                    "Ngôn ngữ (Tiếng Việt / English)",
+                    "Thông báo email",
+                    "Xác thực 2 yếu tố (sắp ra mắt)"
+                ]
+            }
+        }
+    },
+    "footer": {
+        "needHelp": "Cần hỗ trợ thêm? Liên hệ với chúng tôi qua email hoặc hotline.",
+        "copyright": "© 2025 create by AAMS FPT Team. Tất cả quyền được bảo lưu."
+    }
+}

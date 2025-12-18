@@ -1,25 +1,27 @@
 
 import { useState, useEffect } from "react";
 import { Search, BookOpen, User, Home, Store, Megaphone, BarChart3, Zap, Package, CreditCard, Settings, Shield, Users, FileText, Bell, Key } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import "./Guide.css";
 
 const GUIDE_SECTIONS = [
-  { id: "overview", title: "Tổng quan", icon: BookOpen },
-  { id: "getting-started", title: "Bắt đầu", icon: User },
-  { id: "dashboard", title: "Dashboard", icon: Home },
-  { id: "shop-management", title: "Quản lý Shop", icon: Store },
-  { id: "ads-management", title: "Quản lý Quảng cáo", icon: Megaphone },
-  { id: "analytics", title: "Phân tích", icon: BarChart3 },
-  { id: "automation", title: "Tự động hóa", icon: Zap },
-  { id: "service-package", title: "Gói dịch vụ", icon: Package },
-  { id: "ad-account", title: "Tài khoản quảng cáo", icon: CreditCard },
-  { id: "profile", title: "Hồ sơ", icon: Settings },
-//   { id: "admin-system", title: "Admin - System Admin", icon: Shield },
-//   { id: "admin-cs", title: "Admin - CS Staff", icon: Users },
-//   { id: "admin-accountant", title: "Admin - Accountant", icon: FileText },
+  { id: "overview", titleKey: "sections.overview.title", icon: BookOpen },
+  { id: "getting-started", titleKey: "sections.gettingStarted.title", icon: User },
+  { id: "dashboard", titleKey: "sections.dashboard.title", icon: Home },
+  { id: "shop-management", titleKey: "sections.shopManagement.title", icon: Store },
+  { id: "ads-management", titleKey: "sections.adsManagement.title", icon: Megaphone },
+  { id: "analytics", titleKey: "sections.analytics.title", icon: BarChart3 },
+  { id: "automation", titleKey: "sections.automation.title", icon: Zap },
+  { id: "service-package", titleKey: "sections.servicePackage.title", icon: Package },
+  { id: "ad-account", titleKey: "sections.adAccount.title", icon: CreditCard },
+  { id: "profile", titleKey: "sections.profile.title", icon: Settings },
+  //   { id: "admin-system", titleKey: "Admin - System Admin", icon: Shield },
+  //   { id: "admin-cs", titleKey: "Admin - CS Staff", icon: Users },
+  //   { id: "admin-accountant", titleKey: "Admin - Accountant", icon: FileText },
 ];
 
 function Guide() {
+  const { t } = useTranslation('guide');
   const [activeSection, setActiveSection] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -31,7 +33,7 @@ function Guide() {
   }, [activeSection]);
 
   const filteredSections = GUIDE_SECTIONS.filter((section) =>
-    section.title.toLowerCase().includes(searchTerm.toLowerCase())
+    t(section.titleKey).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const scrollToSection = (sectionId) => {
@@ -50,7 +52,7 @@ function Guide() {
             <Search size={18} className="guide-page-search-icon" />
             <input
               type="text"
-              placeholder="Tìm kiếm..."
+              placeholder={t('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="guide-page-search-input"
@@ -58,7 +60,7 @@ function Guide() {
           </div>
 
           <nav className="guide-page-nav">
-            <h3 className="guide-page-nav-title">Mục lục</h3>
+            <h3 className="guide-page-nav-title">{t('tableOfContents')}</h3>
             <ul className="guide-page-nav-list">
               {filteredSections.map((section) => {
                 const Icon = section.icon;
@@ -69,7 +71,7 @@ function Guide() {
                       className={`guide-page-nav-link ${activeSection === section.id ? "active" : ""}`}
                     >
                       <Icon size={18} className="guide-page-nav-icon" />
-                      <span>{section.title}</span>
+                      <span>{t(section.titleKey)}</span>
                     </button>
                   </li>
                 );
@@ -144,9 +146,9 @@ function Guide() {
                 <ol className="guide-steps-list">
                   <li>Vào <strong>"Gói dịch vụ"</strong> từ menu</li>
                   <li>Chọn gói phù hợp (Chatbot, Chatbot AI)</li>
-                  <li>Chọn thời hạn: 3 tháng, 6 tháng, hoặc 12 tháng</li>
+                  <li>Chọn thời hạn: 3 tháng hoặc 12 tháng</li>
                   <li>Chọn số lượng Pages, Employees, và Shops cần thiết</li>
-                  <li>Thanh toán qua Momo, VietQR, hoặc chuyển khoản ngân hàng</li>
+                  <li>Thanh toán qua Bank transfer, VNPAY</li>
                   <li>Chờ admin duyệt giao dịch</li>
                 </ol>
               </div>

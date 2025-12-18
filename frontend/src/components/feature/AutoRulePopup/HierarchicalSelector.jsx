@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
-import { buildApplyToText } from "../../../utils/autoRuleUtils";
+import { useTranslation } from "react-i18next";
+import { buildApplyToText } from "../../../utils/business-logic/autoRuleUtils";
 
 /**
  * Hierarchical Selector Component for selecting campaigns, adsets, and ads
@@ -17,6 +18,7 @@ const HierarchicalSelector = memo(({
   onSelectionChange,
   loading = false,
 }) => {
+  const { t } = useTranslation('automationRule');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [internalExpandedCampaigns, setInternalExpandedCampaigns] = useState(
     new Set()
@@ -170,7 +172,8 @@ const HierarchicalSelector = memo(({
       const applyToText = buildApplyToText(
         newCampaignIds,
         newAdsetIds,
-        newAdIds
+        newAdIds,
+        t
       );
       onSelectionChange(newCampaignIds, newAdsetIds, newAdIds, applyToText);
     },
@@ -222,7 +225,8 @@ const HierarchicalSelector = memo(({
       const applyToText = buildApplyToText(
         selectedCampaignIds,
         newAdsetIds,
-        newAdIds
+        newAdIds,
+        t
       );
       onSelectionChange(selectedCampaignIds, newAdsetIds, newAdIds, applyToText);
     },
@@ -249,7 +253,8 @@ const HierarchicalSelector = memo(({
       const applyToText = buildApplyToText(
         selectedCampaignIds,
         selectedAdsetIds,
-        newAdIds
+        newAdIds,
+        t
       );
       onSelectionChange(selectedCampaignIds, selectedAdsetIds, newAdIds, applyToText);
     },
@@ -280,8 +285,8 @@ const HierarchicalSelector = memo(({
 
   const displayText = useMemo(() => {
     return (
-      buildApplyToText(selectedCampaignIds, selectedAdsetIds, selectedAdIds) ||
-      "Chọn đối tượng"
+      buildApplyToText(selectedCampaignIds, selectedAdsetIds, selectedAdIds, t) ||
+      t('hierarchicalSelector.selectTarget')
     );
   }, [selectedCampaignIds, selectedAdsetIds, selectedAdIds]);
 
@@ -293,7 +298,7 @@ const HierarchicalSelector = memo(({
           className="hierarchical-selector-trigger"
           disabled
         >
-          <span>Đang tải dữ liệu...</span>
+          <span>{t('hierarchicalSelector.loading')}</span>
           <ChevronDown size={16} />
         </button>
       </div>
@@ -308,7 +313,7 @@ const HierarchicalSelector = memo(({
           className="hierarchical-selector-trigger"
           disabled
         >
-          <span>Không có chiến dịch nào. Vui lòng tạo chiến dịch trước.</span>
+          <span>{t('hierarchicalSelector.noCampaigns')}</span>
           <ChevronDown size={16} />
         </button>
       </div>
@@ -324,7 +329,7 @@ const HierarchicalSelector = memo(({
       >
         <span
           className={
-            !displayText || displayText === "Chọn đối tượng"
+            !displayText || displayText === t('hierarchicalSelector.selectTarget')
               ? "hierarchical-selector-placeholder"
               : ""
           }
@@ -358,7 +363,7 @@ const HierarchicalSelector = memo(({
                         className="hierarchical-checkbox"
                       />
                       <span className="hierarchical-label-text campaign-label">
-                        {campaign.name || "Chiến dịch không tên"}
+                        {campaign.name || t('hierarchicalSelector.campaignUnnamed')}
                       </span>
                     </label>
                     <button
@@ -408,7 +413,7 @@ const HierarchicalSelector = memo(({
                                     className="hierarchical-checkbox"
                                   />
                                   <span className="hierarchical-label-text adset-label">
-                                    {adset.name || "Nhóm quảng cáo không tên"}
+                                    {adset.name || t('hierarchicalSelector.adsetUnnamed')}
                                   </span>
                                 </label>
                                 <button
@@ -465,7 +470,7 @@ const HierarchicalSelector = memo(({
                                                 className="hierarchical-checkbox"
                                               />
                                               <span className="hierarchical-label-text ad-label">
-                                                {ad.name || "Quảng cáo không tên"}
+                                                {ad.name || t('hierarchicalSelector.adUnnamed')}
                                               </span>
                                             </label>
                                           </div>
@@ -494,14 +499,14 @@ const HierarchicalSelector = memo(({
   if (prevProps.loading !== nextProps.loading) return false;
   if (prevProps.expandedCampaigns !== nextProps.expandedCampaigns) return false;
   if (prevProps.expandedAdsets !== nextProps.expandedAdsets) return false;
-  
+
   // Compare arrays by reference first (most common case)
   if (prevProps.selectedCampaignIds === nextProps.selectedCampaignIds &&
-      prevProps.selectedAdsetIds === nextProps.selectedAdsetIds &&
-      prevProps.selectedAdIds === nextProps.selectedAdIds) {
+    prevProps.selectedAdsetIds === nextProps.selectedAdsetIds &&
+    prevProps.selectedAdIds === nextProps.selectedAdIds) {
     return true;
   }
-  
+
   // If references differ, compare by length and content (shallow comparison)
   // This prevents re-render if arrays have same content but different reference
   const sameCampaignIds = prevProps.selectedCampaignIds.length === nextProps.selectedCampaignIds.length &&
@@ -510,7 +515,7 @@ const HierarchicalSelector = memo(({
     prevProps.selectedAdsetIds.every((id, i) => id?.toString() === nextProps.selectedAdsetIds[i]?.toString());
   const sameAdIds = prevProps.selectedAdIds.length === nextProps.selectedAdIds.length &&
     prevProps.selectedAdIds.every((id, i) => id?.toString() === nextProps.selectedAdIds[i]?.toString());
-  
+
   return sameCampaignIds && sameAdsetIds && sameAdIds;
 });
 

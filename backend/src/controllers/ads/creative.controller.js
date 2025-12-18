@@ -1,20 +1,19 @@
-// controllers/ads/creative.controller.js
 import Creative from "../../models/ads/creative.model.js";
 
-// Helper function để extract string ID từ ObjectId format
+// Helper function to extract string ID from ObjectId format
 function extractObjectId(value) {
   if (!value) return null;
   if (typeof value === 'string') {
     const match = value.match(/[0-9a-fA-F]{24}/);
     return match ? match[0] : null;
   }
-  if (value.$oid) return value.$oid; // trong trường hợp Mongo xuất ra kiểu { $oid: '...' }
+  if (value.$oid) return value.$oid; // If MongoDB exports as { $oid: '...' }
   return value.toString();
 }
 
 /**
  * GET /api/creatives/database
- * Lấy creative từ database theo creative_id
+ * Get creative from database by creative_id
  */
 export async function getCreativeFromDatabase(req, res) {
   try {
@@ -27,7 +26,7 @@ export async function getCreativeFromDatabase(req, res) {
       });
     }
 
-    // Extract và validate creative_id
+    // Extract and validate creative_id
     const cleanCreativeId = extractObjectId(creative_id);
     if (!cleanCreativeId) {
       return res.status(400).json({
@@ -61,17 +60,17 @@ export async function getCreativeFromDatabase(req, res) {
 
 /**
  * GET /api/creatives
- * Lấy danh sách creatives
+ * Get list of creatives
  */
 export async function listCreativesCtrl(req, res) {
   try {
     const { page = 1, limit = 10, q } = req.query;
 
-    // Xây dựng filter
+    // Build filter
     const filter = {};
     if (q) filter.name = new RegExp(q, "i");
 
-    // Lấy dữ liệu có phân trang
+    // Get data with pagination
     const skip = (Number(page) - 1) * Number(limit);
     const [items, total] = await Promise.all([
       Creative.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),

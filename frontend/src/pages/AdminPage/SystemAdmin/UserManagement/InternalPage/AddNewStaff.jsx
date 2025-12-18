@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Loader2 } from "lucide-react";
-import { useToast } from "../../../../../hooks/useToast";
+import { useToast } from "../../../../../hooks/common/useToast";
 import "./InternalPage.css";
 
 export default function AddNewStaff({ isOpen, onClose, onAdd }) {
@@ -41,13 +41,13 @@ export default function AddNewStaff({ isOpen, onClose, onAdd }) {
       onClose();
     } catch (error) {
       console.error("Error adding staff:", error);
-      
+
       // Lấy error message từ response
-      const errorMessage = 
-        error?.response?.data?.message || 
-        error?.message || 
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
         t("addNewStaff.messages.addErrorGeneric");
-      
+
       toast.error(t("addNewStaff.messages.addError"), {
         description: errorMessage,
       });
@@ -105,8 +105,8 @@ export default function AddNewStaff({ isOpen, onClose, onAdd }) {
           </div>
         </div>
         <div className="amu-modal-footer">
-          <button 
-            className="amu-modal-btn-add" 
+          <button
+            className="amu-modal-btn-add"
             onClick={handleSubmit}
             disabled={loading}
           >

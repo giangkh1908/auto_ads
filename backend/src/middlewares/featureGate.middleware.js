@@ -3,7 +3,7 @@ import {
   FEATURE_KEYS,
   getUserEntitlements,
   userHasFeature,
-} from "../services/entitlementService.js";
+} from "../services/admin/entitlementService.js";
 
 export const attachEntitlements = async (req, _res, next) => {
   try {

@@ -1,8 +1,8 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { Circle, DollarSign, Settings } from "lucide-react";
 import "./CampaignStep.css";
-import { useToast } from "../../../../hooks/useToast";
-import { validateNonEmpty } from "../../../../utils/validation";
+import { useToast } from "../../../../hooks/common/useToast";
+import { validateNonEmpty } from "../../../../utils/validation/validation";
 
 function CampaignStepInner({ campaign, setCampaign }, ref) {
   const toast = useToast();

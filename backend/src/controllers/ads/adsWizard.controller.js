@@ -1,4 +1,3 @@
-// controllers/ads/adsWizard.controller.js
 import mongoose from 'mongoose';
 import { 
   publishWizard, 
@@ -8,18 +7,19 @@ import {
   publishAdService,
   publishFlexibleService,
   updateFlexibleService,
-} from "../../services/adsWizardService.js";
-import User from "../../models/user.model.js";
+} from "../../services/ads/adsWizardService.js";
+import User from "../../models/user/user.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
 import Creative from "../../models/ads/creative.model.js";
 import { convertCTAToFacebookType } from "../../utils/ctaUtils.js";
+import { saveLog } from "../../utils/log.js";
 
 /**
- * 🪄 Controller: Publish quy trình tạo quảng cáo Wizard
- * Bao gồm Campaign → AdSet → Creative → Ad
+ * Publish Ads Wizard
+ * Include Campaign → AdSet → Creative → Ad
  */
 export async function publishAdsWizard(req, res) {
   try {
@@ -37,7 +37,7 @@ export async function publishAdsWizard(req, res) {
       adDraftId,
     } = req.body;
 
-    //  Lấy Access Token: luôn ưu tiên token lưu trong DB để khớp APP SECRET
+    // Get Access Token: always prefer token saved in DB to match APP SECRET
     const user = await User.findById(req.user?._id).select(
       "+facebookAccessToken"
     );
@@ -56,7 +56,7 @@ export async function publishAdsWizard(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -69,7 +69,7 @@ export async function publishAdsWizard(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào cơ bản
+    // Validate basic input data
     if (!campaign?.name || !campaign?.objective) {
       return res.status(400).json({
         success: false,
@@ -95,30 +95,27 @@ export async function publishAdsWizard(req, res) {
       ` [Wizard] Bắt đầu publish quảng cáo cho account: ${ad_account_id}`
     );
 
-    // Sửa trong hàm publishAdsWizard
-
-    // Thêm đoạn này ngay trước khi gọi service
-    // Khoảng dòng 68 (sau phần validate)
+    // Fix bid_strategy and bid_amount conflict
     if (adset.bid_strategy === "LOWEST_COST_WITHOUT_CAP" && adset.bid_amount !== undefined) {
-      console.log("⚠️ Controller: Phát hiện xung đột bid_strategy và bid_amount");
-      // Xóa bid_amount trực tiếp từ đối tượng hiện tại
-      delete adset.bid_amount; // ✅ Hợp lệ - chỉ sửa thuộc tính không gán lại biến
+      console.log("Controller: Phát hiện xung đột bid_strategy và bid_amount");
+      // Remove bid_amount directly from the object
+      delete adset.bid_amount; // Valid - only modify property, not reassign variable
     }
 
-    // Gọi service chính
+    // Call service
     const result = await publishWizard({
       ad_account_id,
       access_token,
       campaign: {
         ...campaign,
         account_id: account._id,
-        shop_id: account.shop_id || req.user.shop_id, // fallback sang user.shop_id
+        shop_id: account.shop_id || req.user.shop_id, // fallback to user.shop_id
         created_by: req.user._id,
         page_id: campaign.page_id,
         page_name: campaign.page_name,
       },
       adset: {
-        ...adset, // Sử dụng adset đã được xử lý
+        ...adset, // Use processed adset
         created_by: req.user._id,
       },
       creative: {
@@ -136,7 +133,7 @@ export async function publishAdsWizard(req, res) {
       adDraftId,
     });
 
-    // Trả kết quả cho FE
+    // Return result to FE
     return res.status(201).json({
       success: true,
       message: dry_run
@@ -165,6 +162,7 @@ export async function publishAdsWizard(req, res) {
   }
 }
 
+// Update Ads Wizard
 export async function updateAdsWizard(req, res) {
   try {
     const {
@@ -177,7 +175,7 @@ export async function updateAdsWizard(req, res) {
       dry_run = false,
     } = req.body;
 
-    // 🧩 1️⃣ Lấy Access Token
+    // Get Access Token
     let access_token = tokenFromFE;
     if (!access_token) {
       const user = await User.findById(req.user?._id).select("+facebookAccessToken");
@@ -190,7 +188,7 @@ export async function updateAdsWizard(req, res) {
       return res.status(400).json({ success: false, message: "Thiếu ad_account_id hoặc access_token." });
     }
 
-    // 🧩 2️⃣ Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       $or: [
@@ -202,16 +200,16 @@ export async function updateAdsWizard(req, res) {
     if (!account)
       return res.status(403).json({ success: false, message: "Tài khoản quảng cáo không thuộc quyền sở hữu của bạn." });
 
-    // ✅ CASE 1: Nếu có campaign.adsets → dùng cascade update
+    // CASE 1: If campaign.adsets exists → use cascade update
     if (campaign?.adsets && Array.isArray(campaign.adsets) && campaign.adsets.length > 0) {
-      console.log(`🔄 [Wizard] Sử dụng cascade update cho campaign: ${campaign.name}`);
+      console.log(`[Wizard] Sử dụng cascade update cho campaign: ${campaign.name}`);
       
       // Enrich campaign data
       const enrichedCampaign = {
         ...campaign,
         account_id: account._id,
         shop_id: account.shop_id || req.user.shop_id,
-        // ⚠️ KHÔNG ghi đè created_by khi update
+        // DO NOT override created_by when updating
         adsets: campaign.adsets.map(adset => ({
           ...adset,
           ads: adset.ads?.map(ad => ({
@@ -233,16 +231,16 @@ export async function updateAdsWizard(req, res) {
       });
     }
 
-    // ✅ CASE 2: Fallback - dùng updateWizard cũ cho backward compatibility
-    console.log(`🔄 [Wizard] Sử dụng update riêng lẻ (legacy) cho account: ${ad_account_id}`);
+    // CASE 2: Fallback - use updateWizard for backward compatibility
+    console.log(`[Wizard] Sử dụng update riêng lẻ (legacy) cho account: ${ad_account_id}`);
     
-    // Xử lý xung đột bid_strategy cho adset
+    // Handle bid_strategy conflict for adset
     if (adset?.bid_strategy === "LOWEST_COST_WITHOUT_CAP" && adset?.bid_amount !== undefined) {
-      console.log("⚠️ Controller (update): Phát hiện xung đột bid_strategy và bid_amount");
+      console.log("Controller (update): Phát hiện xung đột bid_strategy và bid_amount");
       delete adset.bid_amount;
     }
 
-    // 🧩 3️⃣ Gọi service updateWizard
+    // Call service updateWizard
     const result = await updateWizard({
       ad_account_id,
       access_token,
@@ -253,7 +251,7 @@ export async function updateAdsWizard(req, res) {
       dry_run,
     });
 
-    // 🧩 4️⃣ Trả kết quả cho FE
+    // Return result to FE
     return res.status(200).json({
       success: true,
       message: dry_run
@@ -262,7 +260,7 @@ export async function updateAdsWizard(req, res) {
       data: result,
     });
   } catch (error) {
-    console.error("🔥 Update Wizard Error:", error?.response?.data || error);
+    console.error("Update Wizard Error:", error?.response?.data || error);
     const status = error?.response?.status || 500;
     const error_user_msg =
       error?.response?.data?.error_user_msg ||
@@ -277,11 +275,11 @@ export async function updateAdsWizard(req, res) {
 }
 
 // ========================================
-// 🎯 NEW FLEXIBLE CONTROLLERS FOR DIFFERENT MODELS
+// NEW FLEXIBLE CONTROLLERS FOR DIFFERENT MODELS
 // ========================================
 
 /**
- * 🎯 Controller: Tạo Campaign riêng biệt
+ * Controller: Tạo Campaign riêng biệt
  * POST /api/ads-wizard/publish-campaign
  */
 export async function publishCampaignController(req, res) {
@@ -294,7 +292,7 @@ export async function publishCampaignController(req, res) {
       campaignDraftId,
     } = req.body;
 
-    // Lấy Access Token: luôn ưu tiên token lưu trong DB để khớp APP SECRET
+    // Get Access Token: always prefer token saved in DB to match APP SECRET
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
     if (!user) {
       return res.status(401).json({
@@ -311,7 +309,7 @@ export async function publishCampaignController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -324,7 +322,7 @@ export async function publishCampaignController(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào cơ bản
+    // Validate input data
     if (!campaign?.name || !campaign?.objective) {
       return res.status(400).json({
         success: false,
@@ -334,7 +332,7 @@ export async function publishCampaignController(req, res) {
 
     console.log(`[Campaign Only] Bắt đầu tạo campaign: ${campaign.name}`);
 
-    // Gọi service tạo campaign
+    // Call service to create campaign
     const result = await publishCampaignService({
       ad_account_id,
       access_token,
@@ -350,6 +348,20 @@ export async function publishCampaignController(req, res) {
       campaignDraftId,
     });
 
+    // Log tạo campaign thành công
+    await saveLog({
+      user_id: req.user._id,
+      user_name: user.full_name,
+      shop_id: account.shop_id || req.user.shop_id,
+      action: "CREATE_CAMPAIGN",
+      target_type: "Campaign",
+      target_id: result.campaign?._id?.toString() || result.campaign?.external_id,
+      target_name: campaign.name,
+      request: { campaign_name: campaign.name, objective: campaign.objective },
+      ip_address: req.ip,
+      user_agent: req.headers?.['user-agent'],
+    });
+
     return res.status(200).json({
       success: true,
       message: "Tạo campaign thành công!",
@@ -357,7 +369,7 @@ export async function publishCampaignController(req, res) {
     });
 
   } catch (error) {
-    console.error("❌ Lỗi publish campaign:", error);
+    console.error("Lỗi publish campaign:", error);
     const error_user_msg = error?.response?.data?.error_user_msg || error.message;
     const status = error?.response?.status || 500;
 
@@ -370,7 +382,7 @@ export async function publishCampaignController(req, res) {
 }
 
 /**
- * 🎯 Controller: Tạo AdSet cho Campaign đã có
+ * Controller: Create AdSet for existing Campaign
  * POST /api/ads-wizard/publish-adset
  */
 export async function publishAdsetController(req, res) {
@@ -384,7 +396,7 @@ export async function publishAdsetController(req, res) {
       adsetDraftId,
     } = req.body;
 
-    // Lấy Access Token
+    // Get Access Token
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
     if (!user) {
       return res.status(401).json({
@@ -401,7 +413,7 @@ export async function publishAdsetController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -414,7 +426,7 @@ export async function publishAdsetController(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào
+    // Validate input data
     if (!adset?.name) {
       return res.status(400).json({
         success: false,
@@ -424,7 +436,7 @@ export async function publishAdsetController(req, res) {
 
     console.log(`[AdSet Only] Bắt đầu tạo adset: ${adset.name} cho campaign: ${campaignId}`);
 
-    // Gọi service tạo adset
+    // Call service to create adset
     const result = await publishAdsetService({
       ad_account_id,
       access_token,
@@ -437,6 +449,20 @@ export async function publishAdsetController(req, res) {
       adsetDraftId,
     });
 
+    // Log tạo adset thành công
+    await saveLog({
+      user_id: req.user._id,
+      user_name: user.full_name,
+      shop_id: account.shop_id || req.user.shop_id,
+      action: "CREATE_ADSET",
+      target_type: "AdSet",
+      target_id: result.adset?._id?.toString() || result.adset?.external_id,
+      target_name: adset.name,
+      request: { adset_name: adset.name, campaign_id: campaignId },
+      ip_address: req.ip,
+      user_agent: req.headers?.['user-agent'],
+    });
+
     return res.status(200).json({
       success: true,
       message: "Tạo adset thành công!",
@@ -444,7 +470,7 @@ export async function publishAdsetController(req, res) {
     });
 
   } catch (error) {
-    console.error("❌ Lỗi publish adset:", error);
+    console.error("Lỗi publish adset:", error);
     const error_user_msg = error?.response?.data?.error_user_msg || error.message;
     const status = error?.response?.status || 500;
 
@@ -457,7 +483,7 @@ export async function publishAdsetController(req, res) {
 }
 
 /**
- * 🎯 Controller: Tạo Ad cho AdSet đã có
+ * Controller: Create Ad for existing AdSet
  * POST /api/ads-wizard/publish-ad
  */
 export async function publishAdController(req, res) {
@@ -472,7 +498,7 @@ export async function publishAdController(req, res) {
       adDraftId,
     } = req.body;
 
-    // Lấy Access Token
+    // Get Access Token
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
     if (!user) {
       return res.status(401).json({
@@ -489,7 +515,7 @@ export async function publishAdController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -502,7 +528,7 @@ export async function publishAdController(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào
+    // Validate input data
     if (!creative?.object_story_spec) {
       return res.status(400).json({
         success: false,
@@ -519,7 +545,7 @@ export async function publishAdController(req, res) {
 
     console.log(`[Ad Only] Bắt đầu tạo ad: ${ad.name} cho adset: ${adsetId}`);
 
-    // Gọi service tạo ad
+    // Call service to create ad
     const result = await publishAdService({
       ad_account_id,
       access_token,
@@ -536,6 +562,20 @@ export async function publishAdController(req, res) {
       adDraftId,
     });
 
+    // Log tạo ad thành công
+    await saveLog({
+      user_id: req.user._id,
+      user_name: user.full_name,
+      shop_id: account.shop_id || req.user.shop_id,
+      action: "CREATE_AD",
+      target_type: "Ad",
+      target_id: result.ad?._id?.toString() || result.ad?.external_id,
+      target_name: ad.name,
+      request: { ad_name: ad.name, adset_id: adsetId },
+      ip_address: req.ip,
+      user_agent: req.headers?.['user-agent'],
+    });
+
     return res.status(200).json({
       success: true,
       message: "Tạo ad thành công!",
@@ -543,7 +583,7 @@ export async function publishAdController(req, res) {
     });
 
   } catch (error) {
-    console.error("❌ Lỗi publish ad:", error);
+    console.error("Lỗi publish ad:", error);
     const error_user_msg = error?.response?.data?.error_user_msg || error.message;
     const status = error?.response?.status || 500;
 
@@ -556,7 +596,7 @@ export async function publishAdController(req, res) {
 }
 
 /**
- * 🎯 Controller: Tạo toàn bộ cấu trúc linh hoạt
+ * Controller: Create Flexible Ads
  * POST /api/ads-wizard/publish-flexible
  */
 export async function publishFlexibleController(req, res) {
@@ -568,7 +608,7 @@ export async function publishFlexibleController(req, res) {
       dry_run = false,
     } = req.body;
 
-    // Lấy Access Token
+    // Get Access Token
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
     if (!user) {
       return res.status(401).json({
@@ -585,7 +625,7 @@ export async function publishFlexibleController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -598,7 +638,7 @@ export async function publishFlexibleController(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào
+    // Validate input data
     if (!campaignsList || !Array.isArray(campaignsList) || campaignsList.length === 0) {
       return res.status(400).json({
         success: false,
@@ -606,7 +646,7 @@ export async function publishFlexibleController(req, res) {
       });
     }
 
-    // Validate từng campaign
+    // Validate campaign
     for (let i = 0; i < campaignsList.length; i++) {
       const campaign = campaignsList[i];
       if (!campaign?.name || !campaign?.objective) {
@@ -625,7 +665,7 @@ export async function publishFlexibleController(req, res) {
 
     console.log(`[Flexible Structure] Bắt đầu tạo ${campaignsList.length} campaigns với cấu trúc linh hoạt`);
 
-    // Chuẩn bị dữ liệu với thông tin user
+    // Prepare data with user information
     const enrichedCampaignsList = campaignsList.map(campaign => ({
       ...campaign,
       account_id: account._id,
@@ -645,7 +685,7 @@ export async function publishFlexibleController(req, res) {
       }))
     }));
 
-    // Gọi service tạo cấu trúc linh hoạt
+    // Call service to create flexible structure
     const result = await publishFlexibleService({
       ad_account_id,
       access_token,
@@ -673,7 +713,7 @@ export async function publishFlexibleController(req, res) {
 }
 
 /**
- * 🔄 Controller: Update toàn bộ cấu trúc linh hoạt
+ * Controller: Update Flexible Ads
  * PUT /api/ads-wizard/update-flexible
  */
 export async function updateFlexibleController(req, res) {
@@ -684,7 +724,7 @@ export async function updateFlexibleController(req, res) {
       campaignsList,
     } = req.body;
 
-    // Lấy Access Token
+    // Get Access Token
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
     if (!user) {
       return res.status(401).json({
@@ -701,7 +741,7 @@ export async function updateFlexibleController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -714,7 +754,7 @@ export async function updateFlexibleController(req, res) {
       });
     }
 
-    // Validate dữ liệu đầu vào
+    // Validate input data
     if (!campaignsList || !Array.isArray(campaignsList) || campaignsList.length === 0) {
       return res.status(400).json({
         success: false,
@@ -724,12 +764,12 @@ export async function updateFlexibleController(req, res) {
 
     console.log(`Bắt đầu update ${campaignsList.length} campaigns`);
 
-    // Chuẩn bị dữ liệu (⚠️ KHÔNG ghi đè created_by khi update)
+    // Prepare data (NOT override created_by when updating)
     const enrichedCampaignsList = campaignsList.map(campaign => ({
       ...campaign,
       account_id: account._id,
       shop_id: account.shop_id || req.user.shop_id,
-      // ⚠️ Không set created_by khi update - chỉ set khi tạo mới trong service
+      // NOT override created_by when updating - only set when creating in service
       adsets: (campaign.adsets || []).map(adset => ({
         ...adset,
         ads: (adset.ads || []).map(ad => ({
@@ -741,7 +781,7 @@ export async function updateFlexibleController(req, res) {
       }))
     }));
 
-    // Gọi service update cấu trúc linh hoạt
+    // Call service to update flexible structure
     const result = await updateFlexibleService({
       ad_account_id,
       access_token,
@@ -755,7 +795,7 @@ export async function updateFlexibleController(req, res) {
     });
 
   } catch (error) {
-    console.error("❌ Lỗi update flexible structure:", error);
+    console.error("Lỗi update flexible structure:", error);
     const error_user_msg = error?.response?.data?.error_user_msg || error.message;
     const status = error?.response?.status || 500;
 
@@ -768,16 +808,16 @@ export async function updateFlexibleController(req, res) {
 }
 
 /**
- * 🔍 Helper: Kiểm tra xem ID có phải ObjectId hợp lệ không (không phải temp ID)
+ * Helper: Check if ID is valid ObjectId (not temp ID)
  */
 function isValidObjectId(id) {
   if (!id) return false;
-  // Kiểm tra format ObjectId và không phải temp ID
+  // Check format ObjectId and not temp ID
   return mongoose.Types.ObjectId.isValid(id) && !id.toString().startsWith('temp_');
 }
 
 /**
- * 💾 Controller: Lưu nháp campaign/adset/ad
+ * Controller: Save draft campaign/adset/ad
  * POST /api/ads-wizard/save-draft
  */
 export async function saveDraftController(req, res) {
@@ -798,7 +838,7 @@ export async function saveDraftController(req, res) {
       });
     }
 
-    // Kiểm tra quyền sở hữu tài khoản quảng cáo
+    // Check account ownership
     const account = await AdsAccount.findOne({
       external_id: ad_account_id,
       user_ids: req.user._id,
@@ -818,9 +858,9 @@ export async function saveDraftController(req, res) {
       creatives: []
     };
 
-    // Lưu từng campaign
+    // Save each campaign
     for (const campaignData of campaigns) {
-      // ✅ Tạo hoặc update Campaign draft (check ObjectId hợp lệ)
+      // Create or update Campaign draft (check ObjectId hợp lệ)
       const campaignDoc = isValidObjectId(campaignData._id)
         ? await AdsCampaign.findByIdAndUpdate(
             campaignData._id,
@@ -831,7 +871,7 @@ export async function saveDraftController(req, res) {
               daily_budget: campaignData.daily_budget,
               lifetime_budget: campaignData.lifetime_budget,
               external_account_id: ad_account_id,
-              // ✅ XÓA page_id và page_name từ campaign (đã di chuyển sang adset)
+            // Remove page_id and page_name from campaign (moved to adset)
               // page_id: campaignData.facebookPageId,
               // page_name: campaignData.facebookPage,
               updated_at: new Date()
@@ -845,7 +885,7 @@ export async function saveDraftController(req, res) {
               daily_budget: campaignData.daily_budget,
               lifetime_budget: campaignData.lifetime_budget,
               external_account_id: ad_account_id,
-              // ✅ XÓA page_id và page_name từ campaign (đã di chuyển sang adset)
+            // Remove page_id and page_name from campaign (moved to adset)
               // page_id: campaignData.facebookPageId,
               // page_name: campaignData.facebookPage,
               account_id: account._id,
@@ -855,10 +895,10 @@ export async function saveDraftController(req, res) {
 
       savedItems.campaigns.push(campaignDoc);
 
-      // Lưu AdSets nếu có
+      // Save AdSets if any
       if (campaignData.adsets && campaignData.adsets.length > 0) {
         for (const adsetData of campaignData.adsets) {
-          // ✅ Tạo hoặc update AdSet draft (check ObjectId hợp lệ)
+          // Create or update AdSet draft (check ObjectId valid)
           const adsetDoc = isValidObjectId(adsetData._id)
             ? await AdsSet.findByIdAndUpdate(
                 adsetData._id,
@@ -871,7 +911,7 @@ export async function saveDraftController(req, res) {
                   optimization_goal: adsetData.optimization_goal,
                   billing_event: adsetData.billing_event,
                   bid_strategy: adsetData.bid_strategy,
-                  // ✅ THÊM page_id và page_name từ adset (đã di chuyển từ campaign)
+                  // Add page_id and page_name from adset (moved from campaign)
                   ...(adsetData.facebookPageId && { page_id: adsetData.facebookPageId }),
                   ...(adsetData.facebookPage && { page_name: adsetData.facebookPage }),
                   updated_at: new Date()
@@ -888,7 +928,7 @@ export async function saveDraftController(req, res) {
                 optimization_goal: adsetData.optimization_goal,
                 billing_event: adsetData.billing_event,
                 bid_strategy: adsetData.bid_strategy,
-                // ✅ THÊM page_id và page_name từ adset (đã di chuyển từ campaign)
+                // Add page_id and page_name from adset (moved from campaign)
                 ...(adsetData.facebookPageId && { page_id: adsetData.facebookPageId }),
                 ...(adsetData.facebookPage && { page_name: adsetData.facebookPage }),
                 created_by: req.user._id, 
@@ -896,10 +936,10 @@ export async function saveDraftController(req, res) {
 
           savedItems.adsets.push(adsetDoc);
 
-          // Lưu Ads nếu có
+          // Save Ads if any
           if (adsetData.ads && adsetData.ads.length > 0) {
             for (const adData of adsetData.ads) {
-              // ✅ Tạo hoặc update Ad draft (check ObjectId hợp lệ)
+              // Create or update Ad draft (check ObjectId valid)
               const adDoc = isValidObjectId(adData._id)
                 ? await Ads.findByIdAndUpdate(
                     adData._id,
@@ -921,16 +961,16 @@ export async function saveDraftController(req, res) {
 
               savedItems.ads.push(adDoc);
 
-              // ✅ Lưu Creative nếu có dữ liệu creative
+              // Save Creative if any data creative
               if (adData.primaryText || adData.headline || adData.mediaUrl || adData.destinationUrl) {
                 try {
-                  // Kiểm tra xem đã có creative cho ad này chưa
+                  // Check if creative exists for this ad
                   let creativeDoc = await Creative.findOne({ ads_id: adDoc._id });
                   
                   const creativeData = {
                     name: adData.name + ' Creative',
                     ads_id: adDoc._id,
-                    // ✅ LẤY page_id TỪ ADSET THAY VÌ CAMPAIGN
+                    // Get page_id FROM ADSET INSTEAD OF CAMPAIGN
                     page_id: adsetData.facebookPageId || campaignData.facebookPageId,
                     object_story_spec: {
                       page_id: adsetData.facebookPageId || campaignData.facebookPageId,
@@ -948,21 +988,21 @@ export async function saveDraftController(req, res) {
                   };
 
                   if (creativeDoc) {
-                    // Update creative hiện có
+                    // Update creative if exists
                     creativeDoc = await Creative.findByIdAndUpdate(
                       creativeDoc._id,
                       creativeData,
                       { new: true }
                     );
                   } else {
-                    // Tạo mới creative
+                    // Create new creative
                     creativeDoc = await Creative.create(creativeData);
                   }
 
                   savedItems.creatives.push(creativeDoc);
                 } catch (creativeError) {
-                  console.error('⚠️ Lỗi khi lưu creative:', creativeError);
-                  // Không throw error, tiếp tục lưu ad khác
+                  console.error('Lỗi khi lưu creative:', creativeError);
+                  // Not throw error, continue saving ad
                 }
               }
             }

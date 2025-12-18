@@ -114,6 +114,13 @@ export const FEATURE_LABELS_VI = {
   ads_auto_run: 'Quảng cáo tự động',
 }
 
+//Feature keys mapping to Englisg labels
+export const FEATURE_LABELS_EN = {
+  analytics_chat_ai: 'ChatBot AI',
+  content_ai: 'AI Generate',
+  ads_auto_run: 'Auto Run Ads',
+}
+
 // Helper function to get Vietnamese label for feature
 export const getFeatureLabel = (featureKey) => {
   return FEATURE_LABELS_VI[featureKey] || featureKey

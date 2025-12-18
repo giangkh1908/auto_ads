@@ -5,7 +5,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary/ErrorBoundary.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 import AdminRouteGuard from "./components/common/ProtectedRoute/AdminRouteGuard.jsx";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
-import { useAuth } from "./hooks/useAuth.js";
+import { useAuth } from "./hooks/auth/useAuth.js";
 import Header from "./components/layout/Header/Header.jsx";
 import AdminHeader from "./components/admin/AdminHeader/AdminHeader.jsx";
 import AdminSidebar from "./components/admin/AdminSidebar/AdminSidebar.jsx";
@@ -45,7 +45,7 @@ import PaymentPage from "./pages/AdminPage/CsStaff/PaymentPage/PaymentPage.jsx";
 import TransactionsPage from "./pages/AdminPage/Accountant/TransactionsPage/TransactionsPage.jsx";
 import ReportPage from "./pages/AdminPage/Accountant/ReportPage/ReportPage.jsx";
 import ProtectedRouteForRole from "./components/common/ProtectedRoute/ProtectedRouteForRole.jsx";
-import ScrollToTop from "./utils/ScrollToTop.jsx";
+import ScrollToTop from "./utils/ui/ScrollToTop.jsx";
 import { ROUTES, HEADER_ROUTES, AUTH_MODES } from "./constants/app.constants";
 
 function AppContentInner() {
@@ -475,13 +475,13 @@ function AppContentInner() {
         />
 
         {/* Route cho Connect Page */}
-        <Route 
-          path={ROUTES.CONNECT_PAGE} 
+        <Route
+          path={ROUTES.CONNECT_PAGE}
           element={
             <AdminRouteGuard>
               <ConnectPage />
             </AdminRouteGuard>
-          } 
+          }
         />
 
         {/* Route cho Connect Ad Account - Removed: auto sync on login */}

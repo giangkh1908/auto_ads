@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 import "./AutomationRule.css";
 import AutoRulePopup from "../../components/feature/AutoRulePopup/AutoRulePopup";
-import { useAuth } from "../../hooks/useAuth";
-import axiosInstance from "../../utils/axios";
-import automationRuleService from "../../services/automationRuleService";
-import { useToast } from "../../hooks/useToast";
+import { useAuth } from "../../hooks/auth/useAuth";
+import axiosInstance from "../../utils/api/axios";
+import automationRuleService from "../../services/auto/automationRuleService";
+import { useToast } from "../../hooks/common/useToast";
 import {
   ACTION_BE_TO_VI,
   METRIC_BE_TO_VI,
@@ -14,8 +16,11 @@ import {
   // convertConditionToFE,
   // convertScheduleToFE,
 } from "../../constants/autoRuleConstants";
+import { buildApplyToText } from "../../utils/business-logic/autoRuleUtils";
+import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverlay";
 
 function AutomationRule() {
+  const { t } = useTranslation('automationRule');
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
@@ -52,18 +57,13 @@ function AutomationRule() {
             );
             if (account) {
               setSelectedAccountId(savedAccountId);
-            } else if (response.data.items.length > 0) {
-              // Nếu account không tồn tại, chọn account đầu tiên
-              setSelectedAccountId(response.data.items[0].external_id);
             }
-          } else if (!selectedAccountId && response.data.items.length > 0) {
-            // Nếu không có account nào trong localStorage, chọn account đầu tiên
-            setSelectedAccountId(response.data.items[0].external_id);
+            // Nếu không có cache hoặc account không hợp lệ -> không chọn gì
           }
         }
       } catch (error) {
         console.error("Error fetching ad accounts:", error);
-        toast.error("Không thể tải danh sách tài khoản quảng cáo");
+        toast.error(t('toast.loadAccountsError', { ns: 'common' }) || "Cannot load ad accounts");
       }
     };
 
@@ -101,14 +101,21 @@ function AutomationRule() {
             name: rule.name,
             status:
               rule.status === "ACTIVE"
-                ? "Đã bật"
+                ? t('statusDisplay.enabled')
                 : rule.status === "TRIGGERED"
-                ? "Đã kích hoạt"
-                : rule.status === "PAUSED"
-                ? "Vô hiệu hóa"
-                : rule.status,
+                  ? t('statusDisplay.triggered')
+                  : rule.status === "PAUSED"
+                    ? t('statusDisplay.disabled')
+                    : rule.status,
             enabled: rule.enabled,
-            appliedTo: rule.apply_to || "Chưa chọn",
+            appliedTo: rule.apply_to_ids
+              ? buildApplyToText(
+                rule.apply_to_ids.campaign_ids || [],
+                rule.apply_to_ids.adset_ids || [],
+                rule.apply_to_ids.ad_ids || [],
+                t
+              )
+              : rule.apply_to || t('statusDisplay.notSelected'),
             actionCondition: formatActionCondition(rule),
             actionConditionHTML: formatActionConditionHTML(rule),
             result: formatResult(rule),
@@ -124,7 +131,7 @@ function AutomationRule() {
         }
       } catch (error) {
         console.error("Error fetching rules:", error);
-        toast.error(error.message || "Không thể tải danh sách quy tắc");
+        toast.error(error.message || t('loading.fetchingRules'));
       } finally {
         setLoading(false);
       }
@@ -132,7 +139,7 @@ function AutomationRule() {
 
     fetchRules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccountId, user?.shop_id]);
+  }, [selectedAccountId, user?.shop_id, i18n.language]);
 
   // Helper functions để format rule data
   const formatActionCondition = (rule) => {
@@ -149,11 +156,14 @@ function AutomationRule() {
 
   // Format action condition với HTML để in đậm
   const formatActionConditionHTML = (rule) => {
-    const action = ACTION_BE_TO_VI[rule.action] || rule.action;
+    const actionKey = ACTION_BE_TO_VI[rule.action] || rule.action;
+    const action = t(`actions.${actionKey}`);
     const conditions = rule.conditions
       ?.map((c) => {
-        const metric = METRIC_BE_TO_VI[c.metric] || c.metric;
-        const operator = OPERATOR_BE_TO_VI[c.operator] || c.operator;
+        const metricKey = METRIC_BE_TO_VI[c.metric] || c.metric;
+        const metric = t(`metrics.${metricKey}`);
+        const operatorKey = OPERATOR_BE_TO_VI[c.operator] || c.operator;
+        const operator = t(`operators.${operatorKey}`);
         return `<strong>${metric}</strong> ${operator} <strong>${c.value}</strong>`;
       })
       .join("\n");
@@ -165,7 +175,7 @@ function AutomationRule() {
 
     // Dòng 1: Trạng thái tổng quan
     if (!rule.enabled) {
-      return "Vô hiệu hóa";
+      return t('statusDisplay.disabled');
     }
 
     // TRIGGERED status được xử lý giống ACTIVE (rule vẫn tiếp tục chạy)
@@ -183,14 +193,14 @@ function AutomationRule() {
           hour: "2-digit",
           minute: "2-digit"
         });
-        lines.push(`Thời gian: ${errorTime}`);
+        lines.push(t('resultDisplay.errorTime', { time: errorTime }));
       }
       return lines.join("\n");
     }
 
     // Dòng 2: Số lần trigger
     if (rule.trigger_count > 0) {
-      lines.push(`Kích hoạt: ${rule.trigger_count} lần`);
+      lines.push(t('resultDisplay.triggered', { count: rule.trigger_count }));
       if (rule.last_triggered_at) {
         const triggeredTime = new Date(rule.last_triggered_at).toLocaleString("vi-VN", {
           day: "2-digit",
@@ -198,15 +208,15 @@ function AutomationRule() {
           hour: "2-digit",
           minute: "2-digit"
         });
-        lines.push(`Lần cuối: ${triggeredTime}`);
+        lines.push(t('resultDisplay.lastTriggered', { time: triggeredTime }));
       }
     } else {
-      lines.push("Chưa kích hoạt");
+      lines.push(t('resultDisplay.notTriggered'));
     }
 
     // Dòng 3: Số lần chạy
     if (rule.run_count > 0) {
-      lines.push(`Đã chạy: ${rule.run_count} lần`);
+      lines.push(t('resultDisplay.runCount', { count: rule.run_count }));
       if (rule.last_run_at) {
         const lastRunTime = new Date(rule.last_run_at).toLocaleString("vi-VN", {
           day: "2-digit",
@@ -214,10 +224,10 @@ function AutomationRule() {
           hour: "2-digit",
           minute: "2-digit"
         });
-        lines.push(`Chạy lần cuối: ${lastRunTime}`);
+        lines.push(t('resultDisplay.lastRun', { time: lastRunTime }));
       }
     } else {
-      lines.push("Chưa chạy lần nào");
+      lines.push(t('resultDisplay.notRun'));
     }
 
     // Dòng 4: Thời gian chạy tiếp theo
@@ -227,21 +237,21 @@ function AutomationRule() {
       if (nextRun > now) {
         const diffMinutes = Math.round((nextRun - now) / 1000 / 60);
         if (diffMinutes < 60) {
-          lines.push(`Chạy sau: ~${diffMinutes} phút`);
+          lines.push(t('resultDisplay.runInMinutes', { minutes: diffMinutes }));
         } else {
           const hours = Math.floor(diffMinutes / 60);
           const minutes = diffMinutes % 60;
           if (minutes > 0) {
-            lines.push(`Chạy sau: ~${hours}h ${minutes}m`);
+            lines.push(t('resultDisplay.runInHours', { hours, minutes }));
           } else {
-            lines.push(`Chạy sau: ~${hours} giờ`);
+            lines.push(t('resultDisplay.runInHoursOnly', { hours }));
           }
         }
       } else {
-        lines.push("⏰ Đang chờ chạy...");
+        lines.push(t('resultDisplay.waiting'));
       }
     } else {
-      lines.push("Chưa có lịch chạy");
+      lines.push(t('resultDisplay.noSchedule'));
     }
 
     return lines.join("\n");
@@ -249,13 +259,13 @@ function AutomationRule() {
 
   const formatFrequency = (rule) => {
     if (rule.schedule?.type === "CONTINUOUS") {
-      return "Đã kiểm tra tối thiểu 30 phút một lần.";
+      return t('frequencyDisplay.continuous');
     } else if (rule.schedule?.type === "DAILY") {
-      return `Hàng ngày từ ${rule.schedule.daily_time?.start_time || ""} đến ${rule.schedule.daily_time?.end_time || ""}`;
+      return t('frequencyDisplay.daily', { start: rule.schedule.daily_time?.start_time || "", end: rule.schedule.daily_time?.end_time || "" });
     } else if (rule.schedule?.type === "CUSTOM") {
-      return "Theo lịch tùy chỉnh";
+      return t('frequencyDisplay.custom');
     }
-    return "Chưa cài đặt";
+    return t('frequencyDisplay.notSet');
   };
 
   const handleAccountChange = (e) => {
@@ -273,24 +283,24 @@ function AutomationRule() {
           prev.map((rule) =>
             rule.id === id
               ? {
-                  ...rule,
-                  enabled: response.data.enabled,
-                  status: response.data.enabled ? "Đã bật" : "Vô hiệu hóa",
-                  rawData: response.data,
-                }
+                ...rule,
+                enabled: response.data.enabled,
+                status: response.data.enabled ? t('statusDisplay.enabled') : t('statusDisplay.disabled'),
+                rawData: response.data,
+              }
               : rule
           )
         );
-        toast.success(response.message || "Đã cập nhật trạng thái quy tắc");
+        toast.success(response.message || t('toast.toggleSuccess'));
       }
     } catch (error) {
       console.error("Error toggling rule:", error);
-      toast.error(error.message || "Không thể cập nhật trạng thái quy tắc");
+      toast.error(error.message || t('toast.toggleError'));
     }
   };
 
   const handleDeleteRule = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa quy tắc này?")) {
+    if (!window.confirm(t('confirmDelete.message'))) {
       return;
     }
 
@@ -298,11 +308,11 @@ function AutomationRule() {
       const response = await automationRuleService.deleteRule(id);
       if (response.success) {
         setRules((prev) => prev.filter((rule) => rule.id !== id));
-        toast.success(response.message || "Đã xóa quy tắc thành công");
+        toast.success(response.message || t('toast.deleteSuccess'));
       }
     } catch (error) {
       console.error("Error deleting rule:", error);
-      toast.error(error.message || "Không thể xóa quy tắc");
+      toast.error(error.message || t('toast.deleteError'));
     }
   };
 
@@ -321,7 +331,7 @@ function AutomationRule() {
       setLoading(true);
 
       if (!selectedAccountId) {
-        toast.error("Vui lòng chọn tài khoản quảng cáo");
+        toast.error(t('selectAccount'));
         return;
       }
 
@@ -330,7 +340,7 @@ function AutomationRule() {
         (acc) => acc.external_id === selectedAccountId
       );
       if (!account) {
-        toast.error("Không tìm thấy tài khoản quảng cáo");
+        toast.error(t('toast.accountNotFound', { ns: 'common' }) || "Account not found");
         return;
       }
 
@@ -349,11 +359,11 @@ function AutomationRule() {
           editingRule._id,
           ruleDataWithAccount
         );
-        toast.success(response.message || "Đã cập nhật quy tắc thành công");
+        toast.success(response.message || t('toast.updateSuccess'));
       } else {
         // Create new rule
         response = await automationRuleService.createRule(ruleDataWithAccount);
-        toast.success(response.message || "Đã tạo quy tắc thành công");
+        toast.success(response.message || t('toast.createSuccess'));
       }
 
       if (response.success) {
@@ -371,10 +381,10 @@ function AutomationRule() {
               rule.status === "ACTIVE"
                 ? "Đã bật"
                 : rule.status === "TRIGGERED"
-                ? "Đã kích hoạt"
-                : rule.status === "PAUSED"
-                ? "Vô hiệu hóa"
-                : rule.status,
+                  ? "Đã kích hoạt"
+                  : rule.status === "PAUSED"
+                    ? "Vô hiệu hóa"
+                    : rule.status,
             enabled: rule.enabled,
             appliedTo: rule.apply_to || "Chưa chọn",
             actionCondition: formatActionCondition(rule),
@@ -395,7 +405,7 @@ function AutomationRule() {
       }
     } catch (error) {
       console.error("Error saving rule:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi lưu quy tắc");
+      toast.error(error.message || t('loading.savingRule'));
     } finally {
       setLoading(false);
     }
@@ -408,6 +418,7 @@ function AutomationRule() {
 
   return (
     <div className="automation-rule-page">
+      <LoadingOverlay isLoading={loading} message={t('loading.fetchingRules')} />
       <div className="automation-rule-container">
         {/* Header with Back Button */}
         <div className="automation-rule-header">
@@ -422,7 +433,7 @@ function AutomationRule() {
 
         {/* Action Button */}
         <div className="automation-rule-actions">
-          <h1 className="automation-rule-title">Quy tắc tự động</h1>
+          <h1 className="automation-rule-title">{t('pageTitle')}</h1>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <select
               value={selectedAccountId}
@@ -434,7 +445,7 @@ function AutomationRule() {
                 minWidth: "200px",
               }}
             >
-              <option value="">Chọn tài khoản quảng cáo</option>
+              <option value="">{t('selectAccount')}</option>
               {adAccounts.map((account) => (
                 <option key={account._id} value={account.external_id}>
                   {account.name || account.external_id} ({account.external_id})
@@ -447,7 +458,7 @@ function AutomationRule() {
               disabled={!selectedAccountId || loading}
             >
               <Plus size={16} />
-              Tạo quy tắc mới
+              {t('addNewRule')}
             </button>
           </div>
         </div>
@@ -458,34 +469,34 @@ function AutomationRule() {
             <thead>
               <tr>
                 <th></th>
-                <th>Tên quy tắc</th>
-                <th>Trạng thái</th>
+                <th>{t('table.headers.ruleName')}</th>
+                <th>{t('table.headers.enabled')}</th>
                 <th>ID</th>
-                <th>Áp dụng cho</th>
-                <th>Hành động & điều kiện</th>
-                <th>Kết quả của quy tắc</th>
-                <th>Tần suất chạy</th>
-                <th>Người tạo</th>
-                <th>Hành động</th>
+                <th>{t('table.headers.applyTo')}</th>
+                <th>{t('table.headers.actionCondition')}</th>
+                <th>{t('table.headers.result')}</th>
+                <th>{t('table.headers.frequency')}</th>
+                <th>{t('table.headers.createdBy')}</th>
+                <th>{t('table.headers.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={10} className="empty-state">
-                    Đang tải...
+                    {t('loading.fetchingRules')}
                   </td>
                 </tr>
               ) : !selectedAccountId ? (
                 <tr>
                   <td colSpan={10} className="empty-state">
-                    Vui lòng chọn tài khoản quảng cáo để xem quy tắc.
+                    {t('emptyState')}
                   </td>
                 </tr>
               ) : rules.length === 0 ? (
                 <tr>
                   <td className="empty-state" colSpan={10}>
-                    Chưa có quy tắc nào. Hãy tạo quy tắc mới để bắt đầu.
+                    {t('emptyState')}
                   </td>
                 </tr>
               ) : (
@@ -503,34 +514,33 @@ function AutomationRule() {
                     <td>{rule.name}</td>
                     <td>
                       <span
-                        className={`rule-status ${
-                          rule.status === "Đã kích hoạt"
-                            ? "status-triggered"
-                            : rule.enabled
+                        className={`rule-status ${rule.status === "Đã kích hoạt"
+                          ? "status-triggered"
+                          : rule.enabled
                             ? "status-enabled"
                             : "status-disabled"
-                        }`}
+                          }`}
                       >
                         {rule.status}
                       </span>
                     </td>
                     <td className="rule-id-cell">{rule.id}</td>
                     <td>{rule.appliedTo}</td>
-                    <td 
+                    <td
                       className="action-condition-cell"
                       dangerouslySetInnerHTML={{ __html: rule.actionConditionHTML }}
                     />
                     <td className="rule-result-cell">{rule.result}</td>
                     <td>{rule.frequency}</td>
                     <td>
-                      {rule.creator} {rule.createdAt}
+                      {rule.creator} <br /> {rule.createdAt}
                     </td>
                     <td>
                       <div className="rule-actions">
                         <button
                           className="btn-edit"
                           onClick={() => handleEditRule(rule)}
-                          title="Chỉnh sửa"
+                          title={t('buttons.edit')}
                           disabled={loading}
                         >
                           <Edit size={14} />
@@ -538,7 +548,7 @@ function AutomationRule() {
                         <button
                           className="btn-delete"
                           onClick={() => handleDeleteRule(rule.id)}
-                          title="Xóa"
+                          title={t('buttons.delete')}
                           disabled={loading}
                         >
                           <Trash2 size={14} />

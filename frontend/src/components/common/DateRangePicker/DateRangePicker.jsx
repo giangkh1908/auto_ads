@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { useOnClickOutside } from "../../../utils/useOnClickOutside"; // ✅ Thêm import
+import { useOnClickOutside } from "../../../utils/ui/useOnClickOutside";
 import "./DateRangePicker.css";
 
 function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yyyy" }) {
@@ -84,11 +84,11 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
         setEndDate(date);
       }
       setHoverDate(null);
-      
+
       // Gọi onChange với object { from, to } hoặc string tùy thuộc vào format mong muốn
       const finalStart = date < startDate ? date : startDate;
       const finalEnd = date < startDate ? startDate : date;
-      
+
       // Nếu onChange expect object
       if (typeof value === 'object') {
         onChange({ from: finalStart, to: finalEnd });
@@ -192,8 +192,8 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
           readOnly
           onClick={() => setIsOpen(!isOpen)}
         />
-        <Calendar 
-          className="analytics-date-range-icon" 
+        <Calendar
+          className="analytics-date-range-icon"
           size={16}
           onClick={() => setIsOpen(!isOpen)}
         />
@@ -245,11 +245,9 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
                     <button
                       key={date.getTime()}
                       type="button"
-                      className={`analytics-calendar-day ${
-                        isSelected ? "selected" : ""
-                      } ${inRange ? "in-range" : ""} ${isStart ? "start-date" : ""} ${
-                        isEnd ? "end-date" : ""
-                      }`}
+                      className={`analytics-calendar-day ${isSelected ? "selected" : ""
+                        } ${inRange ? "in-range" : ""} ${isStart ? "start-date" : ""} ${isEnd ? "end-date" : ""
+                        }`}
                       onClick={() => handleDateClick(date)}
                       onMouseEnter={() => {
                         if (startDate && !endDate) {
@@ -321,11 +319,9 @@ function DateRangePicker({ value, onChange, placeholder = "dd/mm/yyyy - dd/mm/yy
                     <button
                       key={date.getTime()}
                       type="button"
-                      className={`analytics-calendar-day ${
-                        isSelected ? "selected" : ""
-                      } ${inRange ? "in-range" : ""} ${isStart ? "start-date" : ""} ${
-                        isEnd ? "end-date" : ""
-                      }`}
+                      className={`analytics-calendar-day ${isSelected ? "selected" : ""
+                        } ${inRange ? "in-range" : ""} ${isStart ? "start-date" : ""} ${isEnd ? "end-date" : ""
+                        }`}
                       onClick={() => handleDateClick(date)}
                       onMouseEnter={() => {
                         if (startDate && !endDate) {

@@ -4,7 +4,7 @@ import { X, Download } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import invoiceService from "../../../services/invoiceService";
+import invoiceService from "../../../services/shop/invoiceService";
 import "./Invoice.css";
 
 export default function Invoice({ isOpen, onClose, transactionId }) {
@@ -20,7 +20,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
       const originalOverflow = document.body.style.overflow;
       // Disable scroll
       document.body.style.overflow = "hidden";
-      
+
       // Restore scroll when modal closes
       return () => {
         document.body.style.overflow = originalOverflow;
@@ -58,7 +58,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
 
     try {
       toast.loading(t("invoice.messages.generatingPDF"));
-      
+
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
@@ -67,7 +67,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      
+
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -86,7 +86,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
 
       const fileName = invoice?.invoice_number || `invoice-${transactionId}`;
       pdf.save(`${fileName}.pdf`);
-      
+
       toast.dismiss();
       toast.success(t("invoice.messages.downloadSuccess"));
     } catch (error) {
@@ -124,7 +124,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
 
   const formatDuration = (duration) => {
     if (!duration) return "-";
-    
+
     // Map duration từ backend format sang hiển thị
     const durationMap = {
       "3months": {
@@ -143,7 +143,7 @@ export default function Invoice({ isOpen, onClose, transactionId }) {
 
     const currentLang = i18n.language || "vi";
     const langKey = currentLang === "en" ? "en" : "vi";
-    
+
     return durationMap[duration]?.[langKey] || duration;
   };
 

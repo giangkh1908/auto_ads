@@ -1,0 +1,76 @@
+{
+    "title": "Intelligent Analytics",
+    "selectAccount": "Select Ads Account",
+    "selectObjective": "Select Objective",
+    "searchPlaceholder": "Search by name, ID, date",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "syncButton": "Sync",
+    "syncing": "Syncing...",
+    "loading": "Loading...",
+    "loadingData": "Loading data...",
+    "syncing_data": "Syncing data...",
+    "emptyStates": {
+        "selectAccount": "Please select an account to view analytics.",
+        "selectObjective": "Please select an Objective to view data.",
+        "noData": "No data"
+    },
+    "entitlementAlert": "ChatBot AI is locked. Please upgrade to ChatBot AI+ package to use analytics assistant in this page.",
+    "objectives": {
+        "ALL": "All Objectives",
+        "OUTCOME_AWARENESS": "Awareness",
+        "OUTCOME_TRAFFIC": "Traffic",
+        "OUTCOME_ENGAGEMENT": "Engagement",
+        "OUTCOME_LEADS": "Leads",
+        "OUTCOME_SALES": "Sales",
+        "OUTCOME_APP_PROMOTION": "App Promotion"
+    },
+    "breakdownOptions": {
+        "campaign_name": "Campaign Name",
+        "adset_name": "Ad Set Name",
+        "name": "Ad Name",
+        "page_name": "Page Name",
+        "ad_text": "Ad Text",
+        "age_range": "Age Range",
+        "campaign_objective": "Campaign Objective",
+        "date": "Date"
+    },
+    "dataColumns": {
+        "reach": "Reach",
+        "cpm": "CPM",
+        "spend": "Amount Spent",
+        "frequency": "Frequency",
+        "impressions": "Impressions",
+        "cost_per_result": "Cost per Result",
+        "mobile_app_install": "App Installs",
+        "cost_per_mobile_app_install": "Cost per App Install",
+        "link_clicks": "Link Clicks",
+        "ctr": "CTR",
+        "post_engagement": "Post Engagement",
+        "cost_per_inline_post_engagement": "CPE",
+        "quality_ranking": "Quality Ranking",
+        "cpc": "CPC",
+        "leads": "Leads",
+        "conversions": "Registrations",
+        "cost_per_lead": "CPL",
+        "conversion_rate": "Conversion rate",
+        "website_purchases": "Purchases",
+        "cost_per_conversion": "Cost per Purchase",
+        "website_purchase_roas": "ROAS",
+        "cost_per_action": "CPA"
+    },
+    "settings": {
+        "title": "Setting",
+        "breakdown": "Breakdown",
+        "data": "Data"
+    },
+    "toast": {
+        "selectAccountWarning": "Please select an account to sync",
+        "syncSuccess": "Refresh completed!",
+        "syncWarning": "{{message}} Please try again after {{retryAfter}} seconds.",
+        "syncError": "Sync error: {{message}}"
+    },
+    "infoBar": {
+        "showing": "Showing {{count}} / {{total}} ads with data",
+        "updated": "Updated: {{date}}"
+    }
+}

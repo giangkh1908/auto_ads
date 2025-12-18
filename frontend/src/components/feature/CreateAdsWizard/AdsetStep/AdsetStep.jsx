@@ -23,14 +23,14 @@ import {
   Phone,
   Facebook,
 } from "lucide-react";
-import { useOnClickOutside } from "../../../../utils/useOnClickOutside";
-import { useToast } from "../../../../hooks/useToast";
+import { useOnClickOutside } from "../../../../utils/ui/useOnClickOutside";
+import { useToast } from "../../../../hooks/common/useToast";
 import {
   getOneDayAfter,
   toInputDateTimeLocal,
   isEndAtLeastOneDayAfterStart,
   ensureEndAfterStartPlusOneDay,
-} from "../../../../utils/validation";
+} from "../../../../utils/validation/validation";
 // import { validateNonEmpty } from "../../../../utils/validation";
 import { getAdsetDefaultsByObjective } from "../../../../constants/wizardConstants";
 import { getCompatibleBillingEvents } from "../../../../constants/wizardConstants";
@@ -191,8 +191,8 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
               field.name === "budgetType"
                 ? "budget-type"
                 : field.label === "Loại tương tác"
-                ? "performance-select"
-                : "conversion-event-select"
+                  ? "performance-select"
+                  : "conversion-event-select"
             }
             value={value || field.default || ""}
             onChange={(e) => {
@@ -344,9 +344,8 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
               return (
                 <label
                   key={opt.value}
-                  className={`traffic-option ${
-                    value === opt.value ? "selected" : ""
-                  }`}
+                  className={`traffic-option ${value === opt.value ? "selected" : ""
+                    }`}
                 >
                   <input
                     type="radio"

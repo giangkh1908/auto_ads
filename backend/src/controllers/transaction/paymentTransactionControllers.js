@@ -1,9 +1,9 @@
-import PaymentTransaction from "../../models/paymentTransaction.model.js";
-import UserPackage from "../../models/userPackage.model.js";
-import User from "../../models/user.model.js";
-import Package from "../../models/package.model.js";
+import PaymentTransaction from "../../models/transaction/paymentTransaction.model.js";
+import UserPackage from "../../models/package/userPackage.model.js";
+import User from "../../models/user/user.model.js";
+import Package from "../../models/package/package.model.js";
 import mongoose from "mongoose";
-import { sendPackageApprovalEmail } from "../../services/emailService.js";
+import { queuePackageApprovalEmail } from "../../services/email/emailService.js";
 import { createInvoice } from "../invoice/invoiceControllers.js";
 
 
@@ -439,7 +439,7 @@ export const updatePaymentTransaction = async (req, res) => {
                 // Không throw error để không ảnh hưởng đến flow chính
               }
 
-              // Gửi email thông báo khi package được approve
+              // Gửi email thông báo khi package được approve (fire-and-forget)
               try {
                 const user = await User.findById(currentTransaction.user_id).select("email full_name");
                 const packageInfo = await Package.findById(currentTransaction.package_id).select("name price planType pages employees shops features");
@@ -458,17 +458,17 @@ export const updatePaymentTransaction = async (req, res) => {
                     features: packageInfo.features || [],
                   };
 
-                  await sendPackageApprovalEmail(
+                  queuePackageApprovalEmail(
                     user.email,
                     user.full_name || "Khách hàng",
                     packageData
                   );
-                  console.log(`✅ Đã gửi email thông báo kích hoạt gói cho ${user.email}`);
+                  console.log(`📧 Email thông báo kích hoạt gói đã được queue cho ${user.email}`);
                 } else {
                   console.log(`⚠️ Không thể gửi email: user hoặc package không tìm thấy hoặc user không có email`);
                 }
               } catch (emailError) {
-                console.error("Lỗi gửi email thông báo kích hoạt gói:", emailError);
+                console.error("Lỗi queue email thông báo kích hoạt gói:", emailError);
                 // Không throw error để không ảnh hưởng đến response
               }
 

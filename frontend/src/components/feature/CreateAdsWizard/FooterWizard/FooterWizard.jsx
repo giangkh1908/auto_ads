@@ -83,10 +83,10 @@ function FooterWizard({
                     ? "Vui lòng nhập tên chiến dịch"
                     : undefined
                   : wizardStep === 2
-                  ? !adset?.name || adset.name.trim() === ""
-                    ? "Vui lòng nhập tên nhóm quảng cáo"
+                    ? !adset?.name || adset.name.trim() === ""
+                      ? "Vui lòng nhập tên nhóm quảng cáo"
+                      : undefined
                     : undefined
-                  : undefined
               }
             >
               Tiếp tục
@@ -127,21 +127,21 @@ function FooterWizard({
           )}
           {wizardStep === 4 && (
             <>
-            {!(campaign?.status === "ARCHIVED" || adset?.status === "ARCHIVED" || ad?.status === "ARCHIVED") && (
-              <button
-                className="btn-post"
-                onClick={handlePublish}
-                disabled={loading}
-              >
-                {loading
-                  ? "Đang xử lý..."
-                  : success
-                  ? "Thành công!"
-                  : mode === "edit" && campaign?.status !== "DRAFT"
-                  ? "Cập nhật"
-                  : "Đăng quảng cáo"}
-              </button>
-            )}
+              {!(campaign?.status === "ARCHIVED" || adset?.status === "ARCHIVED" || ad?.status === "ARCHIVED") && (
+                <button
+                  className="btn-post"
+                  onClick={handlePublish}
+                  disabled={loading}
+                >
+                  {loading
+                    ? "Đang xử lý..."
+                    : success
+                      ? "Thành công!"
+                      : mode === "edit" && campaign?.status !== "DRAFT"
+                        ? "Cập nhật"
+                        : "Đăng quảng cáo"}
+                </button>
+              )}
             </>
           )}
         </>

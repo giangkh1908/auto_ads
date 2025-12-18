@@ -4,18 +4,19 @@ import { connectDB } from "./config/db.js";
 import cors from "cors";
 import path from "path";
 
-import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js";
-import { startAutoRuleScheduler } from "./services/autoRuleScheduler.js";
+// import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js"; // Deprecated: Now using AdPerformance from cronJobs.js
+import { startAutoRuleScheduler } from "./services/auto/autoRuleScheduler.js";
 import { startCancelExpiredPaymentsCron } from "./jobs/cancelExpiredPayments.job.js";
 import { startSyncCronJobs } from "./jobs/cronJobs.js";
+import { startUserPackageExpiryCron } from "./jobs/userPackageExpiry.job.js";
 
 //Import Routes
-import userRoutes from './routes/userRoutes.js';
-import roleRoutes from './routes/roleRoutes.js';
-import userRoleRoutes from './routes/userRoleRoutes.js';
+import userRoutes from './routes/user/userRoutes.js';
+import roleRoutes from './routes/admin/roleRoutes.js';
+import userRoleRoutes from './routes/user/userRoleRoutes.js';
 import shopRoutes from './routes/shops/shopRoutes.js';
 import shopUserRoutes from './routes/shops/shopUserRoutes.js';
-import authRoutes from './routes/authRoutes.js';
+import authRoutes from './routes/user/authRoutes.js';
 import adsAccountRoutes from "./routes/ads/adsAccountRoutes.js";
 import adsWizardRoutes from "./routes/ads/adsWizardRoutes.js";
 import adsCampaignRoutes from "./routes/ads/adsCampaignRoutes.js";
@@ -23,25 +24,25 @@ import adsSetRoutes from "./routes/ads/adsSetRoutes.js";
 import adsRoutes from "./routes/ads/adsRoutes.js";
 import creativeRoutes from "./routes/ads/creativeRoutes.js";
 import adPerformanceRoutes from "./routes/ads/adPerformanceRoutes.js";
-import analyticsRoutes from "./routes/analytics.routes.js";
+import analyticsRoutes from "./routes/analytics/analytics.routes.js";
 import locationRoutes from "./routes/ads/locationRoutes.js";
 import targetingRoutes from "./routes/ads/targetingRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
+import uploadRoutes from "./routes/ads/uploadRoutes.js";
 import aiRoutes from "./routes/ai/aiRoutes.js";
 import chatRoutes from "./routes/ai/chatRoutes.js";
-import automationRuleRoutes from "./routes/automationRuleRoutes.js";
-import logRoutes from "./routes/logRoutes.js";
-import systemLogRoutes from "./routes/systemLogRoutes.js";
-import noteRoutes from "./routes/noteRoutes.js";
-import leadRoutes from "./routes/leadRoutes.js";
-import packageRoutes from './routes/packageRoutes.js';
+import automationRuleRoutes from "./routes/auto/automationRuleRoutes.js";
+import logRoutes from "./routes/admin/logRoutes.js";
+import systemLogRoutes from "./routes/admin/systemLogRoutes.js";
+import noteRoutes from "./routes/admin/noteRoutes.js";
+import leadRoutes from "./routes/admin/leadRoutes.js";
+import packageRoutes from './routes/admin/packageRoutes.js';
 import userPackageRoutes from './routes/package/userPackageRoutes.js';
 import paymentTransactionsRoutes from './routes/transaction/paymentTransactionsRoutes.js';
 import stripeTransactionsRoutes from './routes/transaction/stripeTransactionsRoutes.js';
 import zaloPayTransactionsRoutes from './routes/transaction/zaloPayTransactionsRoutes.js';
 import vnPayTransactionsRoutes from './routes/transaction/vnPayTransactionsRoutes.js';
 import invoiceRoutes from "./routes/invoice/invoiceRoutes.js";
-import syncRoutes from "./routes/syncRoutes.js";
+import syncRoutes from "./routes/ads/syncRoutes.js";
 
 //Load các biến môi trường
 dotenv.config();
@@ -122,15 +123,16 @@ const startServer = async () => {
     await connectDB();
 
     startAutoRuleScheduler();
-    startAnalyticsSnapshotCron();
+    // startAnalyticsSnapshotCron(); // Deprecated: Now using AdPerformance from cronJobs.js
     startCancelExpiredPaymentsCron();
     startSyncCronJobs();
+    startUserPackageExpiryCron();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("🚨 Failed to start server:", error);
+    console.error("Failed to start server:", error);
     process.exit(1);
   }
 };

@@ -15,12 +15,12 @@ import AiPopup from "../AiPopup/AiPopup";
 import AiPromptConfig from "../AiPromptConfig/AiPromptConfig";
 import AiConfigManager from "../AiConfigManager/AiConfigManager";
 import "../AiPopup/AiPopup.css";
-import axiosInstance from "../../../../utils/axios";
+import axiosInstance from "../../../../utils/api/axios";
 import "./AdStep.css";
-import { useToast } from "../../../../hooks/useToast";
-import { validateNonEmpty } from "../../../../utils/validation";
+import { useToast } from "../../../../hooks/common/useToast";
+import { validateNonEmpty } from "../../../../utils/validation/validation";
 import { CTA_OPTIONS } from "../../../../constants/ctaConstants";
-import { aiConfigService } from "../../../../services/aiConfigService";
+import { aiConfigService } from "../../../../services/chat/aiConfigService";
 function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -50,8 +50,8 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const getDestinationGuidance = () => {
     const destType = adset?.destination_type;
     // const optimizationGoal = adset?.optimization_goal;
-    
-    switch(destType) {
+
+    switch (destType) {
       case 'ON_VIDEO':
         return {
           title: '🎬 Mục tiêu: Lượt xem video',
@@ -68,7 +68,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           ctaRecommendations: ['Tìm hiểu thêm', 'Xem khuyến mãi', 'Nghe ngay'],
           destinationNote: 'URL đích sẽ hiển thị khi người dùng nhấp vào video hoặc CTA'
         };
-        
+
       case 'ON_POST':
         return {
           title: '💬 Mục tiêu: Tương tác bài viết',
@@ -85,7 +85,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           ctaRecommendations: ['Tìm hiểu thêm', 'Liên hệ ngay', 'Nhận ưu đãi'],
           destinationNote: 'Tập trung vào engagement, URL đích là phụ (có thể dẫn đến trang fanpage hoặc website)'
         };
-        
+
       case 'ON_PAGE':
         return {
           title: '👍 Mục tiêu: Lượt thích trang',
@@ -102,7 +102,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           ctaRecommendations: ['Tìm hiểu thêm', 'Liên hệ ngay', 'Nhận ưu đãi'],
           destinationNote: '🎯 Quảng cáo sẽ hiển thị nút "Thích trang" trực tiếp, URL đích thường là link trang Facebook'
         };
-        
+
       case 'ON_EVENT':
         return {
           title: '📅 Mục tiêu: Phản hồi sự kiện',
@@ -119,7 +119,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           ctaRecommendations: ['Đăng ký ngay', 'Đặt ngay', 'Nhận ưu đãi'],
           destinationNote: '🎯 Quảng cáo sẽ hiển thị nút phản hồi sự kiện (Quan tâm/Tham gia), URL đích thường là link sự kiện Facebook'
         };
-        
+
       case 'MESSAGING_APPS':
         return {
           title: '💬 Mục tiêu: Bắt đầu hội thoại',
@@ -136,7 +136,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           ctaRecommendations: ['Liên hệ ngay', 'Nhận ưu đãi', 'Tìm hiểu thêm'],
           destinationNote: '🎯 Quảng cáo sẽ có nút "Nhắn tin" mở Messenger, URL đích không quan trọng (có thể để link fanpage)'
         };
-        
+
       default:
         return {
           title: '📢 Tạo quảng cáo',
@@ -226,33 +226,33 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
     if (isVideoFile) {
       const video = document.createElement('video');
       video.preload = 'metadata';
-      
-      video.onloadedmetadata = async function() {
+
+      video.onloadedmetadata = async function () {
         window.URL.revokeObjectURL(video.src);
         const duration = video.duration;
-        
+
         // Facebook recommends 15-240 seconds for video ads
         if (duration > 240) {
           toast.warning("Video dài hơn 4 phút. Facebook khuyến nghị video 15-240 giây để tối ưu hiệu suất.");
         }
-        
+
         console.log(`📹 Video duration: ${duration.toFixed(1)}s`);
       };
-      
+
       video.src = URL.createObjectURL(file);
     }
 
     const formData = new FormData();
     formData.append("file", file);
-    
+
     try {
       setUploading(true);
-      
+
       // Show different messages for video vs image
       if (isVideoFile) {
         toast.info("Đang upload video... Vui lòng đợi", { duration: 5000 });
       }
-      
+
       const res = await axiosInstance.post("/api/upload/media", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
@@ -280,8 +280,8 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
         }));
 
         toast.success(
-          mediaType === "video" 
-            ? "✅ Upload video thành công!" 
+          mediaType === "video"
+            ? "✅ Upload video thành công!"
             : "✅ Upload ảnh thành công!"
         );
       } else {
@@ -470,14 +470,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
         const okMedia = !!ad?.mediaUrl;
         const okUrl =
           !!ad?.destinationUrl && String(ad.destinationUrl).trim() !== "";
-        
+
         // Validate media type matches destination_type requirements
         let okMediaType = true;
         if (okMedia && guidance.mediaType === 'video' && ad.media !== 'video') {
           toast.warning("Mục tiêu xem video yêu cầu upload file video");
           okMediaType = false;
         }
-        
+
         if (!okName) validateNonEmpty(ad.name, "tên quảng cáo", toast);
         if (!okMedia) toast.warning("Vui lòng chọn file phương tiện");
         if (!okUrl) validateNonEmpty(ad.destinationUrl, "URL đích", toast);
@@ -577,7 +577,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                     .split(',')
                     .map(s => s.trim())
                     .filter(Boolean);
-              
+
               const mainKeywords = [
                 ...toArray(config.mainKeywords),
                 ...toArray(config.synonymousKeywords),
@@ -589,8 +589,8 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                 return;
               }
 
-              const modelToSend = config.config_id 
-                ? null 
+              const modelToSend = config.config_id
+                ? null
                 : (config.ai_provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini');
 
               axiosInstance.post('/api/ai/context/confirm', {
@@ -601,14 +601,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                 .then(response => {
                   if (response.data && response.data.success) {
                     setContextId(response.data.context_id);
-                    
+
                     if (response.data.model) {
                       const provider = response.data.model.includes('gemini') ? 'gemini' : 'openai';
                       setAiProvider(provider);
                     } else if (config.ai_provider) {
                       setAiProvider(config.ai_provider);
                     }
-                    
+
                     toast.success("Đã thiết lập AI thành công");
                   }
                 })
@@ -793,7 +793,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
               <small className="media-description-hint">
                 {guidance.mediaDescription}
               </small>
-              
+
               {/* ✅ Hiển thị thông tin file đã chọn */}
               {ad.mediaUrl && (
                 <div className="selected-file-info">
@@ -803,7 +803,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   <span className="file-status">Đã upload thành công</span>
                 </div>
               )}
-              
+
               <div className="media-buttons-container">
                 <button
                   className="media-button upload-button"

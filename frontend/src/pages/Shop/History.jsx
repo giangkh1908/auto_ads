@@ -6,9 +6,10 @@ import { ROUTES } from "../../constants/app.constants";
 import "./Shop.css";
 import { STORAGE_KEYS } from "../../constants/app.constants";
 import { toast } from "sonner";
-import axiosInstance from "../../utils/axios.js";
-import { getShopCache, saveShopCache } from "../../utils/shopCache";
-import { Store, Plus, Delete, ClipboardList, Replace, Link, Info, UserCheck, UserMinus, Pause, Play} from "lucide-react";
+import axiosInstance from "../../utils/api/axios.js";
+import { getShopCache, saveShopCache } from "../../utils/cache/shopCache";
+import { Store, Plus, Delete, ClipboardList, Replace, Link, Info, UserCheck, UserMinus, Pause, Play, Edit, ArrowUpCircle } from "lucide-react";
+import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverlay";
 // import { formatDistanceToNow, format } from "date-fns";
 // import { vi, enUS } from "date-fns/locale";
 
@@ -34,6 +35,37 @@ const Icon = ({ type }) => {
       return <Pause className="log-icon pause" />;
     case "RESUME_FACEBOOK_PAGE":
       return <Play className="log-icon resume" />;
+    case "UPDATE_SHOP":
+      return <Edit className="log-icon update" />;
+    case "UPGRADE_SHOP":
+      return <ArrowUpCircle className="log-icon upgrade" />;
+    // Campaign actions
+    case "CREATE_CAMPAIGN":
+      return <Plus className="log-icon create" />;
+    case "UPDATE_CAMPAIGN":
+      return <Edit className="log-icon update" />;
+    case "DELETE_CAMPAIGN":
+      return <Delete className="log-icon remove" />;
+    case "ARCHIVE_CAMPAIGN":
+      return <ClipboardList className="log-icon archive" />;
+    // AdSet actions
+    case "CREATE_ADSET":
+      return <Plus className="log-icon create" />;
+    case "UPDATE_ADSET":
+      return <Edit className="log-icon update" />;
+    case "DELETE_ADSET":
+      return <Delete className="log-icon remove" />;
+    case "ARCHIVE_ADSET":
+      return <ClipboardList className="log-icon archive" />;
+    // Ad actions
+    case "CREATE_AD":
+      return <Plus className="log-icon create" />;
+    case "UPDATE_AD":
+      return <Edit className="log-icon update" />;
+    case "DELETE_AD":
+      return <Delete className="log-icon remove" />;
+    case "ARCHIVE_AD":
+      return <ClipboardList className="log-icon archive" />;
     default:
       return <Info className="log-icon default" />;
   }
@@ -62,12 +94,12 @@ function History() {
 
         if (data.success && Array.isArray(data.data)) {
           const currentShop = data.data.find((shop) => shop.is_current);
-          
+
           // Lưu role của user và cập nhật cache
           if (currentShop?.user_role?.role_name) {
             const role = currentShop.user_role.role_name;
             setUserRoleInShop(role);
-            
+
             // Cập nhật cache với role mới
             const cachedShop = getShopCache();
             if (cachedShop && cachedShop.id === currentShop._id) {
@@ -130,6 +162,7 @@ function History() {
 
   return (
     <div className="shop-border">
+      <LoadingOverlay isLoading={loading} message="Đang tải..." />
       <div className="shop-tabs">
         <NavLink end to={ROUTES.SHOP} className={({ isActive }) => `shop-tab ${isActive ? "active" : ""}`}>
           {t("shop.my_shop")}
@@ -145,8 +178,8 @@ function History() {
           </NavLink>
         )}
 
-        <NavLink 
-          to={actualShopId ? ROUTES.SHOP_HISTORY.replace(":shopId", actualShopId) : ROUTES.SHOP} 
+        <NavLink
+          to={actualShopId ? ROUTES.SHOP_HISTORY.replace(":shopId", actualShopId) : ROUTES.SHOP}
           className={({ isActive }) => `shop-tab ${isActive ? "active" : ""}`}
         >
           {t("shop.history")}

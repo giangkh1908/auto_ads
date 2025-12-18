@@ -398,12 +398,12 @@
   color: #047857;
 }
 
-.shop-deactivate-btn {
+.shop-remove-btn {
   background: #fee2e2;
   color: #dc2626;
 }
 
-.shop-deactivate-btn:hover {
+.shop-remove-btn:hover {
   background: #fecaca;
   color: #b91c1c;
 }

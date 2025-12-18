@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import "./CustomerLog.css";
 import { Search } from "lucide-react";
-import axiosInstance from "../../../../../utils/axios";
+import axiosInstance from "../../../../../utils/api/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 
@@ -53,13 +53,13 @@ export default function CustomerLog() {
       shopId: log.shopId || "N/A",
       time: log.time
         ? new Date(log.time).toLocaleString("vi-VN", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }).replace(",", "")
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }).replace(",", "")
         : "-",
       timeRaw: log.time ? new Date(log.time).getTime() : 0,
       role: roleMap[log.role] || log.role || t("customerLog.roles.nA"),

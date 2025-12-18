@@ -1,19 +1,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Globe, Settings,ShoppingCart,DollarSign,Package,TrendingUp,Users,Briefcase,Calendar,Megaphone,
-        MessageSquare,Reply,Bell,Key,List,ShoppingBag,Truck,Play,Mail,ArrowRight,Sparkles,Phone,User,
+import {
+  MessageCircle, Globe, Settings, ShoppingCart, DollarSign, Package, TrendingUp, Users, Briefcase, Calendar, Megaphone,
+  MessageSquare, Reply, Bell, Key, List, ShoppingBag, Truck, Play, Mail, ArrowRight, Sparkles, Phone, User,
 } from "lucide-react";
 import "./Home.css";
-import laptop_white from "../../assets/macbook-white.png";
+import laptop_white from "../../assets/home/macbook-white.png";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/auth/useAuth";
 import { ROUTES } from "../../constants/app.constants";
-import leadService from "../../services/leadService";
-import { useToast } from "../../hooks/useToast";
-import messenger_icon from "../../assets/messenger.png";
-import zalo_icon from "../../assets/zalo.png";
-import website_icon from "../../assets/AAMS_2.png";
-import tryai_icon from "../../assets/chatbot.png";
+import leadService from "../../services/leads/leadService";
+import { useToast } from "../../hooks/common/useToast";
+import shop_icon from "../../assets/home/shop.png";
+import meta_icon from "../../assets/home/meta.png";
+import website_icon from "../../assets/home/AAMS_2.png";
+import tryai_icon from "../../assets/home/chatbot.png";
+import review_1 from "../../assets/home/review_1.png";
+import review_2 from "../../assets/home/review_2.png";
+import review_3 from "../../assets/home/review_3.png";
+import review_4 from "../../assets/home/review_4.png";
+import review_5 from "../../assets/home/review_5.png";
+import review_6 from "../../assets/home/review_6.png";
+import review_7 from "../../assets/home/review_7.png";
+import review_8 from "../../assets/home/review_8.png";
+import review_9 from "../../assets/home/review_9.png";
 
 function Home({ onLoginClick }) {
   const [name, setName] = useState("");
@@ -28,10 +38,10 @@ function Home({ onLoginClick }) {
   const formatPhoneNumber = (value) => {
     // Remove all non-digit characters
     const phoneNumber = value.replace(/\D/g, "");
-    
+
     // Limit to 11 digits (for Vietnamese phone numbers)
     const limitedNumber = phoneNumber.slice(0, 11);
-    
+
     // Format: 0xxx xxx xxx
     if (limitedNumber.length <= 4) {
       return limitedNumber;
@@ -53,7 +63,7 @@ function Home({ onLoginClick }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate
     if (!name.trim() || !phone.trim()) {
       toast.error("Vui lòng điền đầy đủ thông tin");
@@ -65,7 +75,7 @@ function Home({ onLoginClick }) {
     try {
       // Remove spaces from phone for API call
       const phoneNumber = phone.replace(/\s/g, "");
-      
+
       const response = await leadService.createLead({
         lead_name: name.trim(),
         phone: phoneNumber,
@@ -113,15 +123,15 @@ function Home({ onLoginClick }) {
               {!user?.internal_role && (
                 <button className="cta-button-home" onClick={handleButtonClick}>
                   {isAuthenticated && user?.avatar && (
-                    <img 
-                      src={user.avatar} 
-                      alt={user?.full_name || "Avatar"} 
+                    <img
+                      src={user.avatar}
+                      alt={user?.full_name || "Avatar"}
                       className="cta-avatar"
                     />
                   )}
                   {isAuthenticated ? (
                     <span>SỬ DỤNG NGAY</span>
-                  ):(
+                  ) : (
                     <span>{t("home.get_started")}</span>
                   )}
                   {/* <ArrowRight size={20} /> */}
@@ -159,24 +169,24 @@ function Home({ onLoginClick }) {
           </p>
           <div className="platform-grid">
             <div className="platform-card">
-              <div className="platform-icon messenger">
+              <div className="platform-icon shop">
                 <img
-                  src={messenger_icon}
-                  alt="Messenger"
+                  src={shop_icon}
+                  alt="Shop"
                   className="platform-icon-image"
                 />
               </div>
-              <h3>{t("home.messenger")}</h3>
+              <h3>{t("platforms.shop")}</h3>
             </div>
             <div className="platform-card">
-              <div className="platform-icon zalo">
-                <img 
-                  src={zalo_icon}
-                  alt="Zalo"
+              <div className="platform-icon meta">
+                <img
+                  src={meta_icon}
+                  alt="Meta"
                   className="platform-icon-image"
                 />
               </div>
-              <h3>{t("home.zalo")}</h3>
+              <h3>{t("platforms.meta")}</h3>
             </div>
             <div className="platform-card">
               <div className="platform-icon website">
@@ -186,7 +196,7 @@ function Home({ onLoginClick }) {
                   className="platform-icon-image"
                 />
               </div>
-              <h3>{t("home.website")}</h3>
+              <h3>{t("platforms.website")}</h3>
             </div>
             <div className="platform-card">
               <div className="platform-icon tryai">
@@ -196,7 +206,7 @@ function Home({ onLoginClick }) {
                   className="platform-icon-image"
                 />
               </div>
-              <h3>{t("home.tryai")}</h3>
+              <h3>{t("platforms.tryai")}</h3>
             </div>
           </div>
         </div>
@@ -214,7 +224,7 @@ function Home({ onLoginClick }) {
               <div className="template-icon">
                 <ShoppingCart size={28} />
               </div>
-                <h4>{t("home.buy_product")}</h4>
+              <h4>{t("home.buy_product")}</h4>
             </div>
             <div className="template-card">
               <div className="template-icon">
@@ -270,7 +280,7 @@ function Home({ onLoginClick }) {
       </section>
 
       {/* Automation Features Section */}
-      <section className="automation-section">
+      {/* <section className="automation-section">
         <div className="container">
           <h2 className="section-title">
             {t("home.automation_title")}
@@ -329,7 +339,7 @@ function Home({ onLoginClick }) {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Mini Game Promotion Section */}
       <section className="minigame-section">
@@ -344,57 +354,64 @@ function Home({ onLoginClick }) {
             <div className="carousel-track">
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1663153204573-1e6581da098f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwyfHxzbWFydHBob25lJTIwbW9iaWxlJTIwZ2FtZSUyMGNvbG9yZnVsJTIwYXBwfGVufDB8MXx8fDE3NjAwMTEyMjN8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Mobile game interface - Typerium App on Unsplash"
+                  src={review_1}
+                  alt="Dashboard Screen 1"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1591783097660-037e0d08343b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw1fHxtb2JpbGUlMjBwaG9uZSUyMGdhbWUlMjBjb2xvcmZ1bCUyMHByaXplfGVufDB8MXx8cmVkfDE3NjAwMTEyMjN8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Colorful game screen - Rombo on Unsplash"
+                  src={review_2}
+                  alt="Dashboard Screen 2"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1588889243484-2cacf85b9b87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw0fHxzbWFydHBob25lJTIwZ2FtZSUyMHJld2FyZHMlMjBnaWZ0cyUyMGNvbG9yZnVsfGVufDB8MXx8cHVycGxlfDE3NjAwMTEyMjJ8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Game rewards interface - Batu Gezer on Unsplash"
+                  src={review_3}
+                  alt="Dashboard Screen 3"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1619241638225-14d56e47ae64?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw0fHxtb2JpbGUlMjBnYW1lJTIwd2hlZWwlMjBwcml6ZXMlMjBjZWxlYnJhdGlvbnxlbnwwfDF8fG9yYW5nZXwxNzYwMDExMjIyfDA&ixlib=rb-4.1.0&q=85"
-                  alt="Lucky wheel game - Tangerine Newt on Unsplash"
+                  src={review_4}
+                  alt="Dashboard Screen 4"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1663153204573-1e6581da098f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwyfHxzbWFydHBob25lJTIwbW9iaWxlJTIwZ2FtZSUyMGNvbG9yZnVsJTIwYXBwfGVufDB8MXx8fDE3NjAwMTEyMjN8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Mobile game interface - Typerium App on Unsplash"
+                  src={review_5}
+                  alt="Dashboard Screen 5"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1591783097660-037e0d08343b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw1fHxtb2JpbGUlMjBwaG9uZSUyMGdhbWUlMjBjb2xvcmZ1bCUyMHByaXplfGVufDB8MXx8cmVkfDE3NjAwMTEyMjN8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Colorful game screen - Rombo on Unsplash"
+                  src={review_6}
+                  alt="Dashboard Screen 6"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1588889243484-2cacf85b9b87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw0fHxzbWFydHBob25lJTIwZ2FtZSUyMHJld2FyZHMlMjBnaWZ0cyUyMGNvbG9yZnVsfGVufDB8MXx8cHVycGxlfDE3NjAwMTEyMjJ8MA&ixlib=rb-4.1.0&q=85"
-                  alt="Game rewards interface - Batu Gezer on Unsplash"
+                  src={review_7}
+                  alt="Dashboard Screen 7"
                   className="minigame-image"
                 />
               </div>
               <div className="minigame-card">
                 <img
-                  src="https://images.unsplash.com/photo-1619241638225-14d56e47ae64?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw0fHxtb2JpbGUlMjBnYW1lJTIwd2hlZWwlMjBwcml6ZXMlMjBjZWxlYnJhdGlvbnxlbnwwfDF8fG9yYW5nZXwxNzYwMDExMjIyfDA&ixlib=rb-4.1.0&q=85"
-                  alt="Lucky wheel game - Tangerine Newt on Unsplash"
+                  src={review_8}
+                  alt="Dashboard Screen 8"
+                  className="minigame-image"
+                />
+              </div>
+              <div className="minigame-card">
+                <img
+                  src={review_9}
+                  alt="Dashboard Screen 9"
                   className="minigame-image"
                 />
               </div>
@@ -492,8 +509,8 @@ function Home({ onLoginClick }) {
                 />
               </div>
             </div>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="submit-button-home"
               disabled={isSubmitting}
             >

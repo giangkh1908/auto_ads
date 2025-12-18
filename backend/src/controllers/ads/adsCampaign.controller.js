@@ -1,9 +1,17 @@
-import { fetchCampaignsFromFacebook, updateCampaignStatus, deleteEntity, fetchInsightsForEntities } from "../../services/fbAdsService.js";
-import User from "../../models/user.model.js";
+import { fetchCampaignsFromFacebook, updateCampaignStatus, deleteEntity, fetchInsightsForCampaignIds } from "../../services/ads/fbAdsService.js";
+import User from "../../models/user/user.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
+import AdsAccount from "../../models/ads/adsAccount.model.js";
+import UserRole from "../../models/user/userRole.model.js";
+import { saveLog } from "../../utils/log.js";
 
+// Helper: Get current shop_id from user's active UserRole
+async function getCurrentShopId(userId) {
+  const currentRole = await UserRole.findOne({ user_id: userId, is_current: true }).lean();
+  return currentRole?.shop_id || null;
+}
 
 // Helper function để extract string ID từ ObjectId format
 function extractObjectId(value) {
@@ -22,7 +30,7 @@ function extractObjectId(value) {
  */
 export async function listCampaignsCtrl(req, res) {
   try {
-    const { account_id, q, status, page = 1, limit = 10, fetch_all = false } = req.query;
+    const { account_id, q, status, page = 1, limit = 10, fetch_all = false, date_from, date_to } = req.query;
     
     // Xây dựng filter
     const filter = {};
@@ -41,6 +49,20 @@ export async function listCampaignsCtrl(req, res) {
     // Nếu không có status parameter, lấy tất cả (bao gồm cả DELETED)
     
     if (q) filter.name = new RegExp(q, 'i');
+    
+    // ✅ Filter theo ngày bắt đầu chiến dịch (start_time)
+    if (date_from || date_to) {
+      filter.start_time = {};
+      if (date_from) {
+        filter.start_time.$gte = new Date(date_from);
+      }
+      if (date_to) {
+        // Thêm 1 ngày để bao gồm cả ngày kết thúc (end of day)
+        const endDate = new Date(date_to);
+        endDate.setDate(endDate.getDate() + 1);
+        filter.start_time.$lte = endDate;
+      }
+    }
     
     // Hỗ trợ fetch_all hoặc limit lớn để Frontend có thể sort và phân trang
     const limitNum = Number(limit);
@@ -160,14 +182,6 @@ export async function getCampaignCtrl(req, res) {
   }
 }
 
-
-
-/**
- * GET /api/campaigns/live
- * Lấy danh sách campaigns trực tiếp từ Facebook (không lưu DB)
- */
-import AdsAccount from "../../models/ads/adsAccount.model.js";
-
 function normalizeAccountPair(accountId) {
   const hasPrefix = String(accountId).startsWith("act_");
   const withPrefix = hasPrefix ? String(accountId) : `act_${accountId}`;
@@ -214,6 +228,7 @@ export async function getCampaignsLiveCtrl(req, res) {
     const data = await fetchCampaignsFromFacebook(accessToken, account_id);
 
     // 3. Upsert vào DB nếu có account
+    // KHÔNG ghi đè insights - insights được fetch riêng qua /api/campaigns/insights
     if (adsAccount && data.length > 0) {
       const bulkOps = data.map((c) => {
         const campaignData = {
@@ -230,7 +245,7 @@ export async function getCampaignsLiveCtrl(req, res) {
           lifetime_budget: c.lifetime_budget,
           start_time: c.start_time,
           stop_time: c.stop_time,
-          insights: c.insights?.data?.[0] || {},
+          // Không set insights ở đây - giữ nguyên insights cũ trong DB
         };
 
         return {
@@ -244,9 +259,9 @@ export async function getCampaignsLiveCtrl(req, res) {
 
       try {
         await AdsCampaign.bulkWrite(bulkOps, { ordered: false });
-        console.log(`✅ Đã upsert ${data.length} campaigns từ Live API cho account ${account_id}`);
+        console.log(`Đã upsert ${data.length} campaigns từ Live API cho account ${account_id}`);
       } catch (writeErr) {
-        console.error("❌ Lỗi bulkWrite campaigns:", writeErr);
+        console.error("Lỗi bulkWrite campaigns:", writeErr);
         // Không throw lỗi để vẫn trả về data cho client
       }
     }
@@ -355,6 +370,21 @@ export async function deleteCampaignCascadeCtrl(req, res) {
       AdsCampaign.findByIdAndUpdate(id, { status: "DELETED", deleted_at: now }),
     ]);
 
+    // Log xóa campaign thành công
+    const currentShopId = await getCurrentShopId(req.user._id);
+    await saveLog({
+      user_id: req.user._id,
+      user_name: req.user?.full_name,
+      shop_id: campaign.shop_id || currentShopId,
+      action: "DELETE_CAMPAIGN",
+      target_type: "Campaign",
+      target_id: campaign._id.toString(),
+      target_name: campaign.name,
+      request: { campaign_name: campaign.name, adsets_deleted: adsets.length, ads_deleted: ads.length },
+      ip_address: req.ip,
+      user_agent: req.headers?.['user-agent'],
+    });
+
     return res.status(200).json({
       success: true,
       message: `Đã xoá chiến dịch "${campaign.name}" cùng toàn bộ nhóm quảng cáo & quảng cáo liên quan.`,
@@ -440,6 +470,21 @@ export async function archiveCampaignCascadeCtrl(req, res) {
       ),
       AdsCampaign.findByIdAndUpdate(id, { status: "ARCHIVED", updated_at: now }),
     ]);
+
+    // Log lưu trữ campaign thành công
+    const currentShopId = await getCurrentShopId(req.user._id);
+    await saveLog({
+      user_id: req.user._id,
+      user_name: req.user?.full_name,
+      shop_id: campaign.shop_id || currentShopId,
+      action: "ARCHIVE_CAMPAIGN",
+      target_type: "Campaign",
+      target_id: campaign._id.toString(),
+      target_name: campaign.name,
+      request: { campaign_name: campaign.name, adsets_archived: adsets.length, ads_archived: ads.length },
+      ip_address: req.ip,
+      user_agent: req.headers?.['user-agent'],
+    });
 
     return res.status(200).json({
       success: true,
@@ -547,7 +592,7 @@ export async function copyCampaignCascadeCtrl(req, res) {
 
 /**
  * GET /api/campaigns/insights
- * Lấy insights cho nhiều campaigns từ Facebook
+ * Lấy insights cho nhiều campaigns từ Facebook VÀ LƯU VÀO DB
  */
 export async function getCampaignInsightsCtrl(req, res) {
   try {
@@ -556,7 +601,7 @@ export async function getCampaignInsightsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu danh sách IDs" });
     }
 
-    const campaignIds = ids.split(',');
+    const campaignIds = ids.split(',').map(id => id.trim()).filter(Boolean);
 
     // Lấy token người dùng hiện tại
     const user = await User.findById(req.user?._id).select("+facebookAccessToken");
@@ -565,14 +610,35 @@ export async function getCampaignInsightsCtrl(req, res) {
       return res.status(401).json({ message: "Thiếu access token Facebook" });
     }
 
-    // Gọi service để lấy insights (bạn cần đảm bảo hàm này tồn tại trong fbAdsService.js)
-    const insightsData = await fetchInsightsForEntities(campaignIds, accessToken);
+    // Gọi service để lấy insights từ Facebook
+    const insightsData = await fetchInsightsForCampaignIds(accessToken, campaignIds);
+    
+    console.log(`📊 Fetched insights for ${insightsData.length} campaigns from FB`);
 
     // Map lại data để FE dễ xử lý: { id: '...', insights: {...} }
+    // KHÔNG cần extract .data?.[0] vì service đã làm rồi
     const items = insightsData.map(item => ({
       id: item.id,
-      insights: item.insights?.data?.[0] || {}
+      insights: item.insights || {}
     }));
+
+    // LƯU INSIGHTS VÀO DB (background, không block response)
+    if (items.length > 0) {
+      const bulkOps = items
+        .filter(item => item.insights && Object.keys(item.insights).length > 0)
+        .map(item => ({
+          updateOne: {
+            filter: { external_id: item.id },
+            update: { $set: { insights: item.insights, insights_updated_at: new Date() } },
+          },
+        }));
+
+      if (bulkOps.length > 0) {
+        AdsCampaign.bulkWrite(bulkOps, { ordered: false })
+          .then(() => console.log(`✅ Saved insights for ${bulkOps.length} campaigns to DB`))
+          .catch(err => console.error("Error saving campaign insights to DB:", err.message));
+      }
+    }
 
     return res.status(200).json({ items });
 

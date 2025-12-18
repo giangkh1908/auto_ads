@@ -15,7 +15,7 @@ export const loginLimiter = rateLimit({
 // Rate limiter cho register
 export const registerLimiter = rateLimit({
     windowMs: 60, // 1 phút
-    max: 100, // Limit each IP to 3 registration attempts per hour
+    max: 3, // Limit each IP to 3 registration attempts per hour
     message: {
         success: false,
         message: 'Quá nhiều lần đăng ký. Vui lòng thử lại sau 1 phút.'
@@ -26,11 +26,11 @@ export const registerLimiter = rateLimit({
 
 // Rate limiter cho forgot password
 export const forgotPasswordLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: 15 * 60 * 1000, // 15 minutes
     max: 3, // Limit each IP to 3 forgot password requests per hour
     message: {
         success: false,
-        message: 'Quá nhiều yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau 1 giờ.'
+        message: 'Quá nhiều yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau 15 phút.'
     },
     standardHeaders: true,
     legacyHeaders: false,

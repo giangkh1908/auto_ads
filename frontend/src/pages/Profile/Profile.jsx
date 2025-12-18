@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../../hooks/useAuth'
-import { useToast } from '../../hooks/useToast'
-import profileService from '../../services/profileService'
+import { useAuth } from '../../hooks/auth/useAuth'
+import { useToast } from '../../hooks/common/useToast'
+import profileService from '../../services/auth/profileService'
 import './Profile.css'
 import { getNames } from "country-list";
-import {User, AtSign, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
-import { validateRequired, validatePassword, validateEmail, validatePhone } from '../../utils/validation'
+import { User, AtSign, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
+import { validateRequired, validateEmail, validatePhone } from '../../utils/validation/validation'
 import no_avatar from '../../assets/no-avatar.jpg';
 
 function Profile() {
@@ -42,6 +42,8 @@ function Profile() {
     newPassword: false,
     confirmPassword: false
   })
+  // Errors cho password form
+  const [passwordErrors, setPasswordErrors] = useState({})
 
   // Load user data when component mounts
   useEffect(() => {
@@ -89,6 +91,10 @@ function Profile() {
       ...prev,
       [name]: value
     }))
+    // Clear error khi user nhập
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({ ...prev, [name]: '' }))
+    }
   }
 
   //Ẩn/hiện mật khẩu
@@ -149,28 +155,35 @@ function Profile() {
     e.preventDefault()
     if (loading) return
 
-    // Validation (shared utils)
+    // Validate mật khẩu hiện tại
     if (!validateRequired(passwordData.currentPassword)) {
-      toast.error(t('profile.enter_current_pwd'))
+      toast.error(t('validation.password_required'))
       return
     }
+
+    // Validate mật khẩu mới
     if (!validateRequired(passwordData.newPassword)) {
-      toast.error(t('profile.enter_new_pwd'))
+      toast.error(t('validation.new_password_required'))
+      return
+    } else if (passwordData.newPassword.length < 8) {
+      toast.error(t('validation.new_password_min_length'))
+      return
+    } else if (!/[A-Z]/.test(passwordData.newPassword)) {
+      toast.error(t('validation.new_password_uppercase_required'))
+      return
+    } else if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(passwordData.newPassword)) {
+      toast.error(t('validation.new_password_special_char_required'))
+      return
+    } else if (passwordData.newPassword === passwordData.currentPassword) {
+      toast.error(t('validation.new_password_cannot_same'))
       return
     }
+
+    // Validate xác nhận mật khẩu
     if (!validateRequired(passwordData.confirmPassword)) {
-      toast.error(t('profile.reenter_new_pwd'))
+      toast.error(t('validation.confirm_password_required'))
       return
-    }
-    if (!validatePassword(passwordData.newPassword, { minLength: 6 })) {
-      toast.error(t('validation.password_min_length'))
-      return
-    }
-    if (passwordData.newPassword === passwordData.currentPassword) {
-      toast.error(t('profile.password_cannot_same'))
-      return
-    }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error(t('validation.password_mismatch'))
       return
     }
@@ -191,11 +204,12 @@ function Profile() {
           newPassword: '',
           confirmPassword: ''
         })
+        setPasswordErrors({})
 
         // Logout sau khi đổi mật khẩu
         setTimeout(() => {
           logout()
-        }, 1500)
+        }, 2000)
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message || t('profile.password_change_failed')

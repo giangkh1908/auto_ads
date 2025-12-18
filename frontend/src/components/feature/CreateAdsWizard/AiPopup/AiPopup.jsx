@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye } from 'lucide-react';
-import axiosInstance from '../../../../utils/axios';
-import { aiConfigService } from '../../../../services/aiConfigService';
-import { useToast } from '../../../../hooks/useToast';
+import axiosInstance from '../../../../utils/api/axios';
+import { aiConfigService } from '../../../../services/chat/aiConfigService';
+import { useToast } from '../../../../hooks/common/useToast';
 import PromptPreviewModal from '../PromptPreview/PromptPreviewModal';
 
 const AiPopup = ({
@@ -37,7 +37,7 @@ const AiPopup = ({
   // Track if user manually changed language/tone/aiModel to preserve selections
   const userModifiedRef = useRef(false);
 
-  
+
 
   // Ensure persisted values are restored when popup opens
   useEffect(() => {
@@ -68,8 +68,8 @@ const AiPopup = ({
         setSelectedConfigModel(model);
         setSelectedConfig(config);
         setAiConfig({
-          language: config.metadata?.language === 'vi' ? 'Tiếng Việt' : 
-                   config.metadata?.language === 'en' ? 'English' : '中文',
+          language: config.metadata?.language === 'vi' ? 'Tiếng Việt' :
+            config.metadata?.language === 'en' ? 'English' : '中文',
           tone: config.metadata?.tone?.replace(/_/g, ' ') || 'Chuyên Nghiệp',
           personalization: initialPersonalization || '',
           mainKeywords: initialMainKeywords || '',
@@ -222,7 +222,7 @@ const AiPopup = ({
       });
 
       const data = response.data;
-      
+
       if (data.success && data.related_keywords) {
         // Cập nhật từ khóa cùng nghĩa
         setAiConfig(prev => ({
@@ -248,7 +248,7 @@ const AiPopup = ({
           .split(',')
           .map(s => s.trim())
           .filter(Boolean);
-    
+
     const mainKeywords = [
       ...toArray(aiConfig.mainKeywords),
       ...toArray(aiConfig.synonymousKeywords),
@@ -261,19 +261,19 @@ const AiPopup = ({
 
     // Nếu có selectedConfigId, gửi config_id, nếu không gửi prompt fields
     const configData = selectedConfigId
-      ? { 
-          config_id: selectedConfigId, 
-          main_keywords: mainKeywords,
-          ai_provider: selectedConfigModel?.includes('gemini') ? 'gemini' : 'openai'
-        }
+      ? {
+        config_id: selectedConfigId,
+        main_keywords: mainKeywords,
+        ai_provider: selectedConfigModel?.includes('gemini') ? 'gemini' : 'openai'
+      }
       : {
-          language: aiConfig.language === 'Tiếng Việt' ? 'vi' : aiConfig.language === 'English' ? 'en' : 'zh',
-          tone: aiConfig.tone.toLowerCase().replace(/\s+/g, '_'),
-          personalization: aiConfig.personalization,
-          main_keywords: mainKeywords,
-          ai_provider: aiConfig.aiModel
-        };
-    
+        language: aiConfig.language === 'Tiếng Việt' ? 'vi' : aiConfig.language === 'English' ? 'en' : 'zh',
+        tone: aiConfig.tone.toLowerCase().replace(/\s+/g, '_'),
+        personalization: aiConfig.personalization,
+        main_keywords: mainKeywords,
+        ai_provider: aiConfig.aiModel
+      };
+
     // Persist latest inputs back to parent if requested
     if (typeof onPersistInputs === 'function') {
       onPersistInputs({
@@ -292,14 +292,14 @@ const AiPopup = ({
       <div className="ai-config-modal">
         <div className="ai-config-header">
           <h3>Auto Ads AI</h3>
-          <button 
+          <button
             className="ai-config-close"
             onClick={onClose}
           >
             ✕
           </button>
         </div>
-        
+
         <div className="ai-config-form">
           {/* Chọn Config đã lưu */}
           <div className="ai-config-field">
@@ -369,7 +369,7 @@ const AiPopup = ({
           {/* Ngôn Ngữ */}
           <div className="ai-config-field">
             <label className="ai-config-label">Ngôn Ngữ</label>
-            <select 
+            <select
               className="ai-config-select"
               value={aiConfig.language}
               onChange={(e) => {
@@ -386,7 +386,7 @@ const AiPopup = ({
           {/* Giọng Điệu */}
           <div className="ai-config-field">
             <label className="ai-config-label">Phong Cách</label>
-            <select 
+            <select
               className="ai-config-select"
               value={aiConfig.tone}
               onChange={(e) => {
@@ -404,7 +404,7 @@ const AiPopup = ({
           {/* Model AI */}
           <div className="ai-config-field">
             <label className="ai-config-label">Model AI</label>
-            <select 
+            <select
               className="ai-config-select"
               value={aiConfig.aiModel}
               onChange={(e) => {
@@ -439,7 +439,7 @@ const AiPopup = ({
               onChange={(e) => setAiConfig(prev => ({ ...prev, mainKeywords: e.target.value }))}
               placeholder="nhà, quán quen"
             />
-            <button 
+            <button
               className="ai-config-button"
               onClick={handleGenerateKeywords}
               disabled={isGeneratingKeywords || !aiConfig.mainKeywords.trim()}
@@ -589,7 +589,7 @@ const AiPopup = ({
 
           {/* Confirm Button */}
           <div className="ai-config-actions">
-            <button 
+            <button
               className="ai-config-confirm"
               onClick={handleConfirm}
               style={{

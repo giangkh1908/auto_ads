@@ -1,6 +1,6 @@
-import Invoice from "../../models/invoice.model.js";
-import PaymentTransaction from "../../models/paymentTransaction.model.js";
-import Package from "../../models/package.model.js";
+import Invoice from "../../models/invoice/invoice.model.js";
+import PaymentTransaction from "../../models/transaction/paymentTransaction.model.js";
+import Package from "../../models/package/package.model.js";
 import { generateInvoiceNumber } from "../../utils/invoiceUtils.js";
 
 /**

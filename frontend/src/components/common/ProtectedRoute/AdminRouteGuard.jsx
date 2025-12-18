@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../../hooks/useAuth'
+import { useAuth } from '../../../hooks/auth/useAuth'
 import { getDefaultAdminRoute } from '../../../constants/adminConstants'
 import { ROUTES } from '../../../constants/app.constants'
 import './ProtectedRoute.css'
@@ -37,7 +37,7 @@ const AdminRouteGuard = ({ children }) => {
 
   // Kiểm tra nếu route bắt đầu bằng /admin -> cho phép
   const isAdminRoute = pathname.startsWith('/admin')
-  
+
   // Kiểm tra nếu route là verify-email hoặc reset-password với token
   const isAuthRoute = pathname.startsWith('/verify-email/') || pathname.startsWith('/reset-password/')
 

@@ -225,7 +225,8 @@
     "messages": {
       "loading": "Đang tải...",
       "noData": "Không có dữ liệu",
-      "error": "Có lỗi xảy ra khi tải system logs"
+      "error": "Có lỗi xảy ra khi tải system logs",
+      "noMore": "Không còn dữ liệu"
     },
     "pagination": {
       "showing": "Hiển thị",

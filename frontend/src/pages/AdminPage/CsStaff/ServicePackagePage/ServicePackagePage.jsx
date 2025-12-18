@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import "./ServicePackagePage.css";
 import { Search, ChevronDown, UserPlus, UserCheck } from "lucide-react";
 import Pagination from "../../../../components/common/Pagination/Pagination";
-import axiosInstance from "../../../../utils/axios";
+import axiosInstance from "../../../../utils/api/axios";
 import { toast } from "sonner";
 import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
-import { fetchLatestNotesBatch } from "../../../../utils/noteUtils";
-import { useAuth } from "../../../../hooks/useAuth";
+import { fetchLatestNotesBatch } from "../../../../utils/business-logic/noteUtils";
+import { useAuth } from "../../../../hooks/auth/useAuth";
 
 export default function ServicePackagePage() {
   const { t, i18n } = useTranslation("admin");
@@ -36,7 +36,7 @@ export default function ServicePackagePage() {
     t("servicePackagePage.segments.newSignup"),
     t("servicePackagePage.segments.noIssue")
   ], [t]);
-  
+
   // Fetch user statuses dynamically from backend
   const [userStatusesList, setUserStatusesList] = useState([]);
   // Fetch packages from backend for the package filter dropdown
@@ -52,7 +52,7 @@ export default function ServicePackagePage() {
       ...userStatusesList.map(status => statusTranslationMap[status.toLowerCase()] || status)
     ];
   }, [t, userStatusesList]);
-  
+
   const ASSIGNED_STATUSES = useMemo(() => [t("common.all"), t("common.assigned"), t("common.unassigned")], [t]);
 
   // Helper function để map dữ liệu từ backend sang format UI
@@ -305,13 +305,13 @@ export default function ServicePackagePage() {
         const originalName = p.name || p.title || String(p._id);
         const mappedLabel = mapPackageNameForFilter(originalName);
         const pkgId = String(p._id || p.id);
-        
+
         // Chỉ giữ lại package đầu tiên nếu có duplicate mapped label
         if (!mappedMap.has(mappedLabel)) {
           mappedMap.set(mappedLabel, { id: pkgId, label: mappedLabel });
         }
       });
-      
+
       const arr = Array.from(mappedMap.values());
       arr.sort((a, b) => a.label.localeCompare(b.label));
       return [{ id: "All", label: t("common.all") }, ...arr];

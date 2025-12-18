@@ -5,13 +5,13 @@ import { Play, Pause, Ban, Undo, ChevronDown, Search, Eye } from "lucide-react";
 import ConfirmationPopup from "../../../../../components/common/ConfirmationPopup/ConfirmationPopup";
 import ViewDetails from "./ViewShop";
 import CustomerUpdate from "./CustomerUpdate";
-import axiosInstance from "../../../../../utils/axios";
+import axiosInstance from "../../../../../utils/api/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
 import Pagination from "../../../../../components/common/Pagination/Pagination";
 import {
   getEntityId,
-} from "../../../../../utils/noteUtils";
+} from "../../../../../utils/business-logic/noteUtils";
 import { toast } from "sonner";
 
 export default function CustomerPage() {

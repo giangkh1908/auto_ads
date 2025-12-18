@@ -4,7 +4,7 @@ import "./ReportPage.css";
 import { ChevronDown, Download } from "lucide-react";
 import Pagination from "../../../../components/common/Pagination/Pagination";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
-import paymentTransactionService from "../../../../services/paymentTransactionService";
+import paymentTransactionService from "../../../../services/shop/paymentTransactionService";
 import { toast } from "sonner";
 
 // Format số với dấu phẩy

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { chatService } from '../../../services/chatService';
+import { chatService } from '../../../services/chat/chatService';
 import './ChatAIModuleSelector.css';
 
 const MODULE_ICONS = {
@@ -67,7 +67,7 @@ function ChatAIModuleSelector({ onSelectModule }) {
       <p className="chat-ai-module-subtitle">
         Mỗi module chuyên về một loại phân tích. Chọn module phù hợp với nhu cầu của bạn.
       </p>
-      
+
       <div className="chat-ai-module-grid">
         {modules.map((module) => (
           <div

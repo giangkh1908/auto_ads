@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import "./CustomerPage.css";
-import axiosInstance from "../../../../../utils/axios";
+import axiosInstance from "../../../../../utils/api/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import { X, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,10 +25,10 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
   // Lock background scroll while modal is open
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    
+
     return () => {
       document.body.style.overflow = previousOverflow;
     };

@@ -225,7 +225,8 @@
     "messages": {
       "loading": "Loading...",
       "noData": "No data",
-      "error": "Error loading system logs"
+      "error": "Error loading system logs",
+      "noMore": "No more data"
     },
     "pagination": {
       "showing": "Showing",

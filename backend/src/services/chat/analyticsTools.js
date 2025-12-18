@@ -1,5 +1,6 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
+import mongoose from "mongoose";
 import AdPerformance from "../../models/ads/adPerformance.model.js";
 // import AdHourlyInsight from "../../models/ads/adHourlyInsight.model.js"; // ❌ DISABLED: Feature removed
 import AdsAccount from "../../models/ads/adsAccount.model.js";
@@ -146,10 +147,27 @@ export const queryDataTool = tool(
           adset: AdsSet,
           ad: Ads,
         };
-        const count = await modelMap[entity_type || "campaign"].countDocuments({ 
-          account_id: accountObjId,
-          status: { $ne: "DELETED" }
-        });
+        
+        let count;
+        if (entity_type === "adset" || entity_type === "ad") {
+          // AdsSet and Ads use external_account_id (String), not account_id (ObjectId)
+          // Get account external_id: remove "act_" prefix if present
+          const accountExternalId = account_id.startsWith('act_') 
+            ? account_id.slice(4) 
+            : account_id;
+          
+          count = await modelMap[entity_type || "campaign"].countDocuments({ 
+            external_account_id: accountExternalId,
+            status: { $ne: "DELETED" }
+          });
+        } else {
+          // AdsCampaign uses account_id (ObjectId)
+          count = await modelMap[entity_type || "campaign"].countDocuments({ 
+            account_id: accountObjId,
+            status: { $ne: "DELETED" }
+          });
+        }
+        
         writer?.(`✅ Tìm thấy ${count} ${entity_type || "campaign"}`);
 
         return JSON.stringify({
@@ -472,237 +490,6 @@ Examples:
 );
 
 // ============================================
-// TOOL 1: GET TOTAL METRICS
-// ============================================
-
-export const getTotalMetricsTool = tool(
-  async ({ account_id, date_from, date_to, metrics }, config) => {
-    try {
-      const writer = config?.streamWriter;
-      writer?.(`🔍 Đang truy vấn dữ liệu từ ${date_from} đến ${date_to}...`);
-
-      const accountObjId = await getAccountObjectId(account_id);
-
-      // ✅ Query trực tiếp từ bảng AdPerformance (bảng gốc có data)
-      const result = await AdPerformance.aggregate([
-        {
-          $match: {
-            account_id: accountObjId,
-            date: {
-              $gte: new Date(date_from),
-              $lte: new Date(date_to),
-            },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total_spend: { $sum: "$spend" },
-            total_impressions: { $sum: "$impressions" },
-            total_clicks: { $sum: "$clicks" },
-            total_reach: { $sum: "$reach" },
-            total_results: { $sum: "$results" },
-            total_conversions: { $sum: "$conversions" },
-            avg_ctr: { $avg: "$ctr" },
-            avg_cpc: { $avg: "$cpc" },
-            avg_cpm: { $avg: "$cpm" },
-            avg_frequency: { $avg: "$frequency" },
-            days: { $addToSet: "$date" },
-          },
-        },
-      ]);
-
-      const data = result[0] || {};
-      
-      writer?.(`✅ Đã tìm thấy dữ liệu từ ${data.days?.length || 0} ngày`);
-
-      return JSON.stringify({
-        period: { from: date_from, to: date_to },
-        total_days: data.days?.length || 0,
-        metrics: {
-          spend: {
-            value: data.total_spend || 0,
-            formatted: formatCurrency(data.total_spend),
-          },
-          impressions: {
-            value: data.total_impressions || 0,
-            formatted: formatNumber(data.total_impressions),
-          },
-          clicks: {
-            value: data.total_clicks || 0,
-            formatted: formatNumber(data.total_clicks),
-          },
-          ctr: {
-            value: data.avg_ctr || 0,
-            formatted: formatPercent(data.avg_ctr),
-          },
-          cpc: {
-            value: data.avg_cpc || 0,
-            formatted: formatCurrency(data.avg_cpc),
-          },
-          cpm: {
-            value: data.avg_cpm || 0,
-            formatted: formatCurrency(data.avg_cpm),
-          },
-          results: {
-            value: data.total_results || 0,
-            formatted: formatNumber(data.total_results),
-          },
-          reach: {
-            value: data.total_reach || 0,
-            formatted: formatNumber(data.total_reach),
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Error in getTotalMetrics:", error);
-      throw error;
-    }
-  },
-  {
-    name: "get_total_metrics",
-    description:
-      "Lấy tổng quan các chỉ số hiệu suất quảng cáo (spend, CTR, CPC, CPM, impressions, clicks, results, reach) trong khoảng thời gian. Dùng khi user hỏi về tổng số, trung bình, hoặc overview.",
-    schema: z.object({
-      account_id: z.string().describe("Account ID (act_xxx)"),
-      date_from: z.string().describe("Ngày bắt đầu (YYYY-MM-DD)"),
-      date_to: z.string().describe("Ngày kết thúc (YYYY-MM-DD)"),
-      metrics: z
-        .array(z.string())
-        .optional()
-        .describe(
-          "Optional: Danh sách metrics cụ thể cần lấy. Bỏ qua để lấy tất cả."
-        ),
-    }),
-  }
-);
-
-// ============================================
-// TOOL 2: COMPARE CAMPAIGNS
-// ============================================
-
-export const compareEntitiesTool = tool(
-  async (
-    { account_id, entity_type, entity_ids, date_from, date_to, sort_by, limit },
-    config
-  ) => {
-    try {
-      const writer = config?.streamWriter;
-      const _entity_type = entity_type || "campaign";
-      writer?.(`🔍 Đang so sánh ${_entity_type}...`);
-
-      const accountObjId = await getAccountObjectId(account_id);
-      
-      // Get list of non-deleted entity IDs
-      const modelMap = {
-        campaign: AdsCampaign,
-        adset: AdsSet,
-        ad: Ads,
-      };
-      const activeEntities = await modelMap[_entity_type]
-        .find({ 
-          account_id: accountObjId,
-          status: { $ne: "DELETED" }
-        })
-        .select("external_id")
-        .lean();
-      
-      const activeIds = activeEntities.map(e => e.external_id);
-      
-      const matchStage = {
-        account_id: accountObjId,
-        date: {
-          $gte: new Date(date_from),
-          $lte: new Date(date_to),
-        },
-      };
-
-      let groupField, nameField;
-      switch (_entity_type) {
-        case "adset":
-          groupField = "$external_adset_id";
-          nameField = "$adset_name";
-          matchStage.external_adset_id = entity_ids && entity_ids.length > 0 
-            ? { $in: entity_ids.filter(id => activeIds.includes(id)) }
-            : { $in: activeIds };
-          break;
-        case "ad":
-          groupField = "$external_ad_id";
-          nameField = "$ad_name";
-          matchStage.external_ad_id = entity_ids && entity_ids.length > 0 
-            ? { $in: entity_ids.filter(id => activeIds.includes(id)) }
-            : { $in: activeIds };
-          break;
-        case "campaign":
-        default:
-          groupField = "$external_campaign_id";
-          nameField = "$campaign_name";
-          matchStage.external_campaign_id = entity_ids && entity_ids.length > 0 
-            ? { $in: entity_ids.filter(id => activeIds.includes(id)) }
-            : { $in: activeIds };
-          break;
-      }
-
-      const results = await AdPerformance.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: groupField,
-            entity_name: { $first: nameField },
-            total_spend: { $sum: "$spend" },
-            total_impressions: { $sum: "$impressions" },
-            total_clicks: { $sum: "$clicks" },
-            total_results: { $sum: "$results" },
-            avg_ctr: { $avg: "$ctr" },
-            avg_cpc: { $avg: "$cpc" },
-            avg_cpm: { $avg: "$cpm" },
-            avg_cost_per_result: { $avg: "$cost_per_result" },
-          },
-        },
-        { $sort: { [`${sort_by === 'spend' ? 'total_spend' : 'avg_' + sort_by}`]: -1 } },
-        { $limit: limit || 10 },
-      ]);
-
-      writer?.(`✅ Đã so sánh ${results.length} ${_entity_type}`);
-
-      const formatted = results.map((r) => ({
-        entity_id: r._id,
-        entity_name: r.entity_name,
-        spend: { value: r.total_spend, formatted: formatCurrency(r.total_spend) },
-        impressions: { value: r.total_impressions, formatted: formatNumber(r.total_impressions) },
-        clicks: { value: r.total_clicks, formatted: formatNumber(r.total_clicks) },
-        ctr: { value: r.avg_ctr, formatted: formatPercent(r.avg_ctr) },
-        cpc: { value: r.avg_cpc, formatted: formatCurrency(r.avg_cpc) },
-        cpm: { value: r.avg_cpm, formatted: formatCurrency(r.avg_cpm) },
-        results: { value: r.total_results, formatted: formatNumber(r.total_results) },
-        cost_per_result: { value: r.avg_cost_per_result, formatted: formatCurrency(r.avg_cost_per_result)},
-      }));
-
-      return JSON.stringify({
-        entity_type: _entity_type,
-        results: formatted,
-      });
-    } catch (error) {
-      console.error("Error in compareEntities:", error);
-      throw error;
-    }
-  },
-  {
-    name: "compare_entities",
-    description: "CHUYÊN DỤNG ĐỂ SO SÁNH. Dùng khi user muốn so sánh trực tiếp hiệu quả giữa các chiến dịch, nhóm, hoặc quảng cáo cụ thể. Ví dụ: 'So sánh camp A và B', 'adset nào rẻ hơn'. Trả về bảng so sánh chi tiết các chỉ số.",
-    schema: z.object({
-      account_id: z.string().describe("Account ID"),
-      date_from: z.string().describe("Ngày bắt đầu (YYYY-MM-DD)"),
-      date_to: z.string().describe("Ngày kết thúc (YYYY-MM-DD)"),
-      entity_type: z.enum(["campaign", "adset", "ad"]).describe("Loại đối tượng cần so sánh."),
-      entity_ids: z.array(z.string()).optional().describe("Danh sách ID của các đối tượng cần so sánh. Để trống để so sánh top performers."),
-      sort_by: z.enum(["spend", "ctr", "cpc", "cpm", "results", "cost_per_result"]).optional().describe("Tiêu chí so sánh. Nếu user hỏi 'hiệu quả hơn', hãy chọn 'results' hoặc 'cost_per_result'."),
-      limit: z.number().optional().describe("Số lượng tối đa. Default: 10"),
-    }),
-  }
-);
-
-// ============================================
 // TOOL 3: GET TREND
 // ============================================
 
@@ -849,333 +636,734 @@ export const getTrendTool = tool(
 );
 
 // ============================================
-// TOOL 4: GET RANKING
+// RANK CAMPAIGNS/ADSETS TOOL
 // ============================================
 
-export const getRankingTool = tool(
-  async (
-    { account_id, entity_type, metric, order, limit, date_from, date_to },
-    config
-  ) => {
+function normalizeObjective(objectiveRaw) {
+  if (!objectiveRaw) return null;
+  
+  const upper = objectiveRaw.toUpperCase();
+  
+  if (upper.startsWith("OUTCOME_")) {
+    return upper;
+  }
+  
+  const mapping = {
+    "CONVERSIONS": "OUTCOME_SALES",
+    "CATALOG_SALES": "OUTCOME_SALES",
+    "STORE_VISITS": "OUTCOME_SALES",
+    "LEAD_GENERATION": "OUTCOME_LEADS",
+    "MESSAGES": "OUTCOME_LEADS",
+    "LINK_CLICKS": "OUTCOME_TRAFFIC",
+    "BRAND_AWARENESS": "OUTCOME_AWARENESS",
+    "REACH": "OUTCOME_AWARENESS",
+    "POST_ENGAGEMENT": "OUTCOME_ENGAGEMENT",
+    "PAGE_LIKES": "OUTCOME_ENGAGEMENT",
+    "APP_INSTALLS": "OUTCOME_APP_PROMOTION",
+  };
+  
+  return mapping[upper] || null;
+}
+
+function getMinThresholds(objective) {
+  const thresholds = {
+    OUTCOME_SALES: { minSpend: 100000, minResults: 3 },
+    OUTCOME_LEADS: { minSpend: 100000, minResults: 5 },
+    OUTCOME_TRAFFIC: { minSpend: 50000, minResults: 100 },
+    OUTCOME_AWARENESS: { minSpend: 50000, minResults: 1000 },
+    OUTCOME_ENGAGEMENT: { minSpend: 50000, minResults: 50 },
+    OUTCOME_APP_PROMOTION: { minSpend: 100000, minResults: 3 },
+  };
+  
+  return thresholds[objective] || { minSpend: 50000, minResults: 1 };
+}
+
+function getResultsField(objective) {
+  const fields = {
+    OUTCOME_SALES: "purchases_total",
+    OUTCOME_LEADS: "leads_total",
+    OUTCOME_TRAFFIC: "link_clicks_total",
+    OUTCOME_AWARENESS: "impressions_total",
+    OUTCOME_ENGAGEMENT: "post_engagement_total",
+    OUTCOME_APP_PROMOTION: "mobile_app_install_total",
+  };
+  
+  return fields[objective] || "results_total";
+}
+
+function calculateKPIs(totals) {
+  const kpis = {};
+  
+  if (totals.impressions_total > 0) {
+    kpis.ctr = (totals.clicks_total / totals.impressions_total) * 100;
+    kpis.cpm = (totals.spend_total / totals.impressions_total) * 1000;
+    kpis.link_ctr = (totals.link_clicks_total / totals.impressions_total) * 100;
+  }
+  
+  if (totals.clicks_total > 0) {
+    kpis.cpc = totals.spend_total / totals.clicks_total;
+  }
+  
+  if (totals.link_clicks_total > 0) {
+    kpis.link_cpc = totals.spend_total / totals.link_clicks_total;
+  }
+  
+  if (totals.post_engagement_total > 0) {
+    kpis.cpe = totals.spend_total / totals.post_engagement_total;
+  }
+  
+  if (totals.leads_total > 0) {
+    kpis.cpl = totals.spend_total / totals.leads_total;
+  }
+  
+  if (totals.purchases_total > 0) {
+    kpis.cpa = totals.spend_total / totals.purchases_total;
+  }
+  
+  return kpis;
+}
+
+function normalizeMetric(value, min, max, lowerIsBetter = false) {
+  if (min === max || max === 0) return 0.5;
+  
+  const norm = (value - min) / (max - min);
+  return lowerIsBetter ? 1 - norm : norm;
+}
+
+function calculateScore(entity, objective, allEntities) {
+  const primaryKPIs = {
+    OUTCOME_SALES: { field: "cpa", lowerIsBetter: true, weight: 0.5 },
+    OUTCOME_LEADS: { field: "cpl", lowerIsBetter: true, weight: 0.5 },
+    OUTCOME_TRAFFIC: { field: "link_ctr", lowerIsBetter: false, weight: 0.5 },
+    OUTCOME_AWARENESS: { field: "cpm", lowerIsBetter: true, weight: 0.5 },
+    OUTCOME_ENGAGEMENT: { field: "cpe", lowerIsBetter: true, weight: 0.5 },
+    OUTCOME_APP_PROMOTION: { field: "cpa", lowerIsBetter: true, weight: 0.5 },
+  };
+  
+  const primaryKPI = primaryKPIs[objective];
+  if (!primaryKPI) return 0;
+  
+  const values = allEntities
+    .map(e => e.kpis?.[primaryKPI.field])
+    .filter(v => v != null && v > 0);
+  
+  if (values.length === 0) {
+    const efficiencyValues = allEntities
+      .map(e => e.efficiency_per_100k)
+      .filter(v => v != null);
+    if (efficiencyValues.length === 0) return 0;
+    const efficiencyMin = Math.min(...efficiencyValues);
+    const efficiencyMax = Math.max(...efficiencyValues);
+    const efficiencyNorm = normalizeMetric(entity.efficiency_per_100k || 0, efficiencyMin, efficiencyMax, false);
+    return efficiencyNorm * 0.85;
+  }
+  
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const primaryValue = entity.kpis?.[primaryKPI.field] || 0;
+  const primaryNorm = normalizeMetric(primaryValue, min, max, primaryKPI.lowerIsBetter);
+  
+  const efficiencyValues = allEntities
+    .map(e => e.efficiency_per_100k)
+    .filter(v => v != null);
+  const efficiencyMin = Math.min(...efficiencyValues);
+  const efficiencyMax = Math.max(...efficiencyValues);
+  const efficiencyNorm = normalizeMetric(entity.efficiency_per_100k || 0, efficiencyMin, efficiencyMax, false);
+  
+  const maxSpend = Math.max(...allEntities.map(e => e.totals.spend_total));
+  const volumeBonus = Math.min(Math.sqrt(entity.totals.spend_total / maxSpend), 1) * 0.05;
+  
+  const score = (primaryNorm * primaryKPI.weight) + (efficiencyNorm * 0.35) + (volumeBonus);
+  
+  return Math.max(0, Math.min(1, score));
+}
+
+function generateWhy(entity, objective) {
+  const why = [];
+  const kpis = entity.kpis || {};
+  
+  switch (objective) {
+    case "OUTCOME_SALES":
+      if (kpis.cpa && kpis.cpa < 20000) why.push(`CPA thấp (${formatCurrency(kpis.cpa)})`);
+      if (entity.efficiency_per_100k > 5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} purchases/100k₫`);
+      break;
+    case "OUTCOME_LEADS":
+      if (kpis.cpl < 50000) why.push(`CPL thấp (${formatCurrency(kpis.cpl)})`);
+      if (entity.efficiency_per_100k > 2) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} leads/100k₫`);
+      break;
+    case "OUTCOME_TRAFFIC":
+      if (kpis.link_ctr > 2) why.push(`Link CTR cao (${kpis.link_ctr.toFixed(2)}%)`);
+      if (kpis.link_cpc < 5000) why.push(`Link CPC thấp (${formatCurrency(kpis.link_cpc)})`);
+      if (entity.efficiency_per_100k > 10) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} link clicks/100k₫`);
+      break;
+    case "OUTCOME_AWARENESS":
+      if (kpis.cpm < 5000) why.push(`CPM thấp (${formatCurrency(kpis.cpm)})`);
+      if (entity.efficiency_per_100k > 1000) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(0)} impressions/100k₫`);
+      break;
+    case "OUTCOME_ENGAGEMENT":
+      if (kpis.cpe < 10000) why.push(`CPE thấp (${formatCurrency(kpis.cpe)})`);
+      if (entity.efficiency_per_100k > 5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} engagements/100k₫`);
+      break;
+    case "OUTCOME_APP_PROMOTION":
+      if (kpis.cpa < 50000) why.push(`CPA thấp (${formatCurrency(kpis.cpa)})`);
+      if (entity.efficiency_per_100k > 0.5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} installs/100k₫`);
+      break;
+  }
+  
+  if (why.length === 0) {
+    why.push("Performance tốt trong khoảng thời gian này");
+  }
+  
+  return why;
+}
+
+export const rankCampaignsTool = tool(
+  async ({ account_id, level, objective, date_from, date_to, top_n, sort_by_metric }, config) => {
     try {
-      // Set defaults
-      const _entity_type = entity_type || "campaign";
-      const _metric = metric || "spend";
-      const _order = order || "top";
-      const _limit = limit || 5;
-
       const writer = config?.streamWriter;
-      writer?.(`🏆 Đang xếp hạng ${_entity_type} theo ${_metric}...`);
-
-      const accountObjId = await getAccountObjectId(account_id);
-
-      // Get list of non-deleted entity IDs
-      const modelMap = {
-        campaign: AdsCampaign,
-        adset: AdsSet,
-        ad: Ads,
-      };
-      const activeEntities = await modelMap[_entity_type]
-        .find({ 
-          account_id: accountObjId,
-          status: { $ne: "DELETED" }
-        })
-        .select("external_id")
-        .lean();
+      writer?.("🔍 Đang xếp hạng campaigns/adsets...");
       
-      const activeIds = activeEntities.map(e => e.external_id);
-      const entityIdField = _entity_type === "campaign" ? "external_campaign_id" : 
-                            _entity_type === "adset" ? "external_adset_id" : "external_ad_id";
-
-      const matchStage = {
-        account_id: accountObjId,
-        date: {
-          $gte: new Date(date_from),
-          $lte: new Date(date_to),
+      const accountObjId = await getAccountObjectId(account_id);
+      const today = new Date().toISOString().split('T')[0];
+      
+      const fromUser = new Date(date_from);
+      const toUser = new Date(date_to > today ? today : date_to);
+      
+      writer?.("📅 Đang xác định tracking_start_date...");
+      
+      const trackingStartResult = await AdPerformance.aggregate([
+        {
+          $match: { account_id: accountObjId }
         },
-        [entityIdField]: { $in: activeIds },
-      };
-
-      if (_entity_type === "campaign") {
-        // ✅ Query từ AdPerformance và group by campaign_id
-        const ranking = await AdPerformance.aggregate([
-          { $match: matchStage },
-          {
-            $group: {
-              _id: "$campaign_id",
-              entity_name: { $first: "$campaign_name" },
-              total_spend: { $sum: "$spend" },
-              total_impressions: { $sum: "$impressions" },
-              total_clicks: { $sum: "$clicks" },
-              avg_ctr: { $avg: "$ctr" },
-              avg_cpc: { $avg: "$cpc" },
-              avg_cpm: { $avg: "$cpm" },
-              total_results: { $sum: "$results" },
-              avg_cost_per_result: { $avg: "$cost_per_result" },
-            },
-          },
-          {
-            $sort: {
-              [`${_metric === "spend" ? "total_spend" : "avg_" + _metric}`]:
-                _order === "top" ? -1 : 1,
-            },
-          },
-          { $limit: _limit },
-        ]);
-
-        writer?.(`✅ Đã xếp hạng ${ranking.length} ${_entity_type}`);
-
-        const formatted = ranking.map((r, index) => ({
-          rank: index + 1,
-          entity_id: r._id.toString(),
-          entity_name: r.entity_name,
-          value: {
-            value:
-              _metric === "spend"
-                ? r.total_spend
-                : r[`avg_${_metric}`] || r[`total_${_metric}`],
-            formatted: formatMetric(
-              _metric,
-              _metric === "spend"
-                ? r.total_spend
-                : r[`avg_${_metric}`] || r[`total_${_metric}`]
-            ),
-          },
-        }));
-
-        return JSON.stringify({
-          entity_type: _entity_type,
-          metric: _metric,
-          order: _order,
-          ranking: formatted,
-        });
-      }
-
-      const groupField =
-        _entity_type === "adset" ? "$set_id" : "$ads_id";
-
-      const nameField =
-        _entity_type === "adset" ? "adset_name" : "ad_name";
-
-      const ranking = await AdPerformance.aggregate([
-        { $match: matchStage },
         {
           $group: {
-            _id: groupField,
-            entity_name: { $first: `$${nameField}` },
-            total_spend: { $sum: "$spend" },
-            total_impressions: { $sum: "$impressions" },
-            total_clicks: { $sum: "$clicks" },
-            avg_ctr: { $avg: "$ctr" },
-            avg_cpc: { $avg: "$cpc" },
-            avg_cpm: { $avg: "$cpm" },
-            total_results: { $sum: "$results" },
-            avg_cost_per_result: { $avg: "$cost_per_result" },
-          },
+            _id: null,
+            min_date: { $min: "$date" }
+          }
+        }
+      ]);
+      
+      if (!trackingStartResult.length || !trackingStartResult[0].min_date) {
+        return JSON.stringify({
+          error: "Không có dữ liệu",
+          message: "Hệ thống chưa có dữ liệu tracking cho account này."
+        });
+      }
+      
+      const trackingStartDate = new Date(trackingStartResult[0].min_date);
+      const fromEffective = fromUser > trackingStartDate ? fromUser : trackingStartDate;
+      const toEffective = toUser;
+      
+      if (toEffective < trackingStartDate) {
+        return JSON.stringify({
+          error: "Không có dữ liệu",
+          message: "Không có dữ liệu trong khoảng thời gian user yêu cầu."
+        });
+      }
+      
+      const baseDate = new Date(fromEffective);
+      baseDate.setDate(baseDate.getDate() - 1);
+      
+      const dataCoverageNotes = [];
+      if (fromEffective.getTime() !== fromUser.getTime()) {
+        dataCoverageNotes.push(
+          `Hệ thống chỉ có dữ liệu từ ngày ${trackingStartDate.toISOString().split('T')[0]}, nên kết quả được tính từ ${fromEffective.toISOString().split('T')[0]} đến ${toEffective.toISOString().split('T')[0]}.`
+        );
+      }
+      
+      writer?.("📊 Đang lấy snapshots...");
+      
+      const allSnapshots = await AdPerformance.aggregate([
+        {
+          $match: {
+            account_id: accountObjId,
+            date: { $lte: toEffective }
+          }
         },
         {
-          $sort: {
-            [`${_metric === "spend" ? "total_spend" : "avg_" + _metric}`]:
-              _order === "top" ? -1 : 1,
-          },
-        },
-        { $limit: _limit },
+          $sort: { ads_id: 1, date: -1 }
+        }
       ]);
-
-      writer?.(`✅ Đã xếp hạng ${ranking.length} ${_entity_type}`);
-
-      const formatted = ranking.map((r, index) => ({
-        rank: index + 1,
-        entity_id: r._id.toString(),
-        entity_name: r.entity_name,
-        value: {
-          value:
-            _metric === "spend"
-              ? r.total_spend
-              : r[`avg_${_metric}`] || r[`total_${_metric}`],
-          formatted: formatMetric(
-            _metric,
-            _metric === "spend"
-              ? r.total_spend
-              : r[`avg_${_metric}`] || r[`total_${_metric}`]
-          ),
-        },
-      }));
-
-      return JSON.stringify({
-        entity_type: _entity_type,
-        metric: _metric,
-        order: _order,
-        ranking: formatted,
-      });
+      
+      const snapshotsByAd = {};
+      let countNoBaseline = 0;
+      
+      for (const snap of allSnapshots) {
+        const adId = snap.ads_id.toString();
+        
+        if (!snapshotsByAd[adId]) {
+          snapshotsByAd[adId] = { endSnap: null, baseSnap: null };
+        }
+        
+        if (!snapshotsByAd[adId].endSnap && snap.date <= toEffective) {
+          snapshotsByAd[adId].endSnap = snap;
+        }
+        
+        if (!snapshotsByAd[adId].baseSnap && snap.date <= baseDate) {
+          snapshotsByAd[adId].baseSnap = snap;
+        }
+      }
+      
+      writer?.("🧮 Đang tính delta...");
+      
+      const deltasByAd = {};
+      
+      for (const [adId, snaps] of Object.entries(snapshotsByAd)) {
+        if (!snaps.endSnap) continue;
+        
+        const baseSnap = snaps.baseSnap || {
+          spend: 0,
+          website_purchases: 0,
+          leads: 0,
+          link_clicks: 0,
+          impressions: 0,
+          clicks: 0,
+          post_engagement: 0,
+          reach: 0,
+          mobile_app_install: 0,
+        };
+        
+        if (!snaps.baseSnap) {
+          countNoBaseline++;
+        }
+        
+        deltasByAd[adId] = {
+          spend_range: Math.max(0, snaps.endSnap.spend - (baseSnap.spend || 0)),
+          purchases_range: Math.max(0, (snaps.endSnap.website_purchases || 0) - (baseSnap.website_purchases || 0)),
+          leads_range: Math.max(0, (snaps.endSnap.leads || 0) - (baseSnap.leads || 0)),
+          link_clicks_range: Math.max(0, (snaps.endSnap.link_clicks || 0) - (baseSnap.link_clicks || 0)),
+          impressions_range: Math.max(0, snaps.endSnap.impressions - (baseSnap.impressions || 0)),
+          clicks_range: Math.max(0, snaps.endSnap.clicks - (baseSnap.clicks || 0)),
+          post_engagement_range: Math.max(0, (snaps.endSnap.post_engagement || 0) - (baseSnap.post_engagement || 0)),
+          reach_range: Math.max(0, snaps.endSnap.reach - (baseSnap.reach || 0)),
+          mobile_app_install_range: Math.max(0, (snaps.endSnap.mobile_app_install || 0) - (baseSnap.mobile_app_install || 0)),
+          campaign_id: snaps.endSnap.campaign_id,
+          set_id: snaps.endSnap.set_id,
+        };
+      }
+      
+      if (countNoBaseline > 0) {
+        const totalAds = Object.keys(deltasByAd).length;
+        dataCoverageNotes.push(
+          `Có ${countNoBaseline}/${totalAds} ads không có snapshot trước ngày bắt đầu tính (baseline=0), thường do ads mới tạo hoặc hệ thống bắt đầu tracking sau đó.`
+        );
+      }
+      
+      writer?.("📦 Đang group theo level...");
+      
+      let groups = {};
+      let metaMap = {};
+      
+      if (level === "ad") {
+        for (const [adId, delta] of Object.entries(deltasByAd)) {
+          if (!adId) continue;
+          
+          groups[adId] = {
+            spend_total: delta.spend_range,
+            purchases_total: delta.purchases_range,
+            leads_total: delta.leads_range,
+            link_clicks_total: delta.link_clicks_range,
+            impressions_total: delta.impressions_range,
+            clicks_total: delta.clicks_range,
+            post_engagement_total: delta.post_engagement_range,
+            reach_total: delta.reach_range,
+            mobile_app_install_total: delta.mobile_app_install_range,
+          };
+        }
+        
+        writer?.("🔗 Đang join meta cho ads với parent info...");
+        
+        const adIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
+        const adsWithParents = await Ads.find({
+          _id: { $in: adIds },
+          status: { $ne: "DELETED" }
+        })
+          .select("_id name status set_id")
+          .populate({
+            path: "set_id",
+            select: "_id name campaign_id",
+            populate: {
+              path: "campaign_id",
+              select: "_id name"
+            }
+          })
+          .lean();
+        
+        for (const ad of adsWithParents) {
+          const adIdStr = ad._id.toString();
+          metaMap[adIdStr] = {
+            name: ad.name,
+            objective: null,
+            status: ad.status,
+            start_time: null,
+            adset_id: ad.set_id?._id?.toString() || null,
+            adset_name: ad.set_id?.name || null,
+            campaign_id: ad.set_id?.campaign_id?._id?.toString() || null,
+            campaign_name: ad.set_id?.campaign_id?.name || null,
+          };
+        }
+      } else {
+        const groupField = level === "campaign" ? "campaign_id" : "set_id";
+        
+        for (const [adId, delta] of Object.entries(deltasByAd)) {
+          const groupId = delta[groupField];
+          if (!groupId) continue;
+          
+          const groupIdStr = groupId.toString();
+          if (!groups[groupIdStr]) {
+            groups[groupIdStr] = {
+              spend_total: 0,
+              purchases_total: 0,
+              leads_total: 0,
+              link_clicks_total: 0,
+              impressions_total: 0,
+              clicks_total: 0,
+              post_engagement_total: 0,
+              reach_total: 0,
+              mobile_app_install_total: 0,
+            };
+          }
+          
+          groups[groupIdStr].spend_total += delta.spend_range;
+          groups[groupIdStr].purchases_total += delta.purchases_range;
+          groups[groupIdStr].leads_total += delta.leads_range;
+          groups[groupIdStr].link_clicks_total += delta.link_clicks_range;
+          groups[groupIdStr].impressions_total += delta.impressions_range;
+          groups[groupIdStr].clicks_total += delta.clicks_range;
+          groups[groupIdStr].post_engagement_total += delta.post_engagement_range;
+          groups[groupIdStr].reach_total += delta.reach_range;
+          groups[groupIdStr].mobile_app_install_total += delta.mobile_app_install_range;
+        }
+        
+        writer?.("🔗 Đang join meta...");
+        
+        const Model = level === "campaign" ? AdsCampaign : AdsSet;
+        const groupIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
+        
+        const metaEntities = await Model.find({
+          _id: { $in: groupIds },
+          status: { $ne: "DELETED" },
+          start_time: { $lte: toEffective }
+        })
+          .select("_id name objective status start_time")
+          .lean();
+        
+        for (const meta of metaEntities) {
+          metaMap[meta._id.toString()] = meta;
+        }
+      }
+      
+      writer?.("✅ Đang tính KPI và ranking...");
+      
+      const entities = [];
+      const othersNotes = [];
+      
+      for (const [groupIdStr, totals] of Object.entries(groups)) {
+        const meta = metaMap[groupIdStr];
+        if (!meta) continue;
+        
+        let objectiveNormalized = normalizeObjective(meta.objective);
+        
+        if (level === "ad" && !objectiveNormalized) {
+          const adSnap = allSnapshots.find(s => s.ads_id && s.ads_id.toString() === groupIdStr);
+          if (adSnap && adSnap.objective) {
+            objectiveNormalized = normalizeObjective(adSnap.objective);
+          }
+        }
+        
+        if (objective && objectiveNormalized !== objective) continue;
+        
+        const kpis = calculateKPIs(totals);
+        const resultsField = getResultsField(objectiveNormalized);
+        const resultsTotal = totals[resultsField] || 0;
+        
+        const efficiencyPer100k = totals.spend_total > 0 
+          ? (resultsTotal / totals.spend_total) * 100000 
+          : 0;
+        
+        entities.push({
+          entity_id: groupIdStr,
+          name: meta.name,
+          objective: objectiveNormalized,
+          totals,
+          kpis,
+          efficiency_per_100k: efficiencyPer100k,
+        });
+      }
+      
+      if (objective) {
+        const filtered = entities.filter(e => e.objective === objective);
+        const allFiltered = filtered.map(e => ({
+          ...e,
+          score: calculateScore(e, objective, filtered),
+        }));
+        
+        if (sort_by_metric) {
+          const metricMap = {
+            ctr: (e) => e.kpis?.ctr || 0,
+            cpc: (e) => e.kpis?.cpc || Infinity,
+            cpm: (e) => e.kpis?.cpm || Infinity,
+            cpa: (e) => e.kpis?.cpa || Infinity,
+            cpl: (e) => e.kpis?.cpl || Infinity,
+            spend: (e) => e.totals.spend_total || 0,
+          };
+          
+          const getValue = metricMap[sort_by_metric.toLowerCase()];
+          if (getValue) {
+            const isLowerBetter = ['cpc', 'cpm', 'cpa', 'cpl'].includes(sort_by_metric.toLowerCase());
+            allFiltered.sort((a, b) => {
+              const valA = getValue(a);
+              const valB = getValue(b);
+              return isLowerBetter ? valA - valB : valB - valA;
+            });
+          } else {
+            allFiltered.sort((a, b) => b.score - a.score);
+          }
+        } else {
+          allFiltered.sort((a, b) => b.score - a.score);
+        }
+        
+        const top = allFiltered.slice(0, top_n || 5).map(e => {
+          const base = {
+            entity_id: e.entity_id,
+            name: e.name,
+            spend: { value: e.totals.spend_total, formatted: formatCurrency(e.totals.spend_total) },
+            purchases: { value: e.totals.purchases_total, formatted: formatNumber(e.totals.purchases_total) },
+            leads: { value: e.totals.leads_total, formatted: formatNumber(e.totals.leads_total) },
+            link_clicks: { value: e.totals.link_clicks_total, formatted: formatNumber(e.totals.link_clicks_total) },
+            impressions: { value: e.totals.impressions_total, formatted: formatNumber(e.totals.impressions_total) },
+            cpa: e.kpis.cpa ? { value: e.kpis.cpa, formatted: formatCurrency(e.kpis.cpa) } : null,
+            cpl: e.kpis.cpl ? { value: e.kpis.cpl, formatted: formatCurrency(e.kpis.cpl) } : null,
+            efficiency_per_100k: { value: e.efficiency_per_100k, formatted: e.efficiency_per_100k.toFixed(2) },
+            score: { value: e.score, formatted: `${(e.score * 100).toFixed(1)}%` },
+            why: generateWhy(e, objective),
+          };
+          
+          if (level === "ad" && metaMap[e.entity_id]) {
+            const meta = metaMap[e.entity_id];
+            base.adset_id = meta.adset_id;
+            base.adset_name = meta.adset_name;
+            base.campaign_id = meta.campaign_id;
+            base.campaign_name = meta.campaign_name;
+          }
+          
+          return base;
+        });
+        
+        return JSON.stringify({
+          date_range_user: {
+            from: date_from,
+            to: date_to,
+          },
+          date_range_effective: {
+            from: fromEffective.toISOString().split('T')[0],
+            to: toEffective.toISOString().split('T')[0],
+          },
+          tracking_start_date: trackingStartDate.toISOString().split('T')[0],
+          data_coverage_notes: dataCoverageNotes,
+          level,
+          objective,
+          total_entities: entities.length,
+          valid_entities: filtered.length,
+          top,
+          others_notes: othersNotes,
+        });
+      } else {
+        const grouped = {};
+        for (const e of entities) {
+          if (!grouped[e.objective]) grouped[e.objective] = [];
+          grouped[e.objective].push(e);
+        }
+        
+        const resultGroups = {};
+        for (const [obj, ents] of Object.entries(grouped)) {
+          const withScores = ents.map(e => ({
+            ...e,
+            score: calculateScore(e, obj, ents),
+          }));
+          
+          if (sort_by_metric) {
+            const metricMap = {
+              ctr: (e) => e.kpis?.ctr || 0,
+              cpc: (e) => e.kpis?.cpc || Infinity,
+              cpm: (e) => e.kpis?.cpm || Infinity,
+              cpa: (e) => e.kpis?.cpa || Infinity,
+              cpl: (e) => e.kpis?.cpl || Infinity,
+              spend: (e) => e.totals.spend_total || 0,
+            };
+            
+            const getValue = metricMap[sort_by_metric.toLowerCase()];
+            if (getValue) {
+              const isLowerBetter = ['cpc', 'cpm', 'cpa', 'cpl'].includes(sort_by_metric.toLowerCase());
+              withScores.sort((a, b) => {
+                const valA = getValue(a);
+                const valB = getValue(b);
+                return isLowerBetter ? valA - valB : valB - valA;
+              });
+            } else {
+              withScores.sort((a, b) => b.score - a.score);
+            }
+          } else {
+            withScores.sort((a, b) => b.score - a.score);
+          }
+          
+          resultGroups[obj] = withScores.slice(0, top_n || 5).map(e => ({
+            entity_id: e.entity_id,
+            name: e.name,
+            spend: { value: e.totals.spend_total, formatted: formatCurrency(e.totals.spend_total) },
+            purchases: { value: e.totals.purchases_total, formatted: formatNumber(e.totals.purchases_total) },
+            leads: { value: e.totals.leads_total, formatted: formatNumber(e.totals.leads_total) },
+            link_clicks: { value: e.totals.link_clicks_total, formatted: formatNumber(e.totals.link_clicks_total) },
+            impressions: { value: e.totals.impressions_total, formatted: formatNumber(e.totals.impressions_total) },
+            cpa: e.kpis.cpa ? { value: e.kpis.cpa, formatted: formatCurrency(e.kpis.cpa) } : null,
+            cpl: e.kpis.cpl ? { value: e.kpis.cpl, formatted: formatCurrency(e.kpis.cpl) } : null,
+            efficiency_per_100k: { value: e.efficiency_per_100k, formatted: e.efficiency_per_100k.toFixed(2) },
+            score: { value: e.score, formatted: `${(e.score * 100).toFixed(1)}%` },
+            why: generateWhy(e, obj),
+          }));
+        }
+        
+        return JSON.stringify({
+          date_range_user: {
+            from: date_from,
+            to: date_to,
+          },
+          date_range_effective: {
+            from: fromEffective.toISOString().split('T')[0],
+            to: toEffective.toISOString().split('T')[0],
+          },
+          tracking_start_date: trackingStartDate.toISOString().split('T')[0],
+          data_coverage_notes: dataCoverageNotes,
+          level,
+          objective: null,
+          total_entities: entities.length,
+          valid_entities: entities.length,
+          groups: resultGroups,
+          others_notes: othersNotes,
+        });
+      }
     } catch (error) {
-      console.error("Error in getRanking:", error);
-      throw error;
+      console.error("[rankCampaignsTool] Error:", error);
+      return JSON.stringify({
+        error: "Lỗi khi xếp hạng",
+        message: error.message,
+      });
     }
   },
   {
-    name: "get_ranking",
-    description:
-      "Lấy top/bottom performers (campaigns/adsets/ads). Dùng khi user hỏi 'top 5', 'worst 3', ranking.",
+    name: "rank_campaigns",
+    description: "Xếp hạng campaigns hoặc adsets theo hiệu quả trong khoảng thời gian. Dùng khi user hỏi 'campaign nào hiệu quả nhất', 'adset tốt nhất', 'top campaigns'.",
     schema: z.object({
       account_id: z.string().describe("Account ID"),
+      level: z.enum(["campaign", "adset", "ad"]).describe("Level cần xếp hạng: campaign, adset, hoặc ad"),
+      objective: z.enum(["OUTCOME_SALES", "OUTCOME_LEADS", "OUTCOME_TRAFFIC", "OUTCOME_AWARENESS", "OUTCOME_ENGAGEMENT", "OUTCOME_APP_PROMOTION"]).nullable().describe("Objective cụ thể hoặc null để xếp hạng tất cả"),
       date_from: z.string().describe("Ngày bắt đầu (YYYY-MM-DD)"),
       date_to: z.string().describe("Ngày kết thúc (YYYY-MM-DD)"),
-      entity_type: z
-        .enum(["campaign", "adset", "ad"])
-        .optional()
-        .describe("Loại entity để rank. Default: campaign"),
-      metric: z
-        .enum(["spend", "ctr", "cpc", "cpm", "results"])
-        .optional()
-        .describe("Metric để rank. Default: spend"),
-      order: z
-        .enum(["top", "bottom"])
-        .optional()
-        .describe("Top hoặc bottom performers. Default: top"),
-      limit: z
-        .number()
-        .optional()
-        .describe("Số lượng entities. Default: 5"),
+      top_n: z.number().optional().describe("Số lượng top entities cần trả về. Mặc định: 5"),
+      sort_by_metric: z.enum(["ctr", "cpc", "cpm", "cpa", "cpl", "spend"]).nullable().optional().describe("Metric để sort (ctr, cpc, cpm, cpa, cpl, spend). Nếu null thì sort theo score"),
     }),
   }
 );
 
-// ============================================
-// TOOL 5: GET OVERVIEW (Count of entities)
-// ============================================
-
-export const getOverviewTool = tool(
-  async ({ account_id, status }, config) => {
+export const getEntityMetadataTool = tool(
+  async ({ account_id, entity_type, entity_ids }, config) => {
     try {
       const writer = config?.streamWriter;
-      writer?.(`🔍 Đang lấy thông tin tổng quan...`);
-
-      const accountObjId = await getAccountObjectId(account_id);
-
-      // Build query filter - exclude DELETED by default
-      const filter = { 
-        account_id: accountObjId,
-        status: { $ne: "DELETED" } // Exclude deleted campaigns
-      };
+      writer?.("🔍 Đang lấy metadata và relationship...");
       
-      if (status && status !== "all") {
-        filter.status = status; // Override if specific status requested
+      const accountObjId = await getAccountObjectId(account_id);
+      
+      if (entity_type === "ad") {
+        const ads = await Ads.find({
+          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          account_id: accountObjId
+        })
+          .select("_id name set_id")
+          .populate({
+            path: "set_id",
+            select: "_id name campaign_id",
+            populate: {
+              path: "campaign_id",
+              select: "_id name"
+            }
+          })
+          .lean();
+        
+        return JSON.stringify({
+          entity_type: "ad",
+          entities: ads.map(ad => ({
+            ad_id: ad._id.toString(),
+            ad_name: ad.name,
+            adset_id: ad.set_id?._id?.toString() || null,
+            adset_name: ad.set_id?.name || null,
+            campaign_id: ad.set_id?.campaign_id?._id?.toString() || null,
+            campaign_name: ad.set_id?.campaign_id?.name || null,
+          }))
+        });
       }
-
-      // Count entities
-      const [campaignCount, adsetCount, adCount] = await Promise.all([
-        AdsCampaign.countDocuments(filter),
-        AdsSet.countDocuments(filter),
-        Ads.countDocuments(filter),
-      ]);
-
-      // Get status breakdown for campaigns (excluding DELETED)
-      const campaignStatuses = await AdsCampaign.aggregate([
-        { 
-          $match: { 
-            account_id: accountObjId,
-            status: { $ne: "DELETED" }
-          } 
-        },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]);
-
-      const statusBreakdown = campaignStatuses.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {});
-
-      return JSON.stringify({
-        total_campaigns: campaignCount,
-        total_adsets: adsetCount,
-        total_ads: adCount,
-        campaign_status_breakdown: statusBreakdown,
-        filter_applied: status || "all",
-      });
+      
+      if (entity_type === "adset") {
+        const adsets = await AdsSet.find({
+          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          account_id: accountObjId
+        })
+          .select("_id name campaign_id")
+          .populate({
+            path: "campaign_id",
+            select: "_id name"
+          })
+          .lean();
+        
+        return JSON.stringify({
+          entity_type: "adset",
+          entities: adsets.map(adset => ({
+            adset_id: adset._id.toString(),
+            adset_name: adset.name,
+            campaign_id: adset.campaign_id?._id?.toString() || null,
+            campaign_name: adset.campaign_id?.name || null,
+          }))
+        });
+      }
+      
+      if (entity_type === "campaign") {
+        const campaigns = await AdsCampaign.find({
+          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          account_id: accountObjId
+        })
+          .select("_id name")
+          .lean();
+        
+        return JSON.stringify({
+          entity_type: "campaign",
+          entities: campaigns.map(campaign => ({
+            campaign_id: campaign._id.toString(),
+            campaign_name: campaign.name,
+          }))
+        });
+      }
+      
+      throw new Error(`Unsupported entity_type: ${entity_type}`);
     } catch (error) {
-      console.error("Error in getOverview:", error);
+      console.error("[getEntityMetadataTool] Error:", error);
       throw error;
     }
   },
   {
-    name: "get_overview",
-    description:
-      "Lấy thông tin tổng quan về số lượng campaigns, adsets, ads. Dùng khi user hỏi 'có bao nhiêu quảng cáo', 'tổng số campaign', 'overview'.",
+    name: "get_entity_metadata",
+    description: `Lấy thông tin metadata và relationship của entities (ads → adset → campaign).
+    
+Dùng khi user hỏi về:
+- "ads này thuộc adset/campaign nào?"
+- "adset này thuộc campaign nào?"
+- "campaign này có những adset/ads nào?"
+- Bất kỳ câu hỏi về quan hệ giữa entities
+
+Input: entity_type và danh sách entity_ids cần query
+Output: Thông tin đầy đủ về entity và parent/children`,
     schema: z.object({
       account_id: z.string().describe("Account ID"),
-      status: z
-        .enum(["active", "paused", "archived", "all"])
-        .optional()
-        .describe("Lọc theo trạng thái. Default: all"),
-    }),
-  }
-);
-
-// Export all tools
-export const listEntitiesTool = tool(
-  async ({ account_id, entity_type, status }, config) => {
-    try {
-      const writer = config?.streamWriter;
-      const _entity_type = entity_type || "campaign";
-      writer?.(`🔍 Đang lấy danh sách ${_entity_type}...`);
-
-      const accountObjId = await getAccountObjectId(account_id);
-      const filter = { account_id: accountObjId, status: { $ne: "DELETED" } };
-      if (status && status !== "all") {
-        filter.status = status.toUpperCase();
-      }
-
-      let Model, nameField, selectFields;
-      switch (_entity_type) {
-        case "adset":
-          Model = AdsSet;
-          nameField = "name";
-          selectFields = "name status external_id";
-          break;
-        case "ad":
-          Model = Ads;
-          nameField = "name";
-          selectFields = "name status external_id";
-          break;
-        case "campaign":
-        default:
-          Model = AdsCampaign;
-          nameField = "name";
-          selectFields = "name status external_id";
-          break;
-      }
-      
-      const entities = await Model.find(filter)
-        .select(selectFields)
-        .sort({ [nameField]: 1 })
-        .limit(100)
-        .lean();
-
-      return JSON.stringify({
-        total: entities.length,
-        entities: entities.map((e) => ({ id: e.external_id, name: e.name, status: e.status })),
-        filter_applied: { entity_type: _entity_type, status: status || "all" },
-      });
-    } catch (error) {
-      console.error(`Error in listEntities for ${entity_type}:`, error);
-      throw error;
-    }
-  },
-  {
-    name: "list_entities",
-    description:
-      "Liệt kê tên các chiến dịch, nhóm quảng cáo, hoặc quảng cáo. Rất hữu ích để lấy ID chính xác trước khi so sánh hoặc xếp hạng.",
-    schema: z.object({
-      account_id: z.string().describe("Account ID"),
-      entity_type: z
-        .enum(["campaign", "adset", "ad"])
-        .optional()
-        .describe("Loại đối tượng cần liệt kê. Mặc định: 'campaign'."),
-      status: z
-        .enum(["ACTIVE", "PAUSED", "ARCHIVED", "all"])
-        .optional()
-        .describe("Lọc theo trạng thái. Mặc định: 'all' (trừ DELETED)."),
+      entity_type: z.enum(["ad", "adset", "campaign"]).describe("Loại entity cần query metadata"),
+      entity_ids: z.array(z.string()).describe("Danh sách entity IDs (ObjectId strings) cần query"),
     }),
   }
 );
@@ -1183,6 +1371,8 @@ export const listEntitiesTool = tool(
 export const analyticsTools = [
   queryDataTool, // Universal data query tool
   getTrendTool,  // Trend analysis tool
+  rankCampaignsTool, // Rank campaigns/adsets tool
+  getEntityMetadataTool, // Get entity metadata and relationships
 ];
 
 // ============================================

@@ -4,10 +4,10 @@ import "./TransactionHistory.css";
 import { Search, Download, Eye } from "lucide-react";
 import DateRangePicker from "../../components/common/DateRangePicker/DateRangePicker";
 import Pagination from "../../components/common/Pagination/Pagination";
-import paymentTransactionService from "../../services/paymentTransactionService";
-import invoiceService from "../../services/invoiceService";
+import paymentTransactionService from "../../services/shop/paymentTransactionService";
+import invoiceService from "../../services/shop/invoiceService";
 import { toast } from "sonner";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/auth/useAuth";
 import Invoice from "../../components/feature/Invoice/Invoice";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -322,11 +322,11 @@ export default function TransactionHistory() {
         const filteredData = response.data.filter(
           (txn) => (txn.status || "").toLowerCase() !== "initializing"
         );
-        
+
         setRawTransactions(filteredData);
         const mappedTransactions = filteredData.map((txn) => mapTransactionData(txn));
         setRows(mappedTransactions);
-        
+
         // Tính lại total và pages sau khi filter
         const filteredTotal = filteredData.length;
         setPagination(prev => ({
@@ -387,7 +387,7 @@ export default function TransactionHistory() {
 
       <div className="transaction-filters">
         <div className="filter-group">
-        <label className="filter-label">{t("transactionHistory.search")}</label>
+          <label className="filter-label">{t("transactionHistory.search")}</label>
           <div className="filter-input-wrapper">
             <Search size={18} className="search-icon" />
             <input

@@ -1,9 +1,11 @@
 import { Plus, X, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Custom Schedule Component
  */
 const CustomSchedule = ({ customSchedule, onDayCheck, onTimeSlotChange, onAddTimeSlot, onRemoveTimeSlot }) => {
+  const { t } = useTranslation('automationRule');
   return (
     <div className="auto-rule-popup-custom-schedule">
       {/* Days Rows */}
@@ -35,7 +37,7 @@ const CustomSchedule = ({ customSchedule, onDayCheck, onTimeSlotChange, onAddTim
                   }
                   disabled={!day.checked}
                 />
-                <span className="auto-rule-popup-time-separator">đến</span>
+                <span className="auto-rule-popup-time-separator">{t('popup.timeTo')}</span>
                 <input
                   type="time"
                   className="auto-rule-popup-time-input"
@@ -51,7 +53,7 @@ const CustomSchedule = ({ customSchedule, onDayCheck, onTimeSlotChange, onAddTim
                   type="button"
                   className="auto-rule-popup-custom-schedule-btn-add"
                   onClick={() => onAddTimeSlot(dayIndex)}
-                  title="Thêm time slot cho ngày này"
+                  title={t('customSchedule.addTimeSlotTooltip')}
                   disabled={!day.checked}
                 >
                   <Plus size={16} />
@@ -61,7 +63,7 @@ const CustomSchedule = ({ customSchedule, onDayCheck, onTimeSlotChange, onAddTim
                   type="button"
                   className="auto-rule-popup-custom-schedule-btn-remove"
                   onClick={() => onRemoveTimeSlot(dayIndex, slotIndex)}
-                  title="Xóa time slot này"
+                  title={t('customSchedule.removeTimeSlotTooltip')}
                   disabled={!day.checked}
                 >
                   <X size={16} />

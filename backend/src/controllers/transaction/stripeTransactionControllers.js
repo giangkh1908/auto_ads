@@ -1,7 +1,7 @@
 import stripe from 'stripe'; // ES6 import
-import PaymentTransaction from '../../models/paymentTransaction.model.js'; // Model của bạn
-import UserPackage from '../../models/userPackage.model.js'; // Để tạo gói sau thanh toán
-import Package from '../../models/package.model.js'; // Model package gốc
+import PaymentTransaction from '../../models/transaction/paymentTransaction.model.js'; // Model của bạn
+import UserPackage from '../../models/package/userPackage.model.js'; // Để tạo gói sau thanh toán
+import Package from '../../models/package/package.model.js'; // Model package gốc
 
 // Khởi tạo Stripe (dùng env)
 const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);

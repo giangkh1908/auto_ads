@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import "./LeadPage.css";
 import { Search, ChevronDown, UserPlus, UserCheck } from "lucide-react";
 import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
-import leadService from "../../../../services/leadService";
-import { useToast } from "../../../../hooks/useToast";
-import { useAuth } from "../../../../hooks/useAuth";
+import leadService from "../../../../services/leads/leadService";
+import { toast } from "sonner";
+import { useAuth } from "../../../../hooks/auth/useAuth";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
 import Pagination from "../../../../components/common/Pagination/Pagination";
 
@@ -47,7 +47,6 @@ export default function LeadPage() {
     total: 0,
     totalPages: 0
   });
-  const toast = useToast();
   const { user } = useAuth();
   const currentUserId = user?._id || user?.id;
 

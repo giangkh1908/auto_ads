@@ -1,9 +1,9 @@
 import cron from "node-cron";
-import PaymentTransaction from "../models/paymentTransaction.model.js";
-import UserPackage from "../models/userPackage.model.js";
-import User from "../models/user.model.js";
-import Package from "../models/package.model.js";
-import { sendOrderTimeoutEmail } from "../services/emailService.js";
+import PaymentTransaction from "../models/transaction/paymentTransaction.model.js";
+import UserPackage from "../models/package/userPackage.model.js";
+import User from "../models/user/user.model.js";
+import Package from "../models/package/package.model.js";
+import { queueOrderTimeoutEmail } from "../services/email/emailService.js";
 
 /**
  * Cancel expired payment transactions
@@ -79,13 +79,13 @@ async function cancelExpiredPayments() {
           // Continue with transaction cancellation even if UserPackage update fails
         }
 
-        // Send email notification to user
+        // Send email notification to user (fire-and-forget)
         try {
           const user = await User.findById(transaction.user_id).select("email full_name").lean();
           const packageInfo = await Package.findById(transaction.package_id).select("name").lean();
 
           if (user && user.email) {
-            await sendOrderTimeoutEmail(
+            queueOrderTimeoutEmail(
               user.email,
               user.full_name || "Khách hàng",
               {
@@ -94,11 +94,11 @@ async function cancelExpiredPayments() {
                 amount: transaction.amount,
               }
             );
-            console.log(`✅ Sent timeout email to ${user.email}`);
+            console.log(`📧 Queued timeout email to ${user.email}`);
           }
         } catch (emailError) {
-          console.error(`⚠️ Error sending timeout email for transaction ${transaction._id}:`, emailError.message);
-          // Continue even if email fails
+          console.error(`⚠️ Error queuing timeout email for transaction ${transaction._id}:`, emailError.message);
+          // Continue even if email queue fails
         }
 
         canceledCount++;

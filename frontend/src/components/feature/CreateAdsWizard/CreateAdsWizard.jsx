@@ -10,31 +10,27 @@ import Creative from "./Creative/Creative.jsx";
 import ProgressPopup from "../../common/ProgressPopup/Progress.jsx";
 import ConfirmationPopup from "../../common/ConfirmationPopup/ConfirmationPopup.jsx";
 import "./CreateAdsWizard.css";
-
-// Import custom hooks
 import {
   useWizardState,
   useWizardData,
-} from "../../../hooks/useWizardState.js";
-import { useFacebookPages } from "../../../hooks/useFacebookPages.js";
-import { useEditMode } from "../../../hooks/useEditMode.js";
-import { useFlexibleWizardPublish } from "../../../hooks/useWizardPublish.js";
-import { useProgressState } from "../../../hooks/useProgressState.js";
-import { useToast } from "../../../hooks/useToast.js";
-import { useMyPackage } from "../../../hooks/useMyPackage.js";
-
-// Import utils and constants
-import { getInitialWizardStep } from "../../../utils/wizardUtils.js";
+} from "../../../hooks/wizard/useWizardState.js";
+import { useFacebookPages } from "../../../hooks/social/useFacebookPages.js";
+import { useEditMode } from "../../../hooks/ads/useEditMode.js";
+import { useFlexibleWizardPublish } from "../../../hooks/wizard/useWizardPublish.js";
+import { useProgressState } from "../../../hooks/common/useProgressState.js";
+import { useToast } from "../../../hooks/common/useToast.js";
+import { useMyPackage } from "../../../hooks/shop/useMyPackage.js";
+import { getInitialWizardStep } from "../../../utils/business-logic/wizardUtils.js";
 import {
   WIZARD_STEPS,
   EDITING_ITEM_TYPES,
   TAB_TYPES,
 } from "../../../constants/wizardConstants.js";
-import { saveDraft } from "../../../services/adsWizardService.js";
+import { saveDraft } from "../../../services/ads/adsWizardService.js";
 import { FB_OBJECTIVE_MAP, ADSET_CONFIG_BY_OBJECTIVE, INITIAL_DATA } from "../../../constants/wizardConstants.js";
-import axiosInstance from "../../../utils/axios.js";
-import { convertLocaleIdToLanguageCode } from "../../../utils/locationUtils.js";
-import { parseGeoLocationsToFrontend } from "../../../utils/locationParseUtils.js";
+import axiosInstance from "../../../utils/api/axios.js";
+import { convertLocaleIdToLanguageCode } from "../../../utils/formatters/locationUtils.js";
+import { parseGeoLocationsToFrontend } from "../../../utils/parsers/locationParseUtils.js";
 
 function CreateAdsWizard({
   onClose,
@@ -191,16 +187,16 @@ function CreateAdsWizard({
         targeting: {
           ...selectedAdset.targeting,
           // ✅ Nếu chưa có locations hoặc locations không phải object, khởi tạo mới
-          locations: selectedAdset.targeting?.locations && 
-                     typeof selectedAdset.targeting.locations === 'object' &&
-                     !Array.isArray(selectedAdset.targeting.locations)
+          locations: selectedAdset.targeting?.locations &&
+            typeof selectedAdset.targeting.locations === 'object' &&
+            !Array.isArray(selectedAdset.targeting.locations)
             ? JSON.parse(JSON.stringify(selectedAdset.targeting.locations)) // Deep clone
             : {
-                regions: [],
-                cities: [],
-                custom_locations: [],
-                excluded_ids: []
-              },
+              regions: [],
+              cities: [],
+              custom_locations: [],
+              excluded_ids: []
+            },
         },
       };
       setAdset(adsetWithLocations);
@@ -261,14 +257,14 @@ function CreateAdsWizard({
                     ...as.targeting,
                     ...adset.targeting,
                     // ✅ Deep clone locations để tránh reference sharing
-                    locations: adset.targeting?.locations 
+                    locations: adset.targeting?.locations
                       ? JSON.parse(JSON.stringify(adset.targeting.locations))
                       : (as.targeting?.locations || {
-                          regions: [],
-                          cities: [],
-                          custom_locations: [],
-                          excluded_ids: []
-                        }),
+                        regions: [],
+                        cities: [],
+                        custom_locations: [],
+                        excluded_ids: []
+                      }),
                   },
                 };
               }
@@ -343,34 +339,34 @@ function CreateAdsWizard({
     // - Có external_id → treat như UPDATE (đã publish nhưng thất bại)
     const hasDraftStatus = finalCampaignsList.some(
       (camp) => {
-        const campNeedsCreate = 
-          camp.status === "DRAFT" || 
+        const campNeedsCreate =
+          camp.status === "DRAFT" ||
           (camp.status === "FAILED" && !camp.external_id);
-        
+
         const hasAdsetNeedsCreate = camp.adsets?.some(
           (adset) => {
-            const adsetNeedsCreate = 
-              adset.status === "DRAFT" || 
+            const adsetNeedsCreate =
+              adset.status === "DRAFT" ||
               (adset.status === "FAILED" && !adset.external_id);
-            
+
             const hasAdNeedsCreate = adset.ads?.some(
               (ad) => ad.status === "DRAFT" || (ad.status === "FAILED" && !ad.external_id)
             );
-            
+
             return adsetNeedsCreate || hasAdNeedsCreate;
           }
         );
-        
+
         return campNeedsCreate || hasAdsetNeedsCreate;
       }
     );
 
-    // ✅ Quyết định action dựa trên status, không chỉ mode
+    // Quyết định action dựa trên status, không chỉ mode
     // CREATE: mode === "create" HOẶC có items DRAFT/FAILED (không có external_id)
     // UPDATE: mode === "update" VÀ tất cả items đã publish (có external_id hoặc FAILED có external_id)
     const shouldPublish = mode === "create" || hasDraftStatus;
 
-    // ✅ Mở progress popup
+    // Mở progress popup
     openProgress({
       type: shouldPublish ? "create" : "update",
       title: shouldPublish
@@ -379,26 +375,26 @@ function CreateAdsWizard({
       total: totalEntities,
     });
 
-    // ✅ Check status để gọi đúng function
+    // Check status để gọi đúng function
     if (shouldPublish) {
       console.log(
-        "➕ Calling handleFlexiblePublish (CREATE: DRAFT/FAILED without external_id → ACTIVE)"
+        "Calling handleFlexiblePublish (CREATE: DRAFT/FAILED without external_id → ACTIVE)"
       );
       handleFlexiblePublish({
         campaignsList: finalCampaignsList,
         selectedAccountId,
         onSuccess,
-        onError, // ✅ Truyền callback để refresh data khi thất bại
+        onError, // Truyền callback để refresh data khi thất bại
         onClose,
         updateProgress,
       });
     } else {
-      console.log("🔄 Calling handleFlexibleUpdate (UPDATE: existing ACTIVE or FAILED with external_id)");
+      console.log("Calling handleFlexibleUpdate (UPDATE: existing ACTIVE or FAILED with external_id)");
       handleFlexibleUpdate({
         campaignsList: finalCampaignsList,
         selectedAccountId,
         onSuccess,
-        onError, // ✅ Truyền callback để refresh data khi thất bại
+        onError, // Truyền callback để refresh data khi thất bại
         onClose,
         updateProgress,
       });
@@ -406,15 +402,15 @@ function CreateAdsWizard({
   };
 
   // ==============================
-  // 💾 SAVE DRAFT: Logic lưu nháp
+  // SAVE DRAFT: Logic lưu nháp
   // ==============================
 
   // Khi người dùng click "Đóng" (X hoặc nút Hủy)
   const handleCloseWizard = () => {
-    // ✅ Kiểm tra campaign hiện tại đã được publish chưa?
+    // Kiểm tra campaign hiện tại đã được publish chưa?
     const isPublished = campaign?.external_id;
 
-    // ✅ Chỉ hiển thị popup khi wizardStep > 0 VÀ chưa publish
+    // Chỉ hiển thị popup khi wizardStep > 0 VÀ chưa publish
     if (wizardStep > 0 && !isPublished) {
       // Hiển thị popup xác nhận lưu nháp
       setShowSaveDraftPopup(true);
@@ -463,12 +459,12 @@ function CreateAdsWizard({
 
       toast.success("Đã lưu nháp thành công!");
       setShowSaveDraftPopup(false);
-      
-      // ✅ GỌI onDraftSaved() ĐỂ CHỈ FETCH LẠI TỪ DB (KHÔNG SYNC FACEBOOK)
+
+      // GỌI onDraftSaved() ĐỂ CHỈ FETCH LẠI TỪ DB (KHÔNG SYNC FACEBOOK)
       if (onDraftSaved) {
         onDraftSaved();
       }
-      
+
       onClose();
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -481,12 +477,12 @@ function CreateAdsWizard({
   };
 
   // ==============================
-  // 🎯 HANDLE CREATECHILD SAVE: Chuyển từ CreateChild sang Wizard
+  // HANDLE CREATECHILD SAVE: Chuyển từ CreateChild sang Wizard
   // ==============================
   const handleCreateChildSave = async (data) => {
     try {
       setLoading(true);
-      
+
       const { campaignId, adsetMode, adset: adsetName, adsetId, ad: adName } = data;
 
       if (!campaignId) {
@@ -499,7 +495,7 @@ function CreateAdsWizard({
         params: { campaign_id: campaignId },
       });
       const campaignData = campaignRes.data.data;
-      
+
       if (!campaignData) {
         toast.error("Không tìm thấy campaign");
         return;
@@ -512,7 +508,7 @@ function CreateAdsWizard({
           params: { adset_id: adsetId },
         });
         adsetData = adsetRes.data.data;
-        
+
         if (!adsetData) {
           toast.error("Không tìm thấy adset");
           return;
@@ -549,10 +545,10 @@ function CreateAdsWizard({
           ...INITIAL_DATA.adset,
           _id: firstAdsetId,
           name: adsetName || "Nhóm quảng cáo mới",
-          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+          // Mỗi adset có targeting.locations riêng (không dùng chung)
           targeting: {
             ...INITIAL_DATA.adset.targeting,
-            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+            // Khởi tạo locations với structure mới, mỗi adset có riêng
             locations: {
               regions: [],
               cities: [],
@@ -584,17 +580,17 @@ function CreateAdsWizard({
               : "",
           },
           targeting: {
-            // ✅ NEW: Parse targeting (prioritizes locations with names, falls back to geo_locations)
+            // NEW: Parse targeting (prioritizes locations with names, falls back to geo_locations)
             locations: parseGeoLocationsToFrontend(adsetData.targeting),
             ageMin: adsetData.targeting?.age_min || 18,
             ageMax: adsetData.targeting?.age_max || 65,
             // Map gender và language từ DB
-            gender: adsetData.targeting?.genders?.[0] === 1 
-              ? "male" 
-              : adsetData.targeting?.genders?.[0] === 2 
-              ? "female" 
-              : adsetData.targeting?.gender || "all",
-            language: adsetData.targeting?.locales?.[0] 
+            gender: adsetData.targeting?.genders?.[0] === 1
+              ? "male"
+              : adsetData.targeting?.genders?.[0] === 2
+                ? "female"
+                : adsetData.targeting?.gender || "all",
+            language: adsetData.targeting?.locales?.[0]
               ? (convertLocaleIdToLanguageCode(adsetData.targeting.locales[0]) || adsetData.targeting.locales[0])
               : adsetData.targeting?.language || "all",
             publisher_platforms: adsetData.targeting?.publisher_platforms || ["facebook"],
@@ -665,7 +661,7 @@ function CreateAdsWizard({
       setAdset(mappedAdset);
       setAd(mappedAd);
 
-      toast.success("Đã tải thông tin thành công");
+      //toast.success("Đã tải thông tin thành công");
     } catch (error) {
       console.error("Error handling CreateChild save:", error);
       toast.error(
@@ -715,27 +711,24 @@ function CreateAdsWizard({
   return (
     <div className="ads-modal-overlay" role="dialog" aria-modal="true">
       <div
-        className={`ads-modal ${
-          activeTab === TAB_TYPES.CHILD && wizardStep === WIZARD_STEPS.TARGET
-            ? "child-tab"
-            : "campaign-tab"
-        }`}
+        className={`ads-modal ${activeTab === TAB_TYPES.CHILD && wizardStep === WIZARD_STEPS.TARGET
+          ? "child-tab"
+          : "campaign-tab"
+          }`}
       >
         <div className="ads-modal-header">
           {wizardStep === WIZARD_STEPS.TARGET && (
             <div className="ads-modal-tabs">
               <button
-                className={`tab-button-campaign ${
-                  activeTab === TAB_TYPES.CAMPAIGN ? "active" : "inactive"
-                }`}
+                className={`tab-button-campaign ${activeTab === TAB_TYPES.CAMPAIGN ? "active" : "inactive"
+                  }`}
                 onClick={() => setActiveTab(TAB_TYPES.CAMPAIGN)}
               >
                 {getModalTitle()}
               </button>
               <button
-                className={`tab-button-campaign ${
-                  activeTab === TAB_TYPES.CHILD ? "active" : "inactive"
-                }`}
+                className={`tab-button-campaign ${activeTab === TAB_TYPES.CHILD ? "active" : "inactive"
+                  }`}
                 onClick={() => setActiveTab(TAB_TYPES.CHILD)}
               >
                 Nhóm quảng cáo hoặc quảng cáo mới
@@ -749,7 +742,7 @@ function CreateAdsWizard({
 
         <div className="ads-modal-body">
           {activeTab === TAB_TYPES.CAMPAIGN ||
-          wizardStep > WIZARD_STEPS.TARGET ? (
+            wizardStep > WIZARD_STEPS.TARGET ? (
             <>
               {/* Unified Left Panel - Campaign Hierarchy (hidden for step 0) */}
               {wizardStep > WIZARD_STEPS.TARGET && (
@@ -776,47 +769,47 @@ function CreateAdsWizard({
 
                 {/* Campaign Details Panel */}
                 {wizardStep === WIZARD_STEPS.CAMPAIGN && (
-              <CampaignStep
-                ref={campaignRef}
-                campaign={campaign}
-                setCampaign={setCampaign}
-                campaignsList={campaignsList}
-                setCampaignsList={setCampaignsList}
-                selectedCampaignIndex={selectedCampaignIndex}
-                setSelectedCampaignIndex={setSelectedCampaignIndex}
-              />
-            )}
+                  <CampaignStep
+                    ref={campaignRef}
+                    campaign={campaign}
+                    setCampaign={setCampaign}
+                    campaignsList={campaignsList}
+                    setCampaignsList={setCampaignsList}
+                    selectedCampaignIndex={selectedCampaignIndex}
+                    setSelectedCampaignIndex={setSelectedCampaignIndex}
+                  />
+                )}
 
                 {/* Adset Details Panel */}
                 {wizardStep === WIZARD_STEPS.ADSET && (
-              <AdsetStep
-                ref={adsetRef}
-                adset={adset}
-                setAdset={setAdset}
-                mode={mode}
-                objective={toUiObjective(campaign.objective)}
-                adsetsList={adsetsList}
-                setAdsetsList={setAdsetsList}
-                facebookPages={facebookPages}
-                campaign={campaign}
-                selectedAccountId={selectedAccountId}
-              />
-            )}
+                  <AdsetStep
+                    ref={adsetRef}
+                    adset={adset}
+                    setAdset={setAdset}
+                    mode={mode}
+                    objective={toUiObjective(campaign.objective)}
+                    adsetsList={adsetsList}
+                    setAdsetsList={setAdsetsList}
+                    facebookPages={facebookPages}
+                    campaign={campaign}
+                    selectedAccountId={selectedAccountId}
+                  />
+                )}
 
                 {/* Ad Details Panel */}
                 {wizardStep === WIZARD_STEPS.AD && (
-              <AdStep
-                ref={adRef}
-                ad={ad}
-                setAd={setAd}
-                adset={adset}
-                mode={mode}
-                campaign={campaign}
-                adsList={adsList}
-                setAdsList={setAdsList}
-                contentAiEnabled={contentAiEnabled}
-              />
-            )}
+                  <AdStep
+                    ref={adRef}
+                    ad={ad}
+                    setAd={setAd}
+                    adset={adset}
+                    mode={mode}
+                    campaign={campaign}
+                    adsList={adsList}
+                    setAdsList={setAdsList}
+                    contentAiEnabled={contentAiEnabled}
+                  />
+                )}
 
                 {/* Creative Preview Panel */}
                 {wizardStep === WIZARD_STEPS.CREATIVE && (
@@ -840,24 +833,24 @@ function CreateAdsWizard({
         {/* Wizard Footer - Show in campaign mode or when wizardStep > 0 */}
         {(activeTab === TAB_TYPES.CAMPAIGN ||
           wizardStep > WIZARD_STEPS.TARGET) && (
-          <FooterWizard
-            wizardStep={wizardStep}
-            setWizardStep={setWizardStep}
-            completedSteps={completedSteps}
-            setCompletedSteps={setCompletedSteps}
-            campaign={campaign}
-            adset={adset}
-            ad={ad}
-            campaignRef={campaignRef}
-            adsetRef={adsetRef}
-            adRef={adRef}
-            loading={loading}
-            success={success}
-            mode={mode}
-            onClose={handleCloseWizard}
-            handlePublish={handlePublishClick}
-          />
-        )}
+            <FooterWizard
+              wizardStep={wizardStep}
+              setWizardStep={setWizardStep}
+              completedSteps={completedSteps}
+              setCompletedSteps={setCompletedSteps}
+              campaign={campaign}
+              adset={adset}
+              ad={ad}
+              campaignRef={campaignRef}
+              adsetRef={adsetRef}
+              adRef={adRef}
+              loading={loading}
+              success={success}
+              mode={mode}
+              onClose={handleCloseWizard}
+              handlePublish={handlePublishClick}
+            />
+          )}
       </div>
 
       {/* Progress Popup */}

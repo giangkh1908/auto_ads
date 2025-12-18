@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getPaginationRange, getPaginationInfo } from '../../../utils/paginationUtils';
+import { getPaginationRange, getPaginationInfo } from '../../../utils/ui/paginationUtils';
 import './Pagination.css';
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -42,9 +42,8 @@ const Pagination = ({
           {paginationRange.map((pageNumber, index) => (
             <button
               key={index}
-              className={`pagination-button ${
-                pageNumber === currentPage ? 'active' : ''
-              } ${pageNumber === '...' ? 'dots' : ''}`}
+              className={`pagination-button ${pageNumber === currentPage ? 'active' : ''
+                } ${pageNumber === '...' ? 'dots' : ''}`}
               onClick={() => pageNumber !== '...' && onPageChange(pageNumber)}
               disabled={disabled || pageNumber === '...'}
             >

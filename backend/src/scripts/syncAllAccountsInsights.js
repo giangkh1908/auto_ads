@@ -8,7 +8,7 @@ import "../models/package.model.js";
 import "../models/userPackage.model.js";
 import { FEATURE_KEYS } from "../services/entitlementService.js";
 import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
-import { syncInsightsForAccount } from "../services/insightsSyncService.js";
+import { syncInsightsForAccount } from "../services/ads/insightsSyncService.js";
 
 dotenv.config();
 

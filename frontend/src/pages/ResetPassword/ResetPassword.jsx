@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../hooks/auth/useAuth'
 import { ROUTES } from '../../constants/app.constants'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import './ResetPassword.css'
@@ -11,12 +11,12 @@ function ResetPassword() {
     const { token } = useParams()
     const navigate = useNavigate()
     const { resetPassword } = useAuth()
-    
+
     const [formData, setFormData] = useState({
         password: '',
         confirmPassword: ''
     })
-    
+
     const [showPassword, setShowPassword] = useState(false)
     const [errors, setErrors] = useState({})
     const [isSubmitted, setIsSubmitted] = useState(false)
@@ -24,19 +24,19 @@ function ResetPassword() {
 
     const validateForm = () => {
         const newErrors = {}
-        
+
         if (!formData.password.trim()) {
             newErrors.password = t('validation.password_required')
         } else if (formData.password.length < 6) {
             newErrors.password = t('validation.password_min_length')
         }
-        
+
         if (!formData.confirmPassword.trim()) {
             newErrors.confirmPassword = t('validation.confirm_password_required')
         } else if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = t('validation.password_mismatch')
         }
-        
+
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -50,14 +50,14 @@ function ResetPassword() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        
+
         if (!validateForm()) return
-        
+
         const result = await resetPassword(token, formData.password)
-        
+
         if (result.success) {
             setIsSubmitted(true)
-            
+
             // Redirect to home after 2 seconds
             setTimeout(() => {
                 navigate(ROUTES.HOME)
@@ -98,7 +98,7 @@ function ResetPassword() {
                         <div className="error-icon">❌</div>
                         <h2>{t('auth.invalid_link')}</h2>
                         <p>{tokenError}</p>
-                        <button 
+                        <button
                             className="btn-home"
                             onClick={() => navigate(ROUTES.HOME)}
                         >
@@ -128,8 +128,8 @@ function ResetPassword() {
                             onChange={(e) => handleInputChange('password', e.target.value)}
                             className={errors.password ? 'error' : ''}
                         />
-                        <div 
-                            className="input-action" 
+                        <div
+                            className="input-action"
                             onClick={() => setShowPassword(v => !v)}
                         >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -145,8 +145,8 @@ function ResetPassword() {
                             value={formData.confirmPassword}
                             onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                             className={errors.confirmPassword ? 'error' : ''}
-                        /><div 
-                            className="input-action" 
+                        /><div
+                            className="input-action"
                             onClick={() => setShowPassword(v => !v)}
                         >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}

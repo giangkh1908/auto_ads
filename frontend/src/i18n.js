@@ -11,19 +11,31 @@ import commonEN from './locales/en/common.json';
 import commonVI from './locales/vi/common.json';
 import adminEN from './locales/en/admin.json';
 import adminVI from './locales/vi/admin.json';
+import guideEN from './locales/en/guide.json';
+import guideVI from './locales/vi/guide.json';
+import automationRuleEN from './locales/en/automationRule.json';
+import automationRuleVI from './locales/vi/automationRule.json';
+import analyticsEN from './locales/en/analytics.json';
+import analyticsVI from './locales/vi/analytics.json';
 
 const resources = {
   en: {
     translation: translationEN,
     ads: adsEN,
     common: commonEN,
-    admin: adminEN
+    admin: adminEN,
+    guide: guideEN,
+    automationRule: automationRuleEN,
+    analytics: analyticsEN
   },
   vi: {
     translation: translationVI,
     ads: adsVI,
     common: commonVI,
-    admin: adminVI
+    admin: adminVI,
+    guide: guideVI,
+    automationRule: automationRuleVI,
+    analytics: analyticsVI
   }
 };
 

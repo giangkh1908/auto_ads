@@ -1,8 +1,8 @@
 import crypto from 'crypto-js';
 import axios from 'axios';
-import PaymentTransaction from '../../models/paymentTransaction.model.js';
-import UserPackage from '../../models/userPackage.model.js';
-import Package from '../../models/package.model.js';
+import PaymentTransaction from '../../models/transaction/paymentTransaction.model.js';
+import UserPackage from '../../models/package/userPackage.model.js';
+import Package from '../../models/package/package.model.js';
 
 // Config sandbox (thay bằng env vars)
 const config = {

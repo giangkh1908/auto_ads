@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
-import { aiConfigService } from '../../../../services/aiConfigService';
-import { useToast } from '../../../../hooks/useToast';
+import { aiConfigService } from '../../../../services/chat/aiConfigService';
+import { useToast } from '../../../../hooks/common/useToast';
 import './PromptPreviewModal.css';
 
 const PromptPreviewModal = ({ isOpen, onClose, configId, config = null }) => {
@@ -22,20 +22,20 @@ const PromptPreviewModal = ({ isOpen, onClose, configId, config = null }) => {
     try {
       const maxLen = target === 'headline' ? 60 : target === 'description' ? 90 : 125;
       const configIdToUse = configId || (config && config._id);
-      
+
       if (!configIdToUse) {
         console.error('No configId available for preview');
         toast.error('Không có config ID để preview');
         return;
       }
-      
+
       console.log('Loading preview for configId:', configIdToUse, 'target:', target);
       const response = await aiConfigService.previewPrompt(
         configIdToUse,
         target,
         maxLen
       );
-      
+
       console.log('Preview API response:', response);
       if (response.success) {
         setPreviewData(response);

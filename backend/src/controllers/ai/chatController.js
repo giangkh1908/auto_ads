@@ -6,17 +6,20 @@ import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
+import { agentExecutor } from "../../services/chat/agentExecutor.js";
 import { v4 as uuidv4 } from "uuid";
-
-import { userHasFeature, FEATURE_KEYS } from "../../services/entitlementService.js";
+import { userHasFeature, FEATURE_KEYS } from "../../services/admin/entitlementService.js";
 
 // ============================================
 // HELPERS: DATE PARSER, NORMALIZERS, ENTITY RESOLUTION, LOGGING
 // ============================================
+
+// Remove diacritics
 const removeDiacritics = (s) => s
   ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   : "";
 
+// Parse Vietnamese date range
 function parseViDateRange(text, now = new Date()) {
   const t = removeDiacritics(String(text || "").toLowerCase());
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -65,10 +68,12 @@ function parseViDateRange(text, now = new Date()) {
   return null; // để router/clarify hỏi lại
 }
 
+// Convert date to ISO format
 function toISO(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split("T")[0];
 }
 
+// Metric synonyms
 const METRIC_SYNONYMS = {
   CPC: ["cpc", "gia 1 click", "gia mot click", "chi phi moi nhap", "cost per click", "gia 1 nhap", "giá 1 click", "giá một nhấp"],
   CTR: ["ctr", "ty le nhap", "ti le click", "click through rate", "ty le click", "tỷ lệ nhấp"],
@@ -79,6 +84,7 @@ const METRIC_SYNONYMS = {
   RESULTS: ["ket qua", "results"],
 };
 
+// Normalize metrics
 function normalizeMetrics(raw) {
   if (!raw) return [];
   const toKey = (s) => removeDiacritics(String(s).toLowerCase().trim());
@@ -95,6 +101,7 @@ function normalizeMetrics(raw) {
   return [...res];
 }
 
+// Get account ObjectId
 async function getAccountObjectId(account_id) {
   // Already ObjectId?
   if (String(account_id).match(/^[0-9a-fA-F]{24}$/)) {
@@ -112,8 +119,7 @@ async function getAccountObjectId(account_id) {
   return account._id;
 }
 
-
-
+// Resolve entities
 async function resolveEntitiesV2(account_id, entitiesFromRouter = []) {
   if (!entitiesFromRouter || entitiesFromRouter.length === 0) {
     return { resolved: [], suggestions: [], unresolved: [] };
@@ -186,6 +192,7 @@ async function resolveEntitiesV2(account_id, entitiesFromRouter = []) {
   return { resolved, suggestions, unresolved };
 }
 
+// Log debug
 function logDebug(step, payload) {
   if (!process.env.AI_DEBUG) return;
   const line = JSON.stringify({
@@ -200,10 +207,7 @@ function logDebug(step, payload) {
 // CLARIFY HELPERS
 // ============================================
 
-// ============================================
-// CHAT CONTROLLER
-// ============================================
-
+// Start conversation session
 export const startConversationSession = async (req, res) => {
   try {
     const { account_id } = req.body;
@@ -232,10 +236,7 @@ export const startConversationSession = async (req, res) => {
   }
 };
 
-import { agentExecutor } from "../../services/chat/agentExecutor.js";
-
-// ... (Keep imports and other functions if needed, but replace chatAnalyze)
-
+// Chat analyze
 export const chatAnalyze = async (req, res) => {
   try {
     const { message, conversation_id, account_id } = req.body;
@@ -279,8 +280,12 @@ export const chatAnalyze = async (req, res) => {
     });
 
     // Step 3: Process with Agent Executor
-    // We pass the last few messages as history
-    const history = conversation.messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+    // We pass the last few messages as history (include data field for assistant messages)
+    const history = conversation.messages.slice(-10).map(m => ({
+      role: m.role,
+      content: m.content,
+      data: m.data || null
+    }));
     
     let result;
     try {
@@ -337,6 +342,3 @@ export const chatAnalyze = async (req, res) => {
     });
   }
 };
-
-
-

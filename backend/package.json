@@ -5,7 +5,9 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
@@ -29,20 +31,21 @@
     "express-rate-limit": "^7.1.5",
     "jsonwebtoken": "^9.0.2",
     "langchain": "^1.0.3",
-    
     "mongoose": "^8.18.3",
     "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.10",
     "openai": "^6.5.0",
     "p-limit": "^7.2.0",
+    "stripe": "^20.0.0",
     "uuid": "^13.0.0",
     "validator": "^13.11.0",
-    "zod": "^4.1.12",
-    "stripe": "^20.0.0"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10"
   }
 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { Search, X, Users, Heart, ShoppingBag, Briefcase, GraduationCap, Star } from 'lucide-react';
-import { useTargetingSearch } from '../../../../../hooks/useTargetingSearch';
-import { useOnClickOutside } from '../../../../../utils/useOnClickOutside';
+import { useTargetingSearch } from '../../../../../hooks/targeting/useTargetingSearch';
+import { useOnClickOutside } from '../../../../../utils/ui/useOnClickOutside';
 import './DetailedTargetingSelector.css';
 
 /**
@@ -81,10 +81,10 @@ function getTypeLabel(type) {
  * @param {Function} props.onChange - Callback when selection changes
  * @param {string} props.placeholder - Input placeholder text
  */
-const DetailedTargetingSelector = ({ 
-  value = [], 
-  onChange, 
-  placeholder = "Tìm kiếm sở thích, hành vi, nhân khẩu học..." 
+const DetailedTargetingSelector = ({
+  value = [],
+  onChange,
+  placeholder = "Tìm kiếm sở thích, hành vi, nhân khẩu học..."
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -101,10 +101,10 @@ const DetailedTargetingSelector = ({
     if (!searchQuery.trim() || results.length === 0) {
       return results;
     }
-    
+
     const queryLower = searchQuery.trim().toLowerCase();
     const queryWords = queryLower.split(/\s+/).filter(Boolean);
-    
+
     return results.filter(item => {
       const nameLower = (item.name || '').toLowerCase();
       // Check if name contains all query words (fuzzy match)
@@ -145,7 +145,7 @@ const DetailedTargetingSelector = ({
     const query = e.target.value;
     setSearchQuery(query);
     setShowSuggestions(true);
-    
+
     // Always search - empty query will get default suggestions
     search(query || '');
   };
@@ -227,7 +227,7 @@ const DetailedTargetingSelector = ({
                 {error}
               </div>
             )}
-            
+
             {filteredResults.length > 0 ? (
               <>
                 {filteredResults.map((item) => {

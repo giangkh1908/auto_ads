@@ -1,4 +1,3 @@
-// controllers/ads/adsAccount.controller.js
 import {
   upsertAdAccountsFromFacebook,
   listAdsAccounts,
@@ -6,34 +5,30 @@ import {
   getAdsAccountByExternalId,
   updateAdsAccount,
   hardDeleteAdsAccount,
-} from "../../services/adsAccountService.js";
-import User from "../../models/user.model.js";
-// Thêm imports
+} from "../../services/ads/adsAccountService.js";
+import User from "../../models/user/user.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
 import {
   fetchAccountInsights,
   saveInsightsToAdPerformance,
-} from "../../services/fbAdsService.js";
+} from "../../services/ads/fbAdsService.js";
 import axios from "axios";
-import { upsertOneAdAccount } from "../../services/adsAccountService.js";
+import { upsertOneAdAccount } from "../../services/ads/adsAccountService.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
-import { syncEntitiesForAccount } from "../../services/entitySyncService.js";
-import { startBackfill } from "../../services/backfillService.js";
+import { syncEntitiesForAccount } from "../../services/ads/entitySyncService.js";
+import { startBackfill } from "../../services/ads/backfillService.js";
 
 const FB_API = "https://graph.facebook.com/v23.0";
 
-/**
- * GET /api/ads-accounts/sync
- * Đồng bộ từ Facebook → lưu DB
- */
+// Sync AdsAccounts from Facebook to DB
 export async function syncAdsAccounts(req, res) {
   try {
-    // 1) Lấy token từ query (nếu FE có truyền)
+    // Get token from query (if FE provides)
     let accessToken = req.query.access_token;
 
-    // 2) Nếu không có: lấy từ DB theo user hiện tại
+    // If no token in query, get from DB by current user
     if (!accessToken) {
       const user = await User.findById(req.user?._id).select("+facebookAccessToken");
       accessToken = user?.facebookAccessToken || null;
@@ -46,7 +41,7 @@ export async function syncAdsAccounts(req, res) {
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
 
-    // ✅ Bỏ logic lấy shop_id, chỉ cần user_id
+    // Get user_id
     const docs = await upsertAdAccountsFromFacebook(accessToken, { 
       shopUserId, 
       adminUserId, 
@@ -67,14 +62,12 @@ export async function syncAdsAccounts(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts
- */
+// List AdsAccounts
 export async function listAdsAccountsCtrl(req, res) {
   try {
     const { q, status, account_status, page, limit, sort } = req.query;
     
-    // Lấy thông tin user từ req.user (được set bởi middleware authenticate)
+    // Get user_id from req.user (set by middleware authenticate)
     const userId = req.user?._id || req.user?.id;
     
     if (!userId) {
@@ -83,7 +76,7 @@ export async function listAdsAccountsCtrl(req, res) {
       });
     }
     
-    // ✅ Filter trực tiếp theo userId (tìm trong array user_ids)
+    // Filter AdsAccounts by user_id
     const result = await listAdsAccounts({ 
       userId, 
       q, 
@@ -104,9 +97,7 @@ export async function listAdsAccountsCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/:id
- */
+// Get AdsAccount by id
 export async function getAdsAccountCtrl(req, res) {
   try {
     const doc = await getAdsAccountById(req.params.id);
@@ -118,9 +109,7 @@ export async function getAdsAccountCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/by-external/:externalId
- */
+// Get AdsAccount by externalId
 export async function getAdsAccountByExternalCtrl(req, res) {
   try {
     const doc = await getAdsAccountByExternalId(req.params.externalId);
@@ -132,9 +121,7 @@ export async function getAdsAccountByExternalCtrl(req, res) {
   }
 }
 
-/**
- * PATCH /api/ads-accounts/:id
- */
+// Update AdsAccount by id
 export async function updateAdsAccountCtrl(req, res) {
   try {
     const doc = await updateAdsAccount(req.params.id, req.body || {});
@@ -146,10 +133,7 @@ export async function updateAdsAccountCtrl(req, res) {
   }
 }
 
-/**
- * DELETE /api/ads-accounts/:id
- * Hard delete: xóa thật account khỏi DB, giữ nguyên dữ liệu liên quan (campaigns, adsets, ads)
- */
+// Hard delete AdsAccount by id
 export async function deleteAdsAccountCtrl(req, res) {
   try {
     const doc = await hardDeleteAdsAccount(req.params.id);
@@ -161,10 +145,7 @@ export async function deleteAdsAccountCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/stats
- * Lấy thống kê số lượng của account (campaigns, adsets, ads)
- */
+// Get account stats
 export async function getAccountStatsCtrl(req, res) {
   try {
     const { account_id } = req.query;
@@ -173,13 +154,13 @@ export async function getAccountStatsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
     
-    // Chuẩn hóa ID (kiểm tra cả có và không có tiền tố act_)
+    // Normalize ID (check both with and without act_ prefix)
     const normalizedId = account_id.startsWith('act_') ? account_id.substring(4) : account_id;
     const withPrefix = account_id.startsWith('act_') ? account_id : `act_${account_id}`;
     
-    // Truy vấn song song để tăng hiệu suất
+    // Query in parallel for better performance
     const [campaignCount, adsetCount, adCount] = await Promise.all([
-      // Đếm campaigns
+      // Count campaigns
       AdsCampaign.countDocuments({
         $or: [
           { external_account_id: normalizedId },
@@ -188,7 +169,7 @@ export async function getAccountStatsCtrl(req, res) {
         status: { $ne: "DELETED" }
       }),
       
-      // Đếm adsets
+      // Count adsets
       AdsSet.countDocuments({
         $or: [
           { external_account_id: normalizedId },
@@ -197,7 +178,7 @@ export async function getAccountStatsCtrl(req, res) {
         status: { $ne: "DELETED" }
       }),
       
-      // Đếm ads
+      // Count ads
       Ads.countDocuments({
         $or: [
           { external_account_id: normalizedId },
@@ -224,10 +205,7 @@ export async function getAccountStatsCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/stats/live
- * Lấy thống kê từ DB (chính xác hơn, có pagination)
- */
+// Get account live stats
 export async function getAccountLiveStatsCtrl(req, res) {
   try {
     const { account_id } = req.query;
@@ -235,11 +213,11 @@ export async function getAccountLiveStatsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu account_id" });
     }
 
-    // Chuẩn hóa ID (kiểm tra cả có và không có tiền tố act_)
+    // Normalize ID (check both with and without act_ prefix)
     const normalizedId = account_id.startsWith('act_') ? account_id.substring(4) : account_id;
     const withPrefix = account_id.startsWith('act_') ? account_id : `act_${account_id}`;
     
-    // Đếm từ DB (chính xác, có pagination trong entitySyncService)
+    // Count from DB (more accurate, with pagination in entitySyncService)
     const [campaignCount, adsetCount, adCount] = await Promise.all([
       AdsCampaign.countDocuments({
         $or: [
@@ -282,10 +260,7 @@ export async function getAccountLiveStatsCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/facebook
- * Lấy danh sách tài khoản quảng cáo trực tiếp từ Facebook (không lưu DB)
- */
+// Get list Facebook AdAccounts
 export async function listFacebookAdAccountsCtrl(req, res) {
   try {
     let accessToken = req.query.access_token;
@@ -324,17 +299,17 @@ export async function listFacebookAdAccountsCtrl(req, res) {
       after = resp.data?.paging?.cursors?.after || null;
     } while (after);
 
-    // ✅ Lấy user_id để check ownership
+    // Get user_id to check ownership
     const userId = req.user?._id || req.user?.id;
     
-    // Check xem các account đã được kết nối với user nào chưa
+    // Check if accounts are already connected to any user
     const externalIds = all.map(a => a.external_id);
     const connectedAccounts = await AdsAccount.find({
       external_id: { $in: externalIds },
       user_ids: { $ne: null, $exists: true, $size: { $gt: 0 } }
     }).populate('shop_admin_id', 'username email').lean();
 
-    // Tạo map để tra cứu nhanh
+    // Create map for quick lookup
     const connectedMap = {};
     for (const acc of connectedAccounts) {
       const hasAccess = acc.user_ids && acc.user_ids.some(
@@ -348,7 +323,7 @@ export async function listFacebookAdAccountsCtrl(req, res) {
       };
     }
 
-    // Thêm thông tin connected_user và can_connect vào mỗi account
+    // Add connected_user and can_connect to each account
     const itemsWithConnection = all.map(acc => {
       const connectedInfo = connectedMap[acc.external_id];
       return {
@@ -365,11 +340,7 @@ export async function listFacebookAdAccountsCtrl(req, res) {
   }
 }
 
-/**
- * POST /api/ads-accounts/connect
- * Body: { account_id }
- * Chỉ khi người dùng bấm kết nối mới lưu tài khoản vào DB
- */
+// Connect AdAccount
 export async function connectAdAccountCtrl(req, res) {
   try {
     const { account_id } = req.body || {};
@@ -402,7 +373,7 @@ export async function connectAdAccountCtrl(req, res) {
     const adminUserId = req.user?.id || req.user?._id;
     const shopUserId = req.user?.shop_user_id || null;
 
-    // ✅ Upsert account - Tự động thêm user vào user_ids nếu account đã tồn tại
+    // Upsert account - Automatically add user to user_ids if account exists
     const saved = await upsertOneAdAccount(
       {
         id: fbAcc.id,
@@ -443,10 +414,7 @@ export async function connectAdAccountCtrl(req, res) {
   }
 }
 
-/**
- * GET /api/ads-accounts/:id/insights
- * Lấy insights data từ Facebook với breakdowns
- */
+// Get account insights
 export async function getAccountInsightsCtrl(req, res) {
   try {
     const { id } = req.params;
@@ -505,7 +473,7 @@ export async function getAccountInsightsCtrl(req, res) {
 
     const insightsData = await fetchAccountInsights(accessToken, externalId, options);
 
-    // Map page_name từ adset/campaign trong DB vào insightsData để hiển thị ngay
+    // Map page_name from adset/campaign in DB to insightsData to display immediately
     if (insightsData.length > 0) {
       const adsetExternalIds = [...new Set(insightsData.map(item => item.adset_id).filter(Boolean))];
       const campaignExternalIds = [...new Set(insightsData.map(item => item.campaign_id).filter(Boolean))];
@@ -527,9 +495,9 @@ export async function getAccountInsightsCtrl(req, res) {
 
     try {
       const saveResult = await saveInsightsToAdPerformance(insightsData, id);
-      console.log(`✅ Saved ${saveResult.saved} insights, skipped ${saveResult.skipped}`);
+      console.log(`Saved ${saveResult.saved} insights, skipped ${saveResult.skipped}`);
     } catch (saveErr) {
-      console.warn('⚠️ Error saving insights to DB:', saveErr.message);
+      console.warn('Error saving insights to DB:', saveErr.message);
     }
 
     return res.status(200).json({

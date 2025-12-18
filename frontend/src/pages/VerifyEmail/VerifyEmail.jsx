@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../hooks/auth/useAuth'
 import './VerifyEmail.css'
 
 function VerifyEmail() {
     const { token } = useParams()
     const navigate = useNavigate()
     const { verifyEmail, resendVerificationEmail } = useAuth()
-    
+
     const [status, setStatus] = useState('verifying') // verifying, success, error
     const [message, setMessage] = useState('')
     const [email, setEmail] = useState('')
@@ -24,7 +24,7 @@ function VerifyEmail() {
     const handleVerifyEmail = async () => {
         try {
             const result = await verifyEmail(token)
-            
+
             if (result.success) {
                 setStatus('success')
                 setMessage('Email đã được xác nhận thành công! Tài khoản của bạn đã được kích hoạt.')
@@ -32,11 +32,11 @@ function VerifyEmail() {
             }
         } catch (error) {
             setStatus('error')
-            
+
             // Handle different error types based on error response
             if (error.response?.data?.code) {
                 const { code, message } = error.response.data
-                
+
                 switch (code) {
                     case 'TOKEN_EXPIRED':
                         setMessage(message)
@@ -66,7 +66,7 @@ function VerifyEmail() {
             alert('Vui lòng nhập email')
             return
         }
-        
+
         const result = await resendVerificationEmail(email)
         if (result.success) {
             setShowResend(false)
@@ -99,7 +99,7 @@ function VerifyEmail() {
                         <div className="error-icon">❌</div>
                         <h2>Xác nhận thất bại</h2>
                         <p>{message}</p>
-                        
+
                         {showResend && (
                             <div className="resend-section">
                                 <h3>Gửi lại email xác nhận</h3>
@@ -116,8 +116,8 @@ function VerifyEmail() {
                                 </div>
                             </div>
                         )}
-                        
-                        <button 
+
+                        <button
                             className="btn-home"
                             onClick={() => navigate('/')}
                         >

@@ -58,22 +58,6 @@ const adsAccountSchema = new mongoose.Schema(
       insights_last_synced_at: { type: Date, default: null },
       insights_sync_interval_hours: { type: Number, default: 2 },
       insights_error: { type: String, default: null },
-
-      backfill_status: {
-        type: String,
-        enum: ["idle", "in_progress", "done", "failed"],
-        default: "idle",
-      },
-      backfill_progress_percent: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100,
-      },
-      backfill_current_date: { type: String, default: null },
-      backfill_start_date: { type: String, default: null },
-      backfill_end_date: { type: String, default: null },
-      backfill_error: { type: String, default: null },
     },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }

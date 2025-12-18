@@ -3,8 +3,9 @@ import AdsAccount from "../../models/ads/adsAccount.model.js";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
-import { syncInsightsForAccount } from "../../services/insightsSyncService.js";
+import { syncInsightsForAccount } from "../../services/ads/insightsSyncService.js";
 
+// Normalize date to Vietnam timezone midnight
 function normalizeToVietnamMidnight(dateInput) {
   let dateStr;
   if (typeof dateInput === 'string') {
@@ -22,6 +23,7 @@ function normalizeToVietnamMidnight(dateInput) {
   return vnMidnight;
 }
 
+// Find AdsAccount by external_id
 async function findAccountByExternalId(externalId) {
   const hasPrefix = String(externalId).startsWith("act_");
   const withPrefix = hasPrefix ? externalId : `act_${externalId}`;
@@ -32,11 +34,7 @@ async function findAccountByExternalId(externalId) {
   });
 }
 
-/**
- * GET /api/ads/performance
- * Query ad performance data từ database
- * Hỗ trợ groupBy=ad để tổng hợp metrics theo ad
- */
+// Get ad performance data from database
 export async function getAdPerformance(req, res) {
   try {
     const { account_id, campaign_id, set_id, ads_id, dateFrom, dateTo, groupBy } = req.query;
@@ -48,7 +46,7 @@ export async function getAdPerformance(req, res) {
     // Build filter query
     const filter = {};
     
-    // 🔹 Account filter: Tìm AdsAccount bằng external_id
+    // Find AdsAccount by external_id
     const account = await findAccountByExternalId(account_id);
     if (!account) {
       return res.status(404).json({ 
@@ -57,7 +55,7 @@ export async function getAdPerformance(req, res) {
     }
     filter.account_id = account._id;
     
-    // 🔹 Campaign filter: Tìm campaign bằng external_id
+    // Find AdsCampaign by external_id
     if (campaign_id) {
       const campaign = await AdsCampaign.findOne({ 
         external_id: campaign_id,
@@ -68,7 +66,7 @@ export async function getAdPerformance(req, res) {
       }
     }
     
-    // 🔹 AdSet filter: Tìm adset bằng external_id
+    // Find AdsSet by external_id
     if (set_id) {
       const adset = await AdsSet.findOne({ 
         external_id: set_id,
@@ -79,7 +77,7 @@ export async function getAdPerformance(req, res) {
       }
     }
     
-    // 🔹 Ad filter: Tìm ad bằng external_id
+    // Find Ads by external_id
     if (ads_id) {
       const ad = await Ads.findOne({ 
         external_id: ads_id,
@@ -90,7 +88,7 @@ export async function getAdPerformance(req, res) {
       }
     }
     
-    // 🔹 Date range filter (normalize về VN timezone)
+    // Date range filter (normalize to VN timezone)
     if (dateFrom || dateTo) {
       filter.date = {};
       if (dateFrom) {
@@ -103,7 +101,7 @@ export async function getAdPerformance(req, res) {
       }
     }
 
-    // 🔹 Nếu có groupBy = 'ad', aggregate theo ad
+    // If groupBy = 'ad', aggregate by ad
     if (groupBy === 'ad') {
       const aggregated = await AdPerformance.aggregate([
         { $match: filter },
@@ -116,7 +114,7 @@ export async function getAdPerformance(req, res) {
             page_name: { $first: "$page_name" },
             daily_budget: { $first: "$daily_budget" },
             
-            // Tổng hợp metrics
+            // Aggregate metrics
             totalSpend: { $sum: "$spend" },
             totalImpressions: { $sum: "$impressions" },
             totalReach: { $sum: "$reach" },
@@ -131,7 +129,7 @@ export async function getAdPerformance(req, res) {
             recordCount: { $sum: 1 },
             dateRange: { $push: "$date" },
             
-            // Lưu IDs để populate sau
+            // Save IDs to populate later
             campaign_id: { $first: "$campaign_id" },
             set_id: { $first: "$set_id" },
             account_id: { $first: "$account_id" }
@@ -147,7 +145,7 @@ export async function getAdPerformance(req, res) {
             page_name: 1,
             daily_budget: 1,
             
-            // Metrics (đổi tên để khớp với schema)
+            // Metrics (rename to match schema)
             spend: "$totalSpend",
             impressions: "$totalImpressions",
             reach: "$totalReach",
@@ -221,13 +219,13 @@ export async function getAdPerformance(req, res) {
             date_from: { $min: "$dateRange" },
             date_to: { $max: "$dateRange" },
             
-            // IDs cho populate
+            // IDs for populate
             campaign_id: 1,
             set_id: 1,
             account_id: 1
           }
         },
-        { $sort: { spend: -1 } }  // Sort by spend giảm dần
+        { $sort: { spend: -1 } }  // Sort by spend descending
       ]);
 
       return res.status(200).json({
@@ -237,7 +235,7 @@ export async function getAdPerformance(req, res) {
       });
     }
 
-    // 🔹 Không group: Trả về từng record riêng lẻ (raw data theo ngày)
+    // If not group: Return each record separately (raw data by day)
     const performances = await AdPerformance.find(filter)
       .sort({ date: -1, created_at: -1 })
       .lean();
@@ -256,10 +254,8 @@ export async function getAdPerformance(req, res) {
   }
 }
 
-/**
- * POST /api/ads/performance/refresh
- * Trigger sync ad performance từ Facebook
- */
+// POST /api/ads/performance/refresh
+// Trigger sync ad performance from Facebook
 export async function refreshAdPerformance(req, res) {
   try {
     const { account_id } = req.body;
@@ -289,10 +285,8 @@ export async function refreshAdPerformance(req, res) {
   }
 }
 
-/**
- * GET /api/ads/performance/stats
- * Get aggregated stats (tổng số liệu)
- */
+// GET /api/ads/performance/stats
+// Get aggregated stats (total stats)
 export async function getAdPerformanceStats(req, res) {
   try {
     const { account_id, dateFrom, dateTo } = req.query;
@@ -301,7 +295,7 @@ export async function getAdPerformanceStats(req, res) {
       return res.status(400).json({ message: "account_id is required" });
     }
 
-    // 🔹 Tìm AdsAccount bằng external_id
+    // Find AdsAccount by external_id
     const account = await findAccountByExternalId(account_id);
     if (!account) {
       return res.status(404).json({ 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import "./CustomerPage.css";
-import axiosInstance from "../../../../../utils/axios";
+import axiosInstance from "../../../../../utils/api/axios";
 import { API_ENDPOINTS } from "../../../../../config/api.config";
 import { X } from "lucide-react";
 
@@ -24,7 +24,7 @@ export default function ViewDetails({ isOpen, onClose, userId }) {
         setLoading(true);
         setError(null);
         const response = await axiosInstance.get(API_ENDPOINTS.USERS.SHOPS(userId));
-        
+
         if (response.data.success) {
           setShopData(response.data.data || []);
         } else {

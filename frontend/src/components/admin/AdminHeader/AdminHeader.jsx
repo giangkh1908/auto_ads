@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../../hooks/useAuth";
-import { useAdminRole } from "../../../hooks/useAdminRole";
+import { useAuth } from "../../../hooks/auth/useAuth";
+import { useAdminRole } from "../../../hooks/auth/useAdminRole";
 import "./AdminHeader.css";
 import avatar from "../../../assets/no-avatar.jpg";
 import logo_1 from "../../../assets/Logo_Fchat.png";
@@ -66,7 +66,7 @@ function AdminHeader() {
       '/admin/system-admin/user-management': 'header.tabs.userManagement',
       '/admin/system-admin/system-monitoring': 'header.tabs.systemMonitoring',
     };
-    
+
     const translationKey = tabTranslationMap[tabPath];
     return translationKey ? t(translationKey) : tabName;
   };

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import "./SystemLog.css";
 import { Search, ChevronDown } from "lucide-react";
 import DateRangePicker from "../../../../../components/common/DateRangePicker/DateRangePicker";
-import { getSystemLogs } from "../../../../../services/systemLogService.js";
+import { getSystemLogs } from "../../../../../services/system/systemLogService.js";
 // Pagination replaced by infinite scroll
 
 /**
@@ -328,10 +328,10 @@ export default function SystemLog() {
             </div>
           ))}
       </div>
-        {/* sentinel for infinite scroll */}
-        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
-        {loadingMore && <div style={{ padding: "12px", textAlign: "center" }}>{t("systemLog.messages.loading")}</div>}
-        {!hasMore && logs.length > 0 && <div style={{ padding: "12px", textAlign: "center", color: "#666" }}>{t("systemLog.messages.noMore") || "No more logs"}</div>}
+      {/* sentinel for infinite scroll */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
+      {loadingMore && <div style={{ padding: "12px", textAlign: "center" }}>{t("systemLog.messages.loading")}</div>}
+      {!hasMore && logs.length > 0 && <div style={{ padding: "12px", textAlign: "center", color: "#666" }}>{t("systemLog.messages.noMore") || "No more logs"}</div>}
     </div>
   );
 }

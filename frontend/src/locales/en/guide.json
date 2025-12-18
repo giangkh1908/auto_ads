@@ -1,0 +1,343 @@
+{
+    "title": "User Guide",
+    "searchPlaceholder": "Search...",
+    "tableOfContents": "Table of Contents",
+    "sections": {
+        "overview": {
+            "title": "System Overview",
+            "description": "The Auto Ads Management System is a comprehensive platform that helps you manage Facebook advertising campaigns, automate processes, and track performance effectively.",
+            "features": {
+                "adsManagement": {
+                    "title": "Ads Management",
+                    "description": "Create, edit and manage Facebook campaigns, ad sets and ads"
+                },
+                "analytics": {
+                    "title": "Analytics & Reports",
+                    "description": "Track ad performance with detailed reports and visual charts"
+                },
+                "automation": {
+                    "title": "Automation",
+                    "description": "Set up automation rules to optimize ad campaigns"
+                },
+                "shopManagement": {
+                    "title": "Shop Management",
+                    "description": "Manage multiple shops, employees and connected Facebook Pages"
+                }
+            }
+        },
+        "gettingStarted": {
+            "title": "Getting Started",
+            "register": {
+                "title": "1. Sign up for an account",
+                "steps": [
+                    "Go to homepage and click \"Sign up\" button",
+                    "Fill in complete information: Full name, Email, Phone number, Password",
+                    "Verify email via link sent to your inbox",
+                    "Log in with newly created account"
+                ]
+            },
+            "login": {
+                "title": "2. Log in",
+                "steps": [
+                    "Click \"Login\" button in the top right corner",
+                    "Enter Email and Password",
+                    "Click \"Login\" to access the system",
+                    "Or log in with Facebook without registration",
+                    "If you forgot password, use \"Forgot password\" feature"
+                ]
+            },
+            "buyPackage": {
+                "title": "3. Purchase service package",
+                "steps": [
+                    "Go to \"Service Package\" from menu",
+                    "Select suitable package (Chatbot, Chatbot AI)",
+                    "Select duration: 3 months or 12 months",
+                    "Select number of Pages, Employees, and Shops needed",
+                    "Pay via Bank transfer, VNPAY",
+                    "Wait for admin to approve transaction"
+                ]
+            }
+        },
+        "dashboard": {
+            "title": "Dashboard - Manage Facebook Pages",
+            "description": "Dashboard is the main page to manage connected Facebook Pages and track their status.",
+            "connectPage": {
+                "title": "Connect new Facebook Page",
+                "steps": [
+                    "Go to \"Dashboard\" from main menu",
+                    "Click \"Connect New Page\" button (if not reached limit)",
+                    "Select Page from your Facebook Pages list",
+                    "Confirm access permissions",
+                    "Page will appear in list after successful connection"
+                ]
+            },
+            "managePages": {
+                "title": "Manage Pages",
+                "features": [
+                    "View list: All connected Pages displayed as cards",
+                    "Filter by status: All, Active, Inactive",
+                    "Search: Use search bar to find Page by name",
+                    "View details: Click on Page to see detailed information",
+                    "Disconnect: Use dropdown menu to disconnect Page"
+                ]
+            },
+            "note": "Note: Number of connectable Pages depends on purchased service package. Check limit in \"Service Package\" section."
+        },
+        "shopManagement": {
+            "title": "Shop Management",
+            "description": "Shop Management allows you to create and manage multiple shops, each shop can have multiple employees and Facebook Pages.",
+            "createShop": {
+                "title": "Create new Shop",
+                "steps": [
+                    "Go to \"Shop\" from main menu",
+                    "Click \"Add Shop\" button",
+                    "Fill in information:",
+                    "  - Shop name",
+                    "  - Contact email",
+                    "  - Phone number",
+                    "  - Category",
+                    "Click \"Save\" to create Shop"
+                ]
+            },
+            "manageEmployees": {
+                "title": "Manage Employees",
+                "steps": [
+                    "Select Shop from list",
+                    "Go to \"Employees\" tab",
+                    "Click \"Add employee\" button",
+                    "Enter employee's email (must be registered in system)",
+                    "Select role: Admin or Employee",
+                    "Click \"Add\" to complete"
+                ]
+            },
+            "activityHistory": {
+                "title": "Activity History",
+                "features": [
+                    "View history of actions in Shop",
+                    "Filter by date, performer, or action type",
+                    "Export report if needed"
+                ]
+            },
+            "note": "Note: Number of Shops and Employees you can create depends on service package. Each Shop can connect multiple Facebook Pages."
+        },
+        "adsManagement": {
+            "title": "Ads Management",
+            "description": "Ads Management is where you create, edit and manage all your Facebook ad campaigns.",
+            "structure": {
+                "title": "Ad Structure",
+                "items": [
+                    "Campaign: Highest level, contains multiple Ad Sets",
+                    "Ad Set: Contains multiple Ads, defines audience and budget",
+                    "Ad: Lowest level, contains creative (images, videos, text)"
+                ]
+            },
+            "createCampaign": {
+                "title": "Create new Campaign",
+                "steps": [
+                    "Go to \"Ads Management\" from menu",
+                    "Select ad account from dropdown (if multiple accounts)",
+                    "Click \"Create\" or \"Create Campaign\" button",
+                    "Fill in Campaign information:",
+                    "  - Campaign name",
+                    "  - Objective: Traffic, Conversions, Engagement, etc.",
+                    "  - Budget",
+                    "Continue creating Ad Set:",
+                    "  - Select Audience",
+                    "  - Set Ad Set budget",
+                    "  - Select Placements",
+                    "Finally, create Ad:",
+                    "  - Select format: Single Image, Video, Carousel, etc.",
+                    "  - Upload images/videos",
+                    "  - Enter ad text (Ad Text)",
+                    "  - Add Call-to-Action (CTA) button",
+                    "Review and click \"Publish\" to publish"
+                ]
+            },
+            "manageAds": {
+                "title": "Manage Ads",
+                "features": [
+                    "View list: Switch between tabs Campaigns, Ad Sets, Ads",
+                    "Edit: Click on item to edit",
+                    "Turn On/Off: Use toggle to turn on/off Campaign, Ad Set, or Ad",
+                    "Delete: Select item and click Delete button (with confirmation)",
+                    "Archive: Archive to hide from main list",
+                    "Sync: Click Sync button to sync data from Facebook"
+                ]
+            },
+            "searchFilter": {
+                "title": "Search and Filter",
+                "features": [
+                    "Use search bar to find by name",
+                    "Filter by status: Active, Paused, Archived",
+                    "Filter by creation date or last modified date"
+                ]
+            }
+        },
+        "analytics": {
+            "title": "Analytics & Reports",
+            "description": "Analytics provides detailed reports on ad performance with multiple metrics and breakdown options.",
+            "viewReports": {
+                "title": "View Reports",
+                "steps": [
+                    "Go to \"Analytics\" from menu",
+                    "Select ad account",
+                    "Select date range",
+                    "Select metrics to view:",
+                    "  - Amount Spent",
+                    "  - Impressions",
+                    "  - Reach",
+                    "  - Results",
+                    "  - CPC, CPM, CTR",
+                    "Select breakdown columns:",
+                    "  - Campaign Name, Ad Set Name, Ad Name",
+                    "  - Page Name, Date, Age Range, etc.",
+                    "View data table and charts"
+                ]
+            },
+            "exportReports": {
+                "title": "Export Reports",
+                "features": [
+                    "Export data to Excel/CSV file",
+                    "Save favorite report configurations",
+                    "Schedule automatic report sending"
+                ]
+            }
+        },
+        "automation": {
+            "title": "Ads Automation",
+            "description": "Automation Rules allow you to set up automatic rules to optimize ad campaigns based on performance.",
+            "createRule": {
+                "title": "Create Automation Rule",
+                "steps": [
+                    "Go to \"Automation Rule\" from menu",
+                    "Click \"Create new rule\" button",
+                    "Set name and description for rule",
+                    "Select conditions:",
+                    "  - When CPC > X VND",
+                    "  - When CTR < Y%",
+                    "  - When Results < Z",
+                    "  - When Amount Spent > W VND",
+                    "Select actions:",
+                    "  - Pause Campaign/Ad Set/Ad",
+                    "  - Increase Budget",
+                    "  - Decrease Budget",
+                    "  - Send Notification",
+                    "Set check schedule",
+                    "Activate rule"
+                ]
+            },
+            "manageRules": {
+                "title": "Manage Rules",
+                "features": [
+                    "View list of all rules",
+                    "Turn rules on/off",
+                    "Edit or delete rules",
+                    "View rule execution history"
+                ]
+            },
+            "note": "Note: Automation rules will run according to set schedule. Ensure ad account is connected and has access permissions."
+        },
+        "servicePackage": {
+            "title": "Service Package & Payment",
+            "description": "The system provides service packages with different limits for Pages, Employees, and Shops.",
+            "packageTypes": {
+                "title": "Package Types",
+                "items": [
+                    "Chatbot: Basic package with limits on Pages, Employees, Shops",
+                    "Chatbot AI: Advanced package with more features and higher limits"
+                ]
+            },
+            "buyPackage": {
+                "title": "Purchase Service Package",
+                "steps": [
+                    "Go to \"Service Package\" from menu",
+                    "View information on available packages",
+                    "Select package and duration (3/6/12 months)",
+                    "Select quantity:",
+                    "  - Pages (Facebook Pages)",
+                    "  - Employees",
+                    "  - Shops",
+                    "Click \"Order\"",
+                    "Select payment method:",
+                    "  - Momo",
+                    "  - VietQR",
+                    "  - Bank transfer",
+                    "Complete payment",
+                    "Wait for admin to approve transaction"
+                ]
+            },
+            "viewCurrentPackage": {
+                "title": "View Current Package",
+                "features": [
+                    "View information on package in use",
+                    "Check limit and current usage",
+                    "View expiration date",
+                    "Upgrade package if needed"
+                ]
+            }
+        },
+        "adAccount": {
+            "title": "Manage Ad Account",
+            "description": "Connect and manage Facebook ad accounts to use in the system.",
+            "connect": {
+                "title": "Connect Ad Account",
+                "steps": [
+                    "Go to \"Connect Ad Account\" from menu",
+                    "Click \"Connect\" button",
+                    "Log in to Facebook and grant access",
+                    "Select ad account to connect",
+                    "Confirm connection",
+                    "Account will appear in list"
+                ]
+            },
+            "manage": {
+                "title": "Manage Account",
+                "features": [
+                    "View list: All connected accounts",
+                    "Disconnect: Remove account from system",
+                    "Sync: Sync data from Facebook",
+                    "Select default account: Choose account to use when creating ads"
+                ]
+            },
+            "note": "Note: Ensure your Facebook account has permission to manage ad account. After disconnecting, all related data will be deleted."
+        },
+        "profile": {
+            "title": "Profile & Settings",
+            "description": "Manage your personal information and account settings.",
+            "updateInfo": {
+                "title": "Update Information",
+                "steps": [
+                    "Go to \"Profile\" from menu",
+                    "Update information:",
+                    "  - Full name",
+                    "  - Email",
+                    "  - Phone number",
+                    "  - Avatar",
+                    "Click \"Save\" to update"
+                ]
+            },
+            "changePassword": {
+                "title": "Change Password",
+                "steps": [
+                    "Go to \"Change password\" section in Profile",
+                    "Enter current password",
+                    "Enter new password",
+                    "Confirm new password",
+                    "Click \"Change password\""
+                ]
+            },
+            "otherSettings": {
+                "title": "Other Settings",
+                "features": [
+                    "Language (Vietnamese / English)",
+                    "Email notifications",
+                    "Two-factor authentication (coming soon)"
+                ]
+            }
+        }
+    },
+    "footer": {
+        "needHelp": "Need more help? Contact us via email or hotline.",
+        "copyright": "© 2025 created by AAMS FPT Team. All rights reserved."
+    }
+}

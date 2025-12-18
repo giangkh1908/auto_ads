@@ -1,5 +1,5 @@
 import express from 'express';
-import { searchAdLocations, getPopularVietnamLocations } from '../../services/locationService.js';
+import { searchAdLocations, getPopularVietnamLocations } from '../../services/ads/locationService.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -32,7 +32,7 @@ router.get('/search', authenticate, async (req, res) => {
     }
 
     // Get access token from user (same as other ads controllers)
-    const User = (await import('../../models/user.model.js')).default;
+    const User = (await import('../../models/user/user.model.js')).default;
     const user = await User.findById(req.user._id).select('+facebookAccessToken');
     const accessToken = user?.facebookAccessToken;
 

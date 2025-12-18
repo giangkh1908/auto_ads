@@ -2,26 +2,34 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./ConnectPage.css";
-import { useToast } from "../../hooks/useToast";
-import shopService from "../../services/shopService";
-import { getShopCache } from "../../utils/shopCache";
-import axiosInstance from "../../utils/axios.js";
+import { useToast } from "../../hooks/common/useToast";
+import { useAuth } from "../../hooks/auth/useAuth";
+import shopService from "../../services/shop/shopService";
+import { getShopCache } from "../../utils/cache/shopCache";
+import axiosInstance from "../../utils/api/axios.js";
 import logo from "../../assets/Logo_Fchat.png";
+import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverlay";
 
 function ConnectPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useTranslation();
+  const { user, updateUser } = useAuth();
   const [shopId, setShopId] = useState(null);
   const [fbPages, setFbPages] = useState([]);
   const [selectedPages, setSelectedPages] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("status");
   const [selectAll, setSelectAll] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const FB_CONFIG_ID = import.meta.env.FB_CONFIG_ID;
+  const hasFacebookConnected = !!user?.facebookId;
 
   // Tải dữ liệu từ BE
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
         // 1. Thử lấy shopId từ cache trước (nhanh nhất)
         const cachedShop = getShopCache();
@@ -53,6 +61,8 @@ function ConnectPage() {
       } catch (e) {
         console.error("Load facebook pages error:", e);
         toast.error(t('connect_page.toast_load_error'));
+      } finally {
+        setLoading(false);
       }
     };
     load();
@@ -78,7 +88,7 @@ function ConnectPage() {
       const isConnected = p.connected_shop !== null && p.connected_shop !== undefined;
       const isConnectedToCurrentShop = p.connected_shop?.is_current_shop || false;
       const isConnectedToOtherShop = isConnected && !isConnectedToCurrentShop;
-      
+
       return {
         id: p.id,
         name: p.name,
@@ -86,11 +96,11 @@ function ConnectPage() {
           p.picture || `https://graph.facebook.com/${p.id}/picture?type=square`,
         link: `https://www.facebook.com/${p.id}`,
         role: deriveRole(p.tasks),
-        status: isConnectedToCurrentShop 
-          ? t('connect_page.status_connected') 
+        status: isConnectedToCurrentShop
+          ? t('connect_page.status_connected')
           : isConnectedToOtherShop
-          ? `Đã kết nối với shop "${p.connected_shop?.shop_name || 'Unknown'}"`
-          : t('connect_page.status_not_connected'),
+            ? `Đã kết nối với shop "${p.connected_shop?.shop_name || 'Unknown'}"`
+            : t('connect_page.status_not_connected'),
         connectedBy: p.connected_shop?.shop_name || null,
         isConnectedToCurrentShop,
         isConnectedToOtherShop,
@@ -128,8 +138,8 @@ function ConnectPage() {
     // - Không thể kết nối (canConnect = false)
     if (page && (
       page.isConnectedToCurrentShop ||
-      page.isConnectedToOtherShop || 
-      page.role !== "ADMIN" || 
+      page.isConnectedToOtherShop ||
+      page.role !== "ADMIN" ||
       !page.canConnect
     )) {
       return;
@@ -175,12 +185,12 @@ function ConnectPage() {
           pageAccessToken: page.pageAccessToken,
         });
       }
-      
+
       // Reload pages để cập nhật trạng thái
       const pagesRes = await shopService.fetchFacebookPages();
       const realPages = pagesRes?.data?.pages || [];
       setFbPages(realPages);
-      
+
       toast.success(t('connect_page.toast_connect_success', { count: selected.length }));
       navigate("/dashboard");
     } catch (e) {
@@ -191,11 +201,17 @@ function ConnectPage() {
 
   //Xử lý làm mới kết nối
   const handleRefresh = async () => {
+    // Nếu user chưa có Facebook → gọi login Facebook
+    if (!hasFacebookConnected) {
+      handleFacebookBusinessLogin();
+      return;
+    }
+
+    // Nếu đã có Facebook → refresh token như bình thường
     try {
       const response = await shopService.refreshFacebookToken();
       if (response.success) {
         toast.success(t('connect_page.toast_refresh_success'));
-        // Reload pages after successful token refresh
         const pagesRes = await shopService.fetchFacebookPages();
         const realPages = pagesRes?.data?.pages || [];
         setFbPages(realPages);
@@ -207,6 +223,99 @@ function ConnectPage() {
       toast.error(t('connect_page.toast_refresh_error_detail', { error: error.message || "Unknown error" }));
     }
   };
+
+  // Facebook Business Login Handler
+  const handleFacebookBusinessLogin = () => {
+    if (!window.FB) {
+      toast.error("Facebook SDK chưa sẵn sàng. Vui lòng thử lại.");
+      return;
+    }
+
+    window.FB.login(
+      function (response) {
+        if (response.status === "connected") {
+          handleFacebookLoginSuccess(response);
+        }
+      },
+      {
+        config_id: FB_CONFIG_ID,
+        scope: "email,public_profile,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_manage_posts,business_management,ads_read,ads_management",
+      }
+    );
+  };
+
+  // Xử lý khi Facebook login thành công - LINK Facebook vào account hiện tại
+  const handleFacebookLoginSuccess = async (response) => {
+    try {
+      const { authResponse } = response;
+      if (!authResponse?.accessToken) {
+        toast.error("Đăng nhập Facebook thất bại");
+        return;
+      }
+
+      // Gọi endpoint LINK thay vì LOGIN (dùng axiosInstance có auth token)
+      const linkResponse = await axiosInstance.post(
+        "/api/auth/facebook/link",
+        {
+          facebookId: authResponse.userID,
+          accessToken: authResponse.accessToken,
+        }
+      );
+
+      if (linkResponse.data.success) {
+        const { user: updatedUser, pages } = linkResponse.data.data;
+        
+        // Cập nhật user trong context (không cần đăng nhập lại)
+        updateUser(updatedUser);
+        
+        // Reload danh sách pages
+        const pagesRes = await shopService.fetchFacebookPages();
+        const realPages = pagesRes?.data?.pages || [];
+        setFbPages(realPages);
+        toast.success("Kết nối Facebook thành công!");
+      } else {
+        const errorCode = linkResponse.data?.error?.code;
+        
+        if (errorCode === "FACEBOOK_ALREADY_BOUND") {
+          toast.error("Tài khoản Facebook này đã được liên kết với tài khoản khác. Vui lòng sử dụng tài khoản Facebook khác.");
+        } else {
+          toast.error(linkResponse.data?.error?.message || "Liên kết thất bại");
+        }
+      }
+    } catch (error) {
+      console.error("Facebook link error:", error);
+      const errorCode = error.response?.data?.error?.code;
+      
+      if (errorCode === "FACEBOOK_ALREADY_BOUND") {
+        toast.error("Tài khoản Facebook này đã được liên kết với tài khoản khác. Vui lòng sử dụng tài khoản Facebook khác.");
+      } else {
+        toast.error(error.response?.data?.error?.message || "Liên kết thất bại");
+      }
+    }
+  };
+
+  // Khởi tạo Facebook SDK
+  useEffect(() => {
+    if (window.FB) return;
+
+    window.fbAsyncInit = function () {
+      window.FB.init({
+        appId: "1445692036729400",
+        cookie: true,
+        xfbml: true,
+        version: "v23.0",
+      });
+    };
+
+    (function (d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s);
+      js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    })(document, "script", "facebook-jssdk");
+  }, []);
 
   //Xử lý quay lại
   const handleBackToList = () => {
@@ -235,12 +344,13 @@ function ConnectPage() {
     );
     setSelectAll(
       selectablePages.length > 0 &&
-        selectedPages.length === selectablePages.length
+      selectedPages.length === selectablePages.length
     );
   }, [selectedPages, filteredPages]);
 
   return (
     <div className="connect-page">
+      <LoadingOverlay isLoading={loading} message="Đang tải..." />
       <div className="connect-container">
         {/* Logo */}
         <div className="logo-section">

@@ -1,17 +1,46 @@
 import cron from "node-cron";
 import AdsAccount from "../models/ads/adsAccount.model.js";
-import { syncInsightsForAccount } from "../services/insightsSyncService.js";
-import { syncEntitiesForAccount } from "../services/entitySyncService.js";
-import User from "../models/user.model.js";
+import { syncInsightsForAccount } from "../services/ads/insightsSyncService.js";
+import { syncEntitiesForAccount } from "../services/ads/entitySyncService.js";
+import User from "../models/user/user.model.js";
 import pLimit from "p-limit";
 
 export function startSyncCronJobs() {
-  cron.schedule("0 2,6,10,14,18,22 * * *", async () => {
+  // Run every hour at minute 0
+  cron.schedule("0 * * * *", async () => {
     const startTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    console.log(`🔄 [${startTime}] Starting entity sync...`);
+    console.log(`🔄 [${startTime}] Starting ads entity + ads insights sync...`);
     const limit = pLimit(1);
 
     try {
+      // Reset any stuck sync status (syncing for more than 1 hour)
+      const oneHourAgo = new Date(Date.now() - 3600000);
+      const resetResult = await AdsAccount.updateMany(
+        {
+          status: "ACTIVE",
+          "sync_metadata.entities_status": "syncing",
+          $or: [
+            { "sync_metadata.entities_sync_started_at": { $lt: oneHourAgo } },
+            { 
+              "sync_metadata.entities_sync_started_at": { $exists: false },
+              "sync_metadata.entities_last_synced_at": { $exists: false }
+            }
+          ]
+        },
+        {
+          $set: {
+            "sync_metadata.entities_status": "idle",
+            "sync_metadata.entities_error": "Reset stuck sync status"
+          },
+          $unset: {
+            "sync_metadata.entities_sync_started_at": ""
+          }
+        }
+      );
+      if (resetResult.modifiedCount > 0) {
+        console.log(`🔄 Reset ${resetResult.modifiedCount} stuck sync status(es)`);
+      }
+
       const accounts = await AdsAccount.find({
         status: "ACTIVE"
       })
@@ -32,9 +61,15 @@ export function startSyncCronJobs() {
                 return;
               }
 
+              console.log(`🔄 [${account.external_id}] Starting entity sync...`);
               await syncEntitiesForAccount(account.external_id, accessToken);
+              console.log(`✅ [${account.external_id}] Entity sync completed`);
+              
+              console.log(`🔄 [${account.external_id}] Starting insights sync...`);
+              await syncInsightsForAccount(account._id);
+              console.log(`✅ [${account.external_id}] Insights sync completed`);
+              
               successCount++;
-              console.log(`✅ Synced entities for account ${account.external_id}`);
             } catch (err) {
               console.error(`❌ Failed to sync account ${account.external_id}:`, err.message);
               errorCount++;
@@ -44,50 +79,14 @@ export function startSyncCronJobs() {
       );
 
       const endTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-      console.log(`✅ [${endTime}] Entity sync completed: ${successCount} success, ${errorCount} errors`);
+      console.log(`✅ [${endTime}] Ads entity + ads insights sync completed: ${successCount} success, ${errorCount} errors`);
     } catch (err) {
-      console.error("❌ Entity sync cron failed:", err.message);
-    }
-  });
-
-  cron.schedule("0 0,4,8,12,16,20 * * *", async () => {
-    const startTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    console.log(`📊 [${startTime}] Starting insights sync...`);
-    const limit = pLimit(1);
-
-    try {
-      const accounts = await AdsAccount.find({
-        status: "ACTIVE",
-        "sync_metadata.entities_status": "done",
-      }).select("_id");
-
-      let successCount = 0;
-      let errorCount = 0;
-
-      await Promise.all(
-        accounts.map((account) =>
-          limit(async () => {
-            try {
-              await syncInsightsForAccount(account._id);
-              successCount++;
-            } catch (err) {
-              console.error(`❌ Failed to sync insights for account:`, err.message);
-              errorCount++;
-            }
-          })
-        )
-      );
-
-      const endTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-      console.log(`✅ [${endTime}] Insights sync completed: ${successCount} success, ${errorCount} errors`);
-    } catch (err) {
-      console.error("❌ Insights sync cron failed:", err.message);
+      console.error("❌ Ads entity + ads insights cron failed:", err.message);
     }
   });
 
   console.log("✅ Sync cron jobs started:");
-  console.log("  - Entity Sync: Every 4 hours at 2:00, 6:00, 10:00, 14:00, 18:00, 22:00 (structure sync)");
-  console.log("  - Insights Sync: Every 4 hours at 0:00, 4:00, 8:00, 12:00, 16:00, 20:00 (metrics sync)");
+  console.log("  - Ads Entities + Ads Insights: Every hour (at minute 0)");
 }
 
 

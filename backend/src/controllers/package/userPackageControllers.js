@@ -1,8 +1,8 @@
-import UserPackage from "../../models/userPackage.model.js";
-import PaymentTransaction from "../../models/paymentTransaction.model.js";
-import Package from "../../models/package.model.js";
-import User from "../../models/user.model.js";
-import { getUserEntitlements } from "../../services/entitlementService.js";
+import UserPackage from "../../models/package/userPackage.model.js";
+import PaymentTransaction from "../../models/transaction/paymentTransaction.model.js";
+import Package from "../../models/package/package.model.js";
+import User from "../../models/user/user.model.js";
+import { getUserEntitlements } from "../../services/admin/entitlementService.js";
 
 /**
  * Helper: Compute segment for a user package (matches FE logic in mapUserPackageData)

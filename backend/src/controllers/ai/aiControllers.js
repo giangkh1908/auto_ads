@@ -8,7 +8,7 @@ import AIConfig from "../../models/ai/aiConfig.model.js";
 
 dotenv.config();
 
-// Khởi tạo clients
+// Initialize clients
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -19,19 +19,19 @@ const geminiImageModel = genAI.getGenerativeModel({
   model: "gemini-2.5-flash-image",
 });
 
-// Cấu hình Cloudinary
+// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Lưu trữ context trong memory
+// Store context in memory
 const contexts = new Map();
-const TTL = 30 * 60 * 1000; // 30 phút
+const TTL = 30 * 60 * 1000; // 30 minutes
 
-// Cấu hình concurrency và retry
-const CONCURRENT_LIMIT = 3; // Giới hạn 3 request đồng thời
+// Configure concurrency and retry
+const CONCURRENT_LIMIT = 3; // Limit 3 concurrent requests
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff
 
@@ -56,14 +56,14 @@ async function retryWithBackoff(fn, maxRetries = MAX_RETRIES, delays = RETRY_DEL
 
 /**
  * POST /api/ai/keywords/suggest
- * Gợi ý từ khóa liên quan
+ * Suggest related keywords
  */
 export async function suggestKeywords(req, res) {
   try {
     const {
       language = "vi",
       main_keywords = [],
-      ai_provider = "openai", // Thêm parameter này
+      ai_provider = "openai", // Add this parameter
     } = req.body;
 
     if (!main_keywords.length) {
@@ -82,7 +82,7 @@ export async function suggestKeywords(req, res) {
       const result = await geminiTextModel.generateContent(prompt);
       relatedKeywordsText = result.response.text();
     } else {
-      // Mặc định là openai
+      // Default is openai
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
@@ -114,8 +114,8 @@ export async function suggestKeywords(req, res) {
 
 /**
  * POST /api/ai/context/confirm
- * Xác nhận context trước khi dùng AI
- * Hỗ trợ cả config_id và prompt fields (backward compatible)
+ * Confirm context before using AI
+ * Support both config_id and prompt fields (backward compatible)
  */
 export async function confirmContext(req, res) {
   try {

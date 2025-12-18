@@ -1,8 +1,8 @@
 import cron from "node-cron";
-import { syncAnalyticsSnapshots } from "../services/analyticsSnapshotService.js";
+import { syncAnalyticsSnapshots } from "../services/analytics/analyticsSnapshotService.js";
 import AdsAccount from "../models/ads/adsAccount.model.js";
-import { FEATURE_KEYS } from "../services/entitlementService.js";
-import { filterAccountsByFeature } from "../services/accountFeatureGuard.js";
+import { FEATURE_KEYS } from "../services/admin/entitlementService.js";
+import { filterAccountsByFeature } from "../services/shop/accountFeatureGuard.js";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

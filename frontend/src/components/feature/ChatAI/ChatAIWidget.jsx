@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, Send, Minimize2 } from 'lucide-react'
-import { useChat } from '../../../hooks/useChat'
+import { useChat } from '../../../hooks/chat/useChat'
 import './ChatAIWidget.css'
 
 function ChatAIWidget({ accountId, accountName }) {
@@ -8,6 +8,7 @@ function ChatAIWidget({ accountId, accountName }) {
   const [isMinimized, setIsMinimized] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
 
   const { messages, isLoading, sendMessage } = useChat(accountId)
 
@@ -18,10 +19,26 @@ function ChatAIWidget({ accountId, accountName }) {
     }
   }, [messages, isOpen, isMinimized])
 
+  // Thêm useEffect để auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height để tính toán lại
+      textareaRef.current.style.height = 'auto'
+      // Set height theo scrollHeight
+      const scrollHeight = textareaRef.current.scrollHeight
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 100)}px` // Max 100px
+    }
+  }, [inputValue])
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || !accountId) return
     const messageToSend = inputValue.trim()
     setInputValue('')
+    // Reset textarea height after sending
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = '24px' // Reset to min height
+    }
     await sendMessage(messageToSend)
   }
 
@@ -112,10 +129,19 @@ function ChatAIWidget({ accountId, accountName }) {
           <div className="chat-widget-footer">
             <div className="chat-widget-input-wrapper">
               <textarea
+                ref={textareaRef}
                 className="chat-widget-input"
                 placeholder="Nhập câu hỏi..."
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => {
+                  setInputValue(e.target.value)
+                  // Auto-resize on change
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto'
+                    const scrollHeight = textareaRef.current.scrollHeight
+                    textareaRef.current.style.height = `${Math.min(scrollHeight, 100)}px`
+                  }
+                }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading || !accountId}
                 rows={1}

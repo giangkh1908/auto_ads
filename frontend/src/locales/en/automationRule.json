@@ -1,0 +1,224 @@
+{
+    "pageTitle": "Automation Rules",
+    "subtitle": "Automate your ad management with intelligent rules",
+    "selectAccount": "Select Ads Account",
+    "addNewRule": "Add New Rule",
+    "emptyState": "No rules found. Create rules to automatically manage your Facebook ads based on performance conditions.",
+    "table": {
+        "headers": {
+            "enabled": "Enabled",
+            "ruleName": "Rule Name",
+            "account": "Account",
+            "applyTo": "Apply To",
+            "conditions": "Conditions",
+            "actionCondition": "Action & Condition",
+            "result": "Result",
+            "frequency": "Frequency",
+            "createdBy": "Created By",
+            "actions": "Actions"
+        }
+    },
+    "applyTo": {
+        "allCampaigns": "All Campaigns",
+        "selectedCampaigns": "{{count}} Campaign(s)",
+        "selectedAdSets": "{{count}} Ad Set(s)",
+        "selectedAds": "{{count}} Ad(s)",
+        "mixed": "{{campaigns}} Campaigns, {{adsets}} Ad Sets, {{ads}} Ads"
+    },
+    "actions": {
+        "TURN_ON": "Turn On",
+        "TURN_OFF": "Turn Off",
+        "SEND_NOTIFICATION": "Send Notification"
+    },
+    "operators": {
+        "GREATER_THAN": "greater than",
+        "LESS_THAN": "less than",
+        "EQUAL_TO": "equal to"
+    },
+    "metrics": {
+        "spend": "Amount Spent",
+        "daily_budget": "Daily Budget",
+        "daily_spend_rate": "Daily Spend Rate",
+        "website_purchase_roas": "ROAS",
+        "link_ctr": "Link CTR",
+        "impressions": "Impressions",
+        "link_cpc": "Link CPC",
+        "cost_per_result": "Cost per Result",
+        "results": "Results",
+        "frequency": "Frequency",
+        "website_purchases": "Purchases",
+        "total_amount_spent": "Total Amount Spent",
+        "link_clicks": "Link Clicks",
+        "cpm": "CPM",
+        "audience_reach_percentage": "Audience Reach %"
+    },
+    "scheduleTypes": {
+        "CONTINUOUS": "Continuous",
+        "DAILY": "Daily",
+        "CUSTOM": "Custom"
+    },
+    "scheduleLabels": {
+        "continuous": "Running continuously every 30 minutes",
+        "daily": "Daily from {{startTime}} to {{endTime}}",
+        "customDays": "{{days}} from {{startTime}} to {{endTime}}",
+        "waitingToRun": "Waiting to run...",
+        "noSchedule": "No schedule set"
+    },
+    "days": {
+        "SUNDAY": "Sunday",
+        "MONDAY": "Monday",
+        "TUESDAY": "Tuesday",
+        "WEDNESDAY": "Wednesday",
+        "THURSDAY": "Thursday",
+        "FRIDAY": "Friday",
+        "SATURDAY": "Saturday",
+        "Mon": "Mon",
+        "Tue": "Tue",
+        "Wed": "Wed",
+        "Thu": "Thu",
+        "Fri": "Fri",
+        "Sat": "Sat",
+        "Sun": "Sun"
+    },
+    "results": {
+        "notRun": "Not run yet",
+        "lastRun": "Last run: {{date}}",
+        "triggered": "Triggered {{count}} time(s)",
+        "failed": "Failed: {{error}}"
+    },
+    "buttons": {
+        "edit": "Edit",
+        "delete": "Delete"
+    },
+    "confirmDelete": {
+        "title": "Delete Rule",
+        "message": "Are you sure you want to delete this rule? This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+    },
+    "toast": {
+        "toggleSuccess": "Rule status updated successfully",
+        "toggleError": "Failed to update rule status",
+        "deleteSuccess": "Rule deleted successfully",
+        "deleteError": "Failed to delete rule",
+        "createSuccess": "Rule created successfully",
+        "createError": "Failed to create rule",
+        "updateSuccess": "Rule updated successfully",
+        "updateError": "Failed to update rule"
+    },
+    "loading": {
+        "fetchingRules": "Loading rules...",
+        "savingRule": "Saving rule...",
+        "deletingRule": "Deleting rule..."
+    },
+    "popup": {
+        "titleEdit": "Edit Rule",
+        "titleAdd": "Add New Rule",
+        "ruleName": "Rule Name",
+        "ruleNamePlaceholder": "Enter rule name",
+        "applyTo": "Apply rule to",
+        "action": "Action",
+        "selectAction": "Select action",
+        "selectAccountFirst": "Please select an ad account first",
+        "conditions": "Conditions",
+        "conditionsTooltip": "Rule conditions. The rule will be executed when one of the conditions is met.",
+        "conditionsDescription": "All of the following conditions must match. Note that some ad metrics may be delayed and fluctuate for a few hours. Consider adding some buffer to data-based conditions to avoid false alarms.",
+        "schedule": "Schedule",
+        "scheduleTooltip": "Determine how often the rule is checked. Rules will be checked according to the ad account's timezone.",
+        "scheduleContinuous": "Continuous",
+        "scheduleContinuousDesc": "Rule runs as frequently as possible (typically every 30-60 minutes).",
+        "scheduleDaily": "Daily",
+        "scheduleDailyDesc": "between {{start}} and {{end}} Ho Chi Minh City Time",
+        "scheduleCustom": "Custom",
+        "scheduleCustomDesc": "Adjust the rule schedule to run on specific days and times. If start and end times are the same, the rule will run once per day within 30-60 minutes after the set time. All times are in Ho Chi Minh City Time",
+        "timeTo": "to",
+        "notificationLabel": "On Facebook",
+        "notificationDesc": "You will receive notifications when this rule's conditions are met",
+        "subscriber": "Subscriber",
+        "cancel": "Cancel",
+        "save": "Save Rule",
+        "saveError": "An error occurred while saving the rule"
+    },
+    "conditionRow": {
+        "valuePlaceholder": "Value",
+        "addButton": "Add",
+        "removeTooltip": "Remove condition"
+    },
+    "customSchedule": {
+        "addTimeSlotTooltip": "Add time slot for this day",
+        "removeTimeSlotTooltip": "Remove this time slot"
+    },
+    "hierarchicalSelector": {
+        "selectTarget": "Select target",
+        "loading": "Loading data...",
+        "noCampaigns": "No campaigns found. Please create a campaign first.",
+        "campaignUnnamed": "Unnamed campaign",
+        "adsetUnnamed": "Unnamed ad set",
+        "adUnnamed": "Unnamed ad"
+    },
+    "metrics": {
+        "Đã chi tiêu": "Amount Spent",
+        "Ngân sách hàng ngày": "Daily Budget",
+        "Tỷ lệ hàng ngày đã chi tiêu": "Daily Spend Rate",
+        "ROAS của lượt mua trên trang web": "Website Purchase ROAS",
+        "CTR (liên kết)": "CTR (Link)",
+        "Số lần hiển thị": "Impressions",
+        "CPC (Liên kết)": "CPC (Link)",
+        "Chi phí trên mỗi kết quả": "Cost per Result",
+        "Kết quả": "Results",
+        "Tần suất": "Frequency",
+        "Lượt mua hàng (Meta Pixel)": "Purchases (Meta Pixel)",
+        "Tổng mức chi tiêu": "Total Amount Spent",
+        "Lượt click vào liên kết": "Link Clicks",
+        "CPM": "CPM",
+        "% đối tượng tiếp cận được": "Audience Reach %"
+    },
+    "operators": {
+        "Lớn hơn": "Greater than",
+        "Nhỏ hơn": "Less than",
+        "Bằng": "Equal to"
+    },
+    "actions": {
+        "Bật chiến dịch": "Turn on",
+        "Tắt chiến dịch": "Turn off",
+        "Chỉ gửi thông báo": "Send notification only"
+    },
+    "units": {
+        "đ": "VND",
+        "%": "%",
+        "Lượt": "Count",
+        "": ""
+    },
+    "applyToLabels": {
+        "campaigns": "{{count}} Campaign",
+        "adsets": "{{count}} Adset",
+        "ads": "{{count}} Ad"
+    },
+    "resultDisplay": {
+        "error": "Error:",
+        "errorTime": "Time: {{time}}",
+        "triggered": "Triggered: {{count}} time(s)",
+        "lastTriggered": "Last: {{time}}",
+        "notTriggered": "Not triggered yet",
+        "runCount": "Ran: {{count}} time(s)",
+        "lastRun": "Last run: {{time}}",
+        "notRun": "Never run",
+        "runInMinutes": "Run in: ~{{minutes}} min",
+        "runInHours": "Run in: ~{{hours}}h {{minutes}}m",
+        "runInHoursOnly": "Run in: ~{{hours}} hour(s)",
+        "waiting": "Waiting to run...",
+        "noSchedule": "No schedule set"
+    },
+    "frequencyDisplay": {
+        "continuous": "Checked at least every 30 minutes.",
+        "daily": "Daily from {{start}} to {{end}}",
+        "custom": "Custom schedule",
+        "notSet": "Not set"
+    },
+    "statusDisplay": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "triggered": "Triggered",
+        "notSelected": "Not selected"
+    }
+}

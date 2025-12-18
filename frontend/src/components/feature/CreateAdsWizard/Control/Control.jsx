@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import "./Control.css";
 import { INITIAL_DATA } from "../../../../constants/wizardConstants.js";
-import { deleteAdSet, deleteAd as deleteAdAPI } from "../../../../services/adService.js";
-import { useToast } from "../../../../hooks/useToast.js";
+import { deleteAdSet, deleteAd as deleteAdAPI } from "../../../../services/ads/adService.js";
+import { useToast } from "../../../../hooks/common/useToast.js";
 
 function Control({
   wizardStep,
@@ -173,78 +173,78 @@ function Control({
     }
   };
 
-    // Add new adset
-    const addAdset = (campaignIndex) => {
-      setCampaignsList((prev) => {
-        // ✅ Deep clone để tránh mutation và shared references
-        const next = JSON.parse(JSON.stringify(prev));
-  
-        // Lấy campaign hiện tại
-        const currentCampaign = next[campaignIndex];
-        if (!currentCampaign) return next;
-  
-        // ✅ Generate ID cho adset mới
-        const newAdsetId = `temp_adset_${Date.now()}`;
-  
-        // ✅ Tìm adset đầu tiên có Facebook Page để copy
-        const firstAdsetWithPage = (currentCampaign.adsets || []).find(
-          (adset) => adset.facebookPageId || adset.promoted_object?.page_id
-        );
-  
-        // ✅ Copy Facebook Page từ adset đầu tiên hoặc từ campaign
-        const sourceFacebookPageId =
-          firstAdsetWithPage?.facebookPageId ||
-          firstAdsetWithPage?.promoted_object?.page_id ||
-          currentCampaign.facebookPageId;
-        const sourceFacebookPage =
-          firstAdsetWithPage?.facebookPage || currentCampaign.facebookPage;
-        const sourceFacebookPageAvatar =
-          firstAdsetWithPage?.facebookPageAvatar ||
-          currentCampaign.facebookPageAvatar;
-  
-        // ✅ Tạo adset mới với _id và ad có adset_id
-        const newAdset = {
-          ...INITIAL_DATA.adset,
-          id: Date.now(),
-          _id: newAdsetId,
-          name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
-          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
-          targeting: {
-            ...INITIAL_DATA.adset.targeting,
-            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
-            locations: {
-              regions: [],
-              cities: [],
-              custom_locations: [],
-              excluded_ids: []
-            },
+  // Add new adset
+  const addAdset = (campaignIndex) => {
+    setCampaignsList((prev) => {
+      // ✅ Deep clone để tránh mutation và shared references
+      const next = JSON.parse(JSON.stringify(prev));
+
+      // Lấy campaign hiện tại
+      const currentCampaign = next[campaignIndex];
+      if (!currentCampaign) return next;
+
+      // ✅ Generate ID cho adset mới
+      const newAdsetId = `temp_adset_${Date.now()}`;
+
+      // ✅ Tìm adset đầu tiên có Facebook Page để copy
+      const firstAdsetWithPage = (currentCampaign.adsets || []).find(
+        (adset) => adset.facebookPageId || adset.promoted_object?.page_id
+      );
+
+      // ✅ Copy Facebook Page từ adset đầu tiên hoặc từ campaign
+      const sourceFacebookPageId =
+        firstAdsetWithPage?.facebookPageId ||
+        firstAdsetWithPage?.promoted_object?.page_id ||
+        currentCampaign.facebookPageId;
+      const sourceFacebookPage =
+        firstAdsetWithPage?.facebookPage || currentCampaign.facebookPage;
+      const sourceFacebookPageAvatar =
+        firstAdsetWithPage?.facebookPageAvatar ||
+        currentCampaign.facebookPageAvatar;
+
+      // ✅ Tạo adset mới với _id và ad có adset_id
+      const newAdset = {
+        ...INITIAL_DATA.adset,
+        id: Date.now(),
+        _id: newAdsetId,
+        name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
+        // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+        targeting: {
+          ...INITIAL_DATA.adset.targeting,
+          // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+          locations: {
+            regions: [],
+            cities: [],
+            custom_locations: [],
+            excluded_ids: []
           },
-          // ✅ Copy Facebook Page từ adset đầu tiên hoặc campaign
-          ...(sourceFacebookPageId && {
-            facebookPageId: sourceFacebookPageId,
-            facebookPage: sourceFacebookPage,
-            facebookPageAvatar: sourceFacebookPageAvatar,
-            promoted_object: {
-              ...(firstAdsetWithPage?.promoted_object || {}),
-              page_id: sourceFacebookPageId,
-            },
-          }),
-          ads: [
-            {
-              ...INITIAL_DATA.ad,
-              id: Date.now() + 1,
-              name: "Quảng cáo mới",
-              adset_id: newAdsetId, // ✅ Link ad với adset
-            },
-          ],
-        };
-  
-        // ✅ Thêm adset vào campaign
-        currentCampaign.adsets = [...(currentCampaign.adsets || []), newAdset];
-  
-        return next;
-      });
-    };
+        },
+        // ✅ Copy Facebook Page từ adset đầu tiên hoặc campaign
+        ...(sourceFacebookPageId && {
+          facebookPageId: sourceFacebookPageId,
+          facebookPage: sourceFacebookPage,
+          facebookPageAvatar: sourceFacebookPageAvatar,
+          promoted_object: {
+            ...(firstAdsetWithPage?.promoted_object || {}),
+            page_id: sourceFacebookPageId,
+          },
+        }),
+        ads: [
+          {
+            ...INITIAL_DATA.ad,
+            id: Date.now() + 1,
+            name: "Quảng cáo mới",
+            adset_id: newAdsetId, // ✅ Link ad với adset
+          },
+        ],
+      };
+
+      // ✅ Thêm adset vào campaign
+      currentCampaign.adsets = [...(currentCampaign.adsets || []), newAdset];
+
+      return next;
+    });
+  };
 
   // Delete adset
   const deleteAdset = async (campaignIndex, adsetIndex) => {
@@ -261,8 +261,8 @@ function Control({
       try {
         toast.info("Đang xóa nhóm quảng cáo...");
         await deleteAdSet(adsetId);
-        toast.success(hasExternalId 
-          ? "Đã xóa nhóm quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu" 
+        toast.success(hasExternalId
+          ? "Đã xóa nhóm quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu"
           : "Đã xóa nhóm quảng cáo trong cơ sở dữ liệu");
       } catch (error) {
         console.error("Error deleting adset:", error);
@@ -335,8 +335,8 @@ function Control({
       try {
         toast.info("Đang xóa ...");
         await deleteAdAPI(adId);
-        toast.success(hasExternalId 
-          ? "Đã xóa" 
+        toast.success(hasExternalId
+          ? "Đã xóa"
           : "Đã xóa");
       } catch (error) {
         console.error("Error deleting ad:", error);
@@ -384,9 +384,8 @@ function Control({
               >
                 {/* Campaign Item */}
                 <div
-                  className={`hierarchy-item campaign-item ${
-                    wizardStep === 1 && isSelected ? "current" : ""
-                  } ${isSelected ? "selected" : ""}`}
+                  className={`hierarchy-item campaign-item ${wizardStep === 1 && isSelected ? "current" : ""
+                    } ${isSelected ? "selected" : ""}`}
                   onClick={() => handleStepClick(1, campaignIndex, 0, 0)}
                 >
                   <div className="hierarchy-icon">
@@ -476,209 +475,207 @@ function Control({
                       );
                       const canDeleteAdset = activeAdsets.length > 1;
 
-                    return (
-                      <div
-                        key={adset._id || adset.id || `adset-${campaignIndex}-${originalAdsetIndex}`}
-                        className="hierarchy-group adset-group"
-                      >
-                        {/* Adset Item */}
+                      return (
                         <div
-                          className={`hierarchy-item adset-item ${
-                            wizardStep === 2 && isAdsetSelected ? "current" : ""
-                          } ${isAdsetSelected ? "selected" : ""}`}
-                          onClick={() =>
-                            handleStepClick(2, campaignIndex, originalAdsetIndex, 0)
-                          }
+                          key={adset._id || adset.id || `adset-${campaignIndex}-${originalAdsetIndex}`}
+                          className="hierarchy-group adset-group"
                         >
-                          <div className="hierarchy-icon">
-                            <button
-                              className="expand-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleExpanded(
-                                  "adsets",
-                                  `${campaignIndex}-${originalAdsetIndex}`
-                                );
-                              }}
-                              title={isAdsetExpanded ? "Thu gọn" : "Mở rộng"}
-                            >
-                              {isAdsetExpanded ? (
-                                <ChevronDown size={14} />
-                              ) : (
-                                <ChevronRight size={14} />
-                              )}
-                            </button>
-                            <Grid size={16} />
-                          </div>
-                          <div className="hierarchy-content">
-                            <div className="hierarchy-label">
-                              Nhóm quảng cáo
-                            </div>
-                            <div className="hierarchy-name">{adset.name}</div>
-                          </div>
-                          <div className="hierarchy-actions">
-                            <div className="dropdown-menu">
+                          {/* Adset Item */}
+                          <div
+                            className={`hierarchy-item adset-item ${wizardStep === 2 && isAdsetSelected ? "current" : ""
+                              } ${isAdsetSelected ? "selected" : ""}`}
+                            onClick={() =>
+                              handleStepClick(2, campaignIndex, originalAdsetIndex, 0)
+                            }
+                          >
+                            <div className="hierarchy-icon">
                               <button
-                                className="more-btn"
+                                className="expand-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleDropdown(
-                                    `adset-${campaignIndex}-${originalAdsetIndex}`
+                                  toggleExpanded(
+                                    "adsets",
+                                    `${campaignIndex}-${originalAdsetIndex}`
                                   );
                                 }}
-                                title="Thêm tùy chọn"
+                                title={isAdsetExpanded ? "Thu gọn" : "Mở rộng"}
                               >
-                                <MoreVertical size={16} />
+                                {isAdsetExpanded ? (
+                                  <ChevronDown size={14} />
+                                ) : (
+                                  <ChevronRight size={14} />
+                                )}
                               </button>
-                              {openDropdowns[
-                                `adset-${campaignIndex}-${originalAdsetIndex}`
-                              ] && (
-                                <div className="dropdown-content">
-                                  <button
-                                    className="dropdown-item"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      addAdset(campaignIndex);
-                                      setOpenDropdowns({});
-                                    }}
-                                  >
-                                    <Plus size={14} />
-                                    Tạo nhóm quảng cáo
-                                  </button>
-                                  {canDeleteAdset && (
-                                    <button
-                                      className="dropdown-item delete-item"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteAdset(campaignIndex, originalAdsetIndex);
-                                        setOpenDropdowns({});
-                                      }}
-                                    >
-                                      <Trash2 size={14} />
-                                      Xóa
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                              <Grid size={16} />
                             </div>
-                          </div>
-                          <div className="hierarchy-status">
-                            {wizardStep === 2 && isAdsetSelected ? "●" : ""}
-                          </div>
-                        </div>
-
-                        {/* Ads */}
-                        {isAdsetExpanded &&
-                          (adset.ads || [])
-                            .filter((ad) => ad.status !== "DELETED")
-                            .map((ad) => {
-                              // ✅ Tính lại index sau khi filter để đảm bảo đúng với adset.ads
-                              const originalAdIndex = adset.ads.findIndex(
-                                (a) => (a._id || a.id) === (ad._id || ad.id)
-                              );
-                              const isAdSelected =
-                                selectedCampaignIndex === campaignIndex &&
-                                selectedAdsetIndex === originalAdsetIndex &&
-                                selectedAdIndex === originalAdIndex;
-                              const activeAds = (adset.ads || []).filter(
-                                (a) => a.status !== "DELETED"
-                              );
-                              const canDeleteAd = activeAds.length > 1;
-
-                            return (
-                              <div
-                                key={ad._id || ad.id || `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`}
-                                className="hierarchy-group ad-group"
-                              >
-                                {/* Ad Item */}
-                                <div
-                                  className={`hierarchy-item ad-item ${
-                                    wizardStep === 3 && isAdSelected
-                                      ? "current"
-                                      : ""
-                                  } ${isAdSelected ? "selected" : ""}`}
-                                  onClick={() =>
-                                    handleStepClick(
-                                      3,
-                                      campaignIndex,
-                                      originalAdsetIndex,
-                                      originalAdIndex
-                                    )
-                                  }
+                            <div className="hierarchy-content">
+                              <div className="hierarchy-label">
+                                Nhóm quảng cáo
+                              </div>
+                              <div className="hierarchy-name">{adset.name}</div>
+                            </div>
+                            <div className="hierarchy-actions">
+                              <div className="dropdown-menu">
+                                <button
+                                  className="more-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleDropdown(
+                                      `adset-${campaignIndex}-${originalAdsetIndex}`
+                                    );
+                                  }}
+                                  title="Thêm tùy chọn"
                                 >
-                                  <div className="hierarchy-icon">
-                                    <FileText size={16} />
-                                  </div>
-                                  <div className="hierarchy-content">
-                                    <div className="hierarchy-label">
-                                      Quảng cáo
-                                    </div>
-                                    <div className="hierarchy-name">
-                                      {ad.name}
-                                    </div>
-                                  </div>
-                                  <div className="hierarchy-actions">
-                                    <div className="dropdown-menu">
+                                  <MoreVertical size={16} />
+                                </button>
+                                {openDropdowns[
+                                  `adset-${campaignIndex}-${originalAdsetIndex}`
+                                ] && (
+                                    <div className="dropdown-content">
                                       <button
-                                        className="more-btn"
+                                        className="dropdown-item"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                    toggleDropdown(
-                                      `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
-                                    );
+                                          addAdset(campaignIndex);
+                                          setOpenDropdowns({});
                                         }}
-                                        title="Thêm tùy chọn"
                                       >
-                                        <MoreVertical size={16} />
+                                        <Plus size={14} />
+                                        Tạo nhóm quảng cáo
                                       </button>
-                              {openDropdowns[
-                                `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
-                              ] && (
-                                        <div className="dropdown-content">
-                                          <button
-                                            className="dropdown-item"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              addAd(campaignIndex, adsetIndex);
-                                              setOpenDropdowns({});
-                                            }}
-                                          >
-                                            <Plus size={14} />
-                                            Tạo quảng cáo
-                                          </button>
-                                          {canDeleteAd && (
-                                            <button
-                                              className="dropdown-item delete-item"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteAd(
-                                                  campaignIndex,
-                                                  originalAdsetIndex,
-                                                  originalAdIndex
-                                                );
-                                                setOpenDropdowns({});
-                                              }}
-                                            >
-                                              <Trash2 size={14} />
-                                              Xóa
-                                            </button>
-                                          )}
-                                        </div>
+                                      {canDeleteAdset && (
+                                        <button
+                                          className="dropdown-item delete-item"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteAdset(campaignIndex, originalAdsetIndex);
+                                            setOpenDropdowns({});
+                                          }}
+                                        >
+                                          <Trash2 size={14} />
+                                          Xóa
+                                        </button>
                                       )}
                                     </div>
-                                  </div>
-                                  <div className="hierarchy-status">
-                                    {wizardStep === 3 && isAdSelected
-                                      ? "●"
-                                      : ""}
-                                  </div>
-                                </div>
+                                  )}
                               </div>
-                            );
-                          })}
-                      </div>
-                    );
-                  })}
+                            </div>
+                            <div className="hierarchy-status">
+                              {wizardStep === 2 && isAdsetSelected ? "●" : ""}
+                            </div>
+                          </div>
+
+                          {/* Ads */}
+                          {isAdsetExpanded &&
+                            (adset.ads || [])
+                              .filter((ad) => ad.status !== "DELETED")
+                              .map((ad) => {
+                                // ✅ Tính lại index sau khi filter để đảm bảo đúng với adset.ads
+                                const originalAdIndex = adset.ads.findIndex(
+                                  (a) => (a._id || a.id) === (ad._id || ad.id)
+                                );
+                                const isAdSelected =
+                                  selectedCampaignIndex === campaignIndex &&
+                                  selectedAdsetIndex === originalAdsetIndex &&
+                                  selectedAdIndex === originalAdIndex;
+                                const activeAds = (adset.ads || []).filter(
+                                  (a) => a.status !== "DELETED"
+                                );
+                                const canDeleteAd = activeAds.length > 1;
+
+                                return (
+                                  <div
+                                    key={ad._id || ad.id || `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`}
+                                    className="hierarchy-group ad-group"
+                                  >
+                                    {/* Ad Item */}
+                                    <div
+                                      className={`hierarchy-item ad-item ${wizardStep === 3 && isAdSelected
+                                        ? "current"
+                                        : ""
+                                        } ${isAdSelected ? "selected" : ""}`}
+                                      onClick={() =>
+                                        handleStepClick(
+                                          3,
+                                          campaignIndex,
+                                          originalAdsetIndex,
+                                          originalAdIndex
+                                        )
+                                      }
+                                    >
+                                      <div className="hierarchy-icon">
+                                        <FileText size={16} />
+                                      </div>
+                                      <div className="hierarchy-content">
+                                        <div className="hierarchy-label">
+                                          Quảng cáo
+                                        </div>
+                                        <div className="hierarchy-name">
+                                          {ad.name}
+                                        </div>
+                                      </div>
+                                      <div className="hierarchy-actions">
+                                        <div className="dropdown-menu">
+                                          <button
+                                            className="more-btn"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleDropdown(
+                                                `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
+                                              );
+                                            }}
+                                            title="Thêm tùy chọn"
+                                          >
+                                            <MoreVertical size={16} />
+                                          </button>
+                                          {openDropdowns[
+                                            `ad-${campaignIndex}-${originalAdsetIndex}-${originalAdIndex}`
+                                          ] && (
+                                              <div className="dropdown-content">
+                                                <button
+                                                  className="dropdown-item"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addAd(campaignIndex, adsetIndex);
+                                                    setOpenDropdowns({});
+                                                  }}
+                                                >
+                                                  <Plus size={14} />
+                                                  Tạo quảng cáo
+                                                </button>
+                                                {canDeleteAd && (
+                                                  <button
+                                                    className="dropdown-item delete-item"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      deleteAd(
+                                                        campaignIndex,
+                                                        originalAdsetIndex,
+                                                        originalAdIndex
+                                                      );
+                                                      setOpenDropdowns({});
+                                                    }}
+                                                  >
+                                                    <Trash2 size={14} />
+                                                    Xóa
+                                                  </button>
+                                                )}
+                                              </div>
+                                            )}
+                                        </div>
+                                      </div>
+                                      <div className="hierarchy-status">
+                                        {wizardStep === 3 && isAdSelected
+                                          ? "●"
+                                          : ""}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                        </div>
+                      );
+                    })}
               </div>
             );
           })}

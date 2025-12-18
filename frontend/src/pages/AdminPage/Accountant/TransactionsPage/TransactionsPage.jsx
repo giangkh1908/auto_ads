@@ -5,11 +5,11 @@ import { Search, ChevronDown, Eye, Download } from "lucide-react";
 import Pagination from "../../../../components/common/Pagination/Pagination";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
 import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
-import { fetchLatestNotesBatch } from "../../../../utils/noteUtils";
-import paymentTransactionService from "../../../../services/paymentTransactionService";
+import { fetchLatestNotesBatch } from "../../../../utils/business-logic/noteUtils";
+import paymentTransactionService from "../../../../services/shop/paymentTransactionService";
 import { toast } from "sonner";
 import Invoice from "../../../../components/feature/Invoice/Invoice";
-import invoiceService from "../../../../services/invoiceService";
+import invoiceService from "../../../../services/shop/invoiceService";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -389,7 +389,7 @@ export default function TransactionsPage() {
           total: response.total,
           totalPages: response.pages
         }));
-        
+
         // Merge notes vào transactions
         const transactionsWithNotes = await mergeNotesToTransactions(mappedTransactions);
         setRows(transactionsWithNotes);

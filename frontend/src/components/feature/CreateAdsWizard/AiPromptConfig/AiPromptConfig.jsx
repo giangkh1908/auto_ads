@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { aiConfigService } from '../../../../services/aiConfigService';
-import { useToast } from '../../../../hooks/useToast';
+import { aiConfigService } from '../../../../services/chat/aiConfigService';
+import { useToast } from '../../../../hooks/common/useToast';
 import './AiPromptConfig.css';
 
 const AiPromptConfig = ({ isOpen, onClose, onSave, initialConfig = {}, configId = null }) => {
@@ -23,13 +23,13 @@ const AiPromptConfig = ({ isOpen, onClose, onSave, initialConfig = {}, configId 
   const [selectedModel, setSelectedModel] = useState(initialConfig.model || 'gpt-4o-mini');
   const [openingQuestion, setOpeningQuestion] = useState(initialConfig.openingQuestion || '');
   const [autoSuggestions, setAutoSuggestions] = useState(initialConfig.autoSuggestions || false);
-  
+
   // Prompt templates state
   const [promptTemplateHeadline, setPromptTemplateHeadline] = useState(initialConfig.prompt_template_headline || '');
   const [promptTemplateBody, setPromptTemplateBody] = useState(initialConfig.prompt_template_body || '');
   const [promptTemplateDescription, setPromptTemplateDescription] = useState(initialConfig.prompt_template_description || '');
   const [useCustomTemplates, setUseCustomTemplates] = useState(initialConfig.use_custom_templates || false);
-  
+
   const [expandedSections, setExpandedSections] = useState({
     model: false,
     knowledge: true,
@@ -95,7 +95,7 @@ const AiPromptConfig = ({ isOpen, onClose, onSave, initialConfig = {}, configId 
   // Default templates
   const getDefaultTemplate = (target) => {
     const formatInstruction = "\n\nQUAN TRỌNG: Chỉ trả về nội dung quảng cáo thuần túy. KHÔNG giải thích, KHÔNG markdown (**), KHÔNG 'Lý do chọn' hay 'Tuyệt vời!'. Format: Chỉ text thuần, không có phần mở đầu hay kết luận. Trả về ngay nội dung, không nói thêm gì.";
-    
+
     const basePrompt = `{character}
 
 Kỹ năng:
@@ -124,9 +124,9 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
     const template = getDefaultTemplate(target);
     const skillsText = skills.filter(s => s.trim()).map(s => `- ${s}`).join('\n');
     const limitationsText = limitations.filter(l => l.trim()).map(l => `- ${l}`).join('\n');
-    
+
     const maxLen = target === 'headline' ? '60' : target === 'description' ? '90' : '125';
-    
+
     let prompt = template
       .replace(/{character}/g, character || '')
       .replace(/{skills}/g, skillsText || '')
@@ -197,10 +197,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
           <div className="ai-prompt-left">
             <div className="ai-prompt-section">
               <h4 className="ai-prompt-section-title">Prompt</h4>
-              
+
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title" 
-                title="Cấu hình nhân vật giả tưởng cho prompt">
+                <h5 className="ai-prompt-subsection-title"
+                  title="Cấu hình nhân vật giả tưởng cho prompt">
                   # Nhân vật
                 </h5>
                 <textarea
@@ -213,8 +213,8 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
               </div>
 
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title" 
-                title="Cấu hình kỹ năng mà nhân vật ấy sử dụng cho prompt">
+                <h5 className="ai-prompt-subsection-title"
+                  title="Cấu hình kỹ năng mà nhân vật ấy sử dụng cho prompt">
                   ## Kỹ năng
                 </h5>
                 <div className="ai-prompt-list">
@@ -244,8 +244,8 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
               </div>
 
               <div className="ai-prompt-subsection">
-                <h5 className="ai-prompt-subsection-title" 
-                title="Có giới hạn nào mà không cho phép nhân vật vượt quá?">
+                <h5 className="ai-prompt-subsection-title"
+                  title="Có giới hạn nào mà không cho phép nhân vật vượt quá?">
                   ## Giới hạn
                 </h5>
                 <div className="ai-prompt-list">
@@ -400,10 +400,10 @@ Ngữ cảnh: {personalization}. Từ khóa: {keywords}. Giọng: {tone}. Ngôn 
                           />
                           <span>Sử dụng Custom Templates</span>
                         </label>
-                        <div style={{ fontSize: '12px', color: '#666', marginTop: '10px'}}>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
                           Khi bật, hệ thống sẽ dùng các template tùy chỉnh thay vì tự động build từ Character/Skills/Limitations
                         </div>
-                        <div style={{ fontSize: '12px', color: '#666'}}>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
                           Các placeholders có thể dùng: {'{character}'}, {'{skills}'}, {'{limitations}'}, {'{language}'}, {'{tone}'}, {'{personalization}'}, {'{keywords}'}, {'{maxLen}'}
                         </div>
                       </div>

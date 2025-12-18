@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import "./PaymentManagement.css";
 import { Search, ChevronDown, Check, X, FileText } from "lucide-react";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
-import paymentTransactionService from "../../../../services/paymentTransactionService";
+import paymentTransactionService from "../../../../services/shop/paymentTransactionService";
 import { toast } from "sonner";
 import ConfirmationPopup from "../../../../components/common/ConfirmationPopup/ConfirmationPopup";
 import Invoice from "../../../../components/feature/Invoice/Invoice";

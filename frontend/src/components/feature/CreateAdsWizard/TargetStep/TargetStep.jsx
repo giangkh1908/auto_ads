@@ -138,14 +138,14 @@ function TargetStep({ campaign, setCampaign }) {
     },
   };
 
-  const currentObjective = campaign.objective && objectiveDetails[campaign.objective] 
+  const currentObjective = campaign.objective && objectiveDetails[campaign.objective]
     ? objectiveDetails[campaign.objective]
     : {
-        title: "Chọn mục tiêu chiến dịch",
-        description: "Mục tiêu chiến dịch là mục tiêu kinh doanh mà bạn mong muốn đạt được khi chạy quảng cáo. Hãy chọn một mục tiêu từ danh sách bên trái để tiếp tục.",
-        image: target,
-        suitableFor: ['Chọn mục tiêu để xem chi tiết'],
-      };
+      title: "Chọn mục tiêu chiến dịch",
+      description: "Mục tiêu chiến dịch là mục tiêu kinh doanh mà bạn mong muốn đạt được khi chạy quảng cáo. Hãy chọn một mục tiêu từ danh sách bên trái để tiếp tục.",
+      image: target,
+      suitableFor: ['Chọn mục tiêu để xem chi tiết'],
+    };
 
   return (
     <div className="panel objectives-panel">
@@ -159,9 +159,8 @@ function TargetStep({ campaign, setCampaign }) {
             {objectives.map((item) => (
               <label
                 key={item.key}
-                className={`objective-item ${
-                  campaign.objective === item.key ? "selected" : ""
-                }`}
+                className={`objective-item ${campaign.objective === item.key ? "selected" : ""
+                  }`}
               >
                 <input
                   type="radio"

@@ -1,0 +1,224 @@
+{
+    "pageTitle": "Quy tắc Tự động",
+    "subtitle": "Tự động hóa quản lý quảng cáo với các quy tắc thông minh",
+    "selectAccount": "Chọn tài khoản quảng cáo",
+    "addNewRule": "Thêm quy tắc mới",
+    "emptyState": "Chưa có quy tắc nào. Tạo quy tắc để tự động quản lý quảng cáo Facebook dựa trên điều kiện hiệu suất.",
+    "table": {
+        "headers": {
+            "enabled": "Kích hoạt",
+            "ruleName": "Tên quy tắc",
+            "account": "Tài khoản",
+            "applyTo": "Áp dụng cho",
+            "conditions": "Điều kiện",
+            "actionCondition": "Hành động & Điều kiện",
+            "result": "Kết quả",
+            "frequency": "Tần suất",
+            "createdBy": "Người tạo",
+            "actions": "Thao tác"
+        }
+    },
+    "applyTo": {
+        "allCampaigns": "Tất cả Campaigns",
+        "selectedCampaigns": "{{count}} Campaign",
+        "selectedAdSets": "{{count}} Ad Set",
+        "selectedAds": "{{count}} Ad",
+        "mixed": "{{campaigns}} Campaigns, {{adsets}} Ad Sets, {{ads}} Ads"
+    },
+    "actions": {
+        "TURN_ON": "Bật",
+        "TURN_OFF": "Tắt",
+        "SEND_NOTIFICATION": "Gửi Thông báo"
+    },
+    "operators": {
+        "GREATER_THAN": "lớn hơn",
+        "LESS_THAN": "nhỏ hơn",
+        "EQUAL_TO": "bằng"
+    },
+    "metrics": {
+        "spend": "Chi phí",
+        "daily_budget": "Ngân sách Hàng ngày",
+        "daily_spend_rate": "Tỷ lệ Chi tiêu Hàng ngày",
+        "website_purchase_roas": "ROAS",
+        "link_ctr": "CTR Liên kết",
+        "impressions": "Lượt hiển thị",
+        "link_cpc": "CPC Liên kết",
+        "cost_per_result": "Chi phí mỗi Kết quả",
+        "results": "Kết quả",
+        "frequency": "Tần suất",
+        "website_purchases": "Lượt mua hàng",
+        "total_amount_spent": "Tổng Chi phí",
+        "link_clicks": "Nhấp chuột Liên kết",
+        "cpm": "CPM",
+        "audience_reach_percentage": "% Tiếp cận Đối tượng"
+    },
+    "scheduleTypes": {
+        "CONTINUOUS": "Liên tục",
+        "DAILY": "Hàng ngày",
+        "CUSTOM": "Tùy chỉnh"
+    },
+    "scheduleLabels": {
+        "continuous": "Chạy liên tục mỗi 30 phút",
+        "daily": "Hàng ngày từ {{startTime}} đến {{endTime}}",
+        "customDays": "{{days}} từ {{startTime}} đến {{endTime}}",
+        "waitingToRun": "Đang chờ chạy...",
+        "noSchedule": "Chưa có lịch chạy"
+    },
+    "days": {
+        "SUNDAY": "Chủ nhật",
+        "MONDAY": "Thứ hai",
+        "TUESDAY": "Thứ ba",
+        "WEDNESDAY": "Thứ tư",
+        "THURSDAY": "Thứ năm",
+        "FRIDAY": "Thứ sáu",
+        "SATURDAY": "Thứ bảy",
+        "Mon": "T2",
+        "Tue": "T3",
+        "Wed": "T4",
+        "Thu": "T5",
+        "Fri": "T6",
+        "Sat": "T7",
+        "Sun": "CN"
+    },
+    "results": {
+        "notRun": "Chưa chạy",
+        "lastRun": "Chạy lần cuối: {{date}}",
+        "triggered": "Đã kích hoạt {{count}} lần",
+        "failed": "Lỗi: {{error}}"
+    },
+    "buttons": {
+        "edit": "Sửa",
+        "delete": "Xóa"
+    },
+    "confirmDelete": {
+        "title": "Xóa Quy tắc",
+        "message": "Bạn có chắc chắn muốn xóa quy tắc này? Hành động này không thể hoàn tác.",
+        "cancel": "Hủy",
+        "confirm": "Xóa"
+    },
+    "toast": {
+        "toggleSuccess": "Cập nhật trạng thái quy tắc thành công",
+        "toggleError": "Lỗi cập nhật trạng thái quy tắc",
+        "deleteSuccess": "Xóa quy tắc thành công",
+        "deleteError": "Lỗi xóa quy tắc",
+        "createSuccess": "Tạo quy tắc thành công",
+        "createError": "Lỗi tạo quy tắc",
+        "updateSuccess": "Cập nhật quy tắc thành công",
+        "updateError": "Lỗi cập nhật quy tắc"
+    },
+    "loading": {
+        "fetchingRules": "Đang tải quy tắc...",
+        "savingRule": "Đang lưu quy tắc...",
+        "deletingRule": "Đang xóa quy tắc..."
+    },
+    "popup": {
+        "titleEdit": "Chỉnh sửa quy tắc",
+        "titleAdd": "Thêm quy tắc mới",
+        "ruleName": "Tên quy tắc",
+        "ruleNamePlaceholder": "Nhập tên quy tắc",
+        "applyTo": "Áp dụng quy tắc cho",
+        "action": "Hành động",
+        "selectAction": "Chọn hành động",
+        "selectAccountFirst": "Vui lòng chọn tài khoản quảng cáo",
+        "conditions": "Điều kiện",
+        "conditionsTooltip": "Điều kiện của quy tắc. Quy tắc sẽ được thực hiện khi một trong các điều kiện được đáp ứng.",
+        "conditionsDescription": "Tất cả các điều kiện sau đây phải khớp. Lưu ý rằng một số số liệu quảng cáo có thể bị trễ và dao động trong vài giờ. Hãy cân nhắc thêm một số buffer cho các điều kiện dựa trên dữ liệu để tránh cảnh báo sai.",
+        "schedule": "Lịch trình",
+        "scheduleTooltip": "Xác định tần suất kiểm tra quy tắc. Quy tắc sẽ được kiểm tra theo múi giờ của tài khoản quảng cáo.",
+        "scheduleContinuous": "Liên tục",
+        "scheduleContinuousDesc": "Quy tắc chạy thường xuyên nhất có thể (thường là 30-60 phút/lần).",
+        "scheduleDaily": "Hàng ngày",
+        "scheduleDailyDesc": "giữa {{start}} và {{end}} theo Giờ TP Hồ Chí Minh",
+        "scheduleCustom": "Tùy chỉnh",
+        "scheduleCustomDesc": "Hãy điều chỉnh lịch chạy quy tắc để chạy vào những ngày và giờ cụ thể. Nếu thời gian bắt đầu và kết thúc giống nhau, quy tắc sẽ chạy mỗi ngày một lần trong vòng 30-60 phút sau thời gian đã đặt. Tất cả thời gian đều theo Giờ TP Hồ Chí Minh",
+        "timeTo": "đến",
+        "notificationLabel": "Trên Facebook",
+        "notificationDesc": "Bạn sẽ nhận được thông báo khi đạt điều kiện của quy tắc này",
+        "subscriber": "Người đăng ký",
+        "cancel": "Hủy",
+        "save": "Lưu quy tắc",
+        "saveError": "Có lỗi xảy ra khi lưu quy tắc"
+    },
+    "conditionRow": {
+        "valuePlaceholder": "Giá trị",
+        "addButton": "Thêm",
+        "removeTooltip": "Xóa điều kiện"
+    },
+    "customSchedule": {
+        "addTimeSlotTooltip": "Thêm time slot cho ngày này",
+        "removeTimeSlotTooltip": "Xóa time slot này"
+    },
+    "hierarchicalSelector": {
+        "selectTarget": "Chọn đối tượng",
+        "loading": "Đang tải dữ liệu...",
+        "noCampaigns": "Không có chiến dịch nào. Vui lòng tạo chiến dịch trước.",
+        "campaignUnnamed": "Chiến dịch không tên",
+        "adsetUnnamed": "Nhóm quảng cáo không tên",
+        "adUnnamed": "Quảng cáo không tên"
+    },
+    "metrics": {
+        "Đã chi tiêu": "Đã chi tiêu",
+        "Ngân sách hàng ngày": "Ngân sách hàng ngày",
+        "Tỷ lệ hàng ngày đã chi tiêu": "Tỷ lệ hàng ngày đã chi tiêu",
+        "ROAS của lượt mua trên trang web": "ROAS của lượt mua trên trang web",
+        "CTR (liên kết)": "CTR (liên kết)",
+        "Số lần hiển thị": "Số lần hiển thị",
+        "CPC (Liên kết)": "CPC (Liên kết)",
+        "Chi phí trên mỗi kết quả": "Chi phí trên mỗi kết quả",
+        "Kết quả": "Kết quả",
+        "Tần suất": "Tần suất",
+        "Lượt mua hàng (Meta Pixel)": "Lượt mua hàng (Meta Pixel)",
+        "Tổng mức chi tiêu": "Tổng mức chi tiêu",
+        "Lượt click vào liên kết": "Lượt click vào liên kết",
+        "CPM": "CPM",
+        "% đối tượng tiếp cận được": "% đối tượng tiếp cận được"
+    },
+    "operators": {
+        "Lớn hơn": "Lớn hơn",
+        "Nhỏ hơn": "Nhỏ hơn",
+        "Bằng": "Bằng"
+    },
+    "actions": {
+        "Bật chiến dịch": "Bật chiến dịch",
+        "Tắt chiến dịch": "Tắt chiến dịch",
+        "Chỉ gửi thông báo": "Chỉ gửi thông báo"
+    },
+    "units": {
+        "đ": "đ",
+        "%": "%",
+        "Lượt": "Lượt",
+        "": ""
+    },
+    "applyToLabels": {
+        "campaigns": "{{count}} chiến dịch",
+        "adsets": "{{count}} nhóm quảng cáo",
+        "ads": "{{count}} quảng cáo"
+    },
+    "resultDisplay": {
+        "error": "Lỗi:",
+        "errorTime": "Thời gian: {{time}}",
+        "triggered": "Kích hoạt: {{count}} lần",
+        "lastTriggered": "Lần cuối: {{time}}",
+        "notTriggered": "Chưa kích hoạt",
+        "runCount": "Đã chạy: {{count}} lần",
+        "lastRun": "Chạy lần cuối: {{time}}",
+        "notRun": "Chưa chạy lần nào",
+        "runInMinutes": "Chạy sau: ~{{minutes}} phút",
+        "runInHours": "Chạy sau: ~{{hours}}h {{minutes}}m",
+        "runInHoursOnly": "Chạy sau: ~{{hours}} giờ",
+        "waiting": "Đang chờ chạy...",
+        "noSchedule": "Chưa có lịch chạy"
+    },
+    "frequencyDisplay": {
+        "continuous": "Đã kiểm tra tối thiểu 30 phút một lần.",
+        "daily": "Hàng ngày từ {{start}} đến {{end}}",
+        "custom": "Theo lịch tùy chỉnh",
+        "notSet": "Chưa cài đặt"
+    },
+    "statusDisplay": {
+        "enabled": "Đã bật",
+        "disabled": "Vô hiệu hóa",
+        "triggered": "Đã kích hoạt",
+        "notSelected": "Chưa chọn"
+    }
+}

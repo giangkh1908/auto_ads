@@ -882,6 +882,8 @@
   max-height: 100px;
   min-height: 24px;
   line-height: 1.5;
+  overflow-y: auto; /* Thêm scroll khi quá max-height */
+  /* Remove fixed height, let it auto-resize */
 }
 
 .chat-widget-input::placeholder {

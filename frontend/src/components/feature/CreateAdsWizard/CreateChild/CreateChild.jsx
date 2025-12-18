@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Folder, Grid, FileText, X } from "lucide-react";
-import axiosInstance from "../../../../utils/axios";
-import { transformCampaign, transformAdset } from "../../../../pages/AdsManagement/services/adsDataService";
+import axiosInstance from "../../../../utils/api/axios";
+import { transformCampaign, transformAdset } from "../../../../services/ads/adsDataService";
 import "./CreateChild.css";
 
 function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = null }) {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
-  
+
   // Adset states
   const [adsetMode, setAdsetMode] = useState("createNew"); // "createNew" or "selectExisting"
   const [adsets, setAdsets] = useState([]);
   const [selectedAdsetId, setSelectedAdsetId] = useState("");
   const [adsetName, setAdsetName] = useState("");
   const [loadingAdsets, setLoadingAdsets] = useState(false);
-  
+
   // Ad states - Ad luôn được tạo mới
   const [adName, setAdName] = useState("");
 
@@ -137,7 +137,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
   const handleSave = () => {
     const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
     const selectedAdset = adsets.find(a => a.id === selectedAdsetId);
-    
+
     const data = {
       campaign: selectedCampaign ? selectedCampaign.name : "",
       campaignId: selectedCampaignId,
@@ -191,7 +191,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
               ))}
             </select>
             {selectedCampaignId && (
-              <button 
+              <button
                 className="clear-button"
                 onClick={() => setSelectedCampaignId("")}
               >
@@ -210,7 +210,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
             <div className="section-label">Nhóm quảng cáo</div>
           </div>
           <div className="form-row-child">
-            <select 
+            <select
               className="form-select-child"
               value={adsetMode}
               onChange={(e) => setAdsetMode(e.target.value)}
@@ -230,7 +230,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
                   disabled={!selectedCampaignId}
                 />
                 {adsetName && (
-                  <button 
+                  <button
                     className="clear-button"
                     onClick={() => setAdsetName("")}
                   >
@@ -256,7 +256,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
                   ))}
                 </select>
                 {selectedAdsetId && (
-                  <button 
+                  <button
                     className="clear-button"
                     onClick={() => setSelectedAdsetId("")}
                   >
@@ -286,7 +286,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
               disabled={(adsetMode === "selectExisting" && !selectedAdsetId) || (adsetMode === "createNew" && !adsetName)}
             />
             {adName && (
-              <button 
+              <button
                 className="clear-button"
                 onClick={() => setAdName("")}
               >
@@ -302,8 +302,8 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
         <button className="btn-secondary" onClick={onClose}>
           Hủy
         </button>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           onClick={handleSave}
           disabled={!isFormValid()}
         >

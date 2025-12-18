@@ -1,7 +1,20 @@
-import Log from "../models/log.model.js";
+import Log from "../models/admin/log.model.js";
 
 export const saveLog = async (logData) => {
   try {
+    // DEBUG: Log the incoming data
+    // console.log("[saveLog] 📝 Receiving logData:", {
+    //   action: logData.action,
+    //   shop_id: logData.shop_id,
+    //   user_id: logData.user_id,
+    //   target_name: logData.target_name,
+    // });
+
+    // Nếu không có shop_id, log warning và skip
+    if (!logData.shop_id) {
+      console.warn("[saveLog] ⚠️ shop_id is null/undefined! Log will NOT be visible in Shop History.");
+    }
+
     // Tạo description tự động theo action
     let description = "";
 
@@ -88,6 +101,62 @@ export const saveLog = async (logData) => {
 
       case "REFRESH_FACEBOOK_TOKEN":
         description = `${userName} đã làm mới access token Facebook thành công`;
+        break;
+
+      case "UPGRADE_SHOP":
+        const packageName = logData.meta?.package_name || logData.request?.package_name || "Gói dịch vụ";
+        description = logData.description || `${userName} đã nâng cấp cửa hàng "${shopName}" lên gói "${packageName}"`;
+        break;
+
+      // ===== CAMPAIGN ACTIONS =====
+      case "CREATE_CAMPAIGN":
+        description = `${userName} vừa tạo chiến dịch: "${targetName}"`;
+        break;
+
+      case "UPDATE_CAMPAIGN":
+        description = `${userName} vừa cập nhật chiến dịch: "${targetName}"`;
+        break;
+
+      case "DELETE_CAMPAIGN":
+        description = `${userName} vừa xóa chiến dịch: "${targetName}"`;
+        break;
+
+      case "ARCHIVE_CAMPAIGN":
+        description = `${userName} vừa lưu trữ chiến dịch: "${targetName}"`;
+        break;
+
+      // ===== ADSET ACTIONS =====
+      case "CREATE_ADSET":
+        description = `${userName} vừa tạo nhóm quảng cáo: "${targetName}"`;
+        break;
+
+      case "UPDATE_ADSET":
+        description = `${userName} vừa cập nhật nhóm quảng cáo: "${targetName}"`;
+        break;
+
+      case "DELETE_ADSET":
+        description = `${userName} vừa xóa nhóm quảng cáo: "${targetName}"`;
+        break;
+
+      case "ARCHIVE_ADSET":
+        description = `${userName} vừa lưu trữ nhóm quảng cáo: "${targetName}"`;
+        break;
+
+      // ===== AD ACTIONS =====
+      case "CREATE_AD":
+        description = `${userName} vừa tạo quảng cáo: "${targetName}"`;
+        break;
+
+      case "UPDATE_AD":
+        description = `${userName} vừa cập nhật quảng cáo: "${targetName}"`;
+        break;
+
+      case "DELETE_AD":
+        description = `${userName} vừa xóa quảng cáo: "${targetName}"`;
+        break;
+
+      case "ARCHIVE_AD":
+        description = `${userName} vừa lưu trữ quảng cáo: "${targetName}"`;
         break;
 
       default:

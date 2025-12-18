@@ -1,5 +1,5 @@
 import express from 'express';
-import { searchTargeting, getTargetingSuggestions } from '../../services/targetingSearchService.js';
+import { searchTargeting, getTargetingSuggestions } from '../../services/ads/targetingSearchService.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -25,7 +25,7 @@ router.get('/search', authenticate, async (req, res) => {
     }
 
     // Get access token from user
-    const User = (await import('../../models/user.model.js')).default;
+    const User = (await import('../../models/user/user.model.js')).default;
     const user = await User.findById(req.user._id).select('+facebookAccessToken');
     const accessToken = user?.facebookAccessToken;
 
@@ -80,7 +80,7 @@ router.get('/suggestions', authenticate, async (req, res) => {
     const { types } = req.query;
 
     // Get access token from user
-    const User = (await import('../../models/user.model.js')).default;
+    const User = (await import('../../models/user/user.model.js')).default;
     const user = await User.findById(req.user._id).select('+facebookAccessToken');
     const accessToken = user?.facebookAccessToken;
 

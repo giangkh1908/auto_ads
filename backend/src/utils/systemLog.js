@@ -1,5 +1,5 @@
 // backend/src/utils/systemLog.js
-import SystemLog from '../models/systemLogs.model.js';
+import SystemLog from '../models/admin/systemLogs.model.js';
 
 /**
  * Helper function để lưu system log dễ dàng

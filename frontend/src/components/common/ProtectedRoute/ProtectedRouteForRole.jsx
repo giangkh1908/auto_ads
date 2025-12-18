@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../../hooks/useAuth'
+import { useAuth } from '../../../hooks/auth/useAuth'
 import { ROUTES } from '../../../constants/app.constants'
 import './ProtectedRoute.css'
 

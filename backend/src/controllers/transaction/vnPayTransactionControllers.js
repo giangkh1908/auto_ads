@@ -1,15 +1,16 @@
 import crypto from "crypto";
 import querystring from "qs";
 import axios from "axios";
-import PaymentTransaction from "../../models/paymentTransaction.model.js";
-import UserPackage from "../../models/userPackage.model.js";
-import Package from "../../models/package.model.js";
+import PaymentTransaction from "../../models/transaction/paymentTransaction.model.js";
+import UserPackage from "../../models/package/userPackage.model.js";
+import Package from "../../models/package/package.model.js";
+import { createInvoice } from "../invoice/invoiceControllers.js";
 
 const config = {
   vnp_TmnCode: process.env.VNPAY_TMN_CODE || "Y4DJ13B6",
   vnp_HashSecret: process.env.VNPAY_HASH_SECRET || "BIYMKPJPKLOEPMWRKCRWIXJLOIETVDUN",
   vnp_Url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-  vnp_ReturnUrl: process.env.VNPAY_RETURN_URL || "http://auto-ads-ai.vercel.app/dashboard",
+  vnp_ReturnUrl: process.env.VNPAY_RETURN_URL || "https://api.vibestoneoficial.store/api/vnpay/return",
 };
 
 /* ============== HÀM SORT OBJECT THEO THỨ TỰ A-Z (CHÍNH XÁC NHƯ DEMO VNPAY) ============== */
@@ -93,7 +94,7 @@ export const createVnpayPayment = async (req, res) => {
 
     await PaymentTransaction.findByIdAndUpdate(orderId, {
       vnp_txn_ref: txnRef,
-vnp_create_date: createDate,
+      vnp_create_date: createDate,
       status: "pending",
       payment_method: "vnpay",
     });
@@ -114,7 +115,9 @@ export const vnpayReturn = async (req, res) => {
     delete vnp_Params.vnp_SecureHash;
     delete vnp_Params.vnp_SecureHashType;
 
-    vnp_Params = sortObject(vnp_Params);
+    // Ensure values are encoded exactly the same way as when creating the payment
+    // so the computed hash matches the one returned by VNPAY.
+    vnp_Params = sortAndEncodeParams(vnp_Params);
     let signData = querystring.stringify(vnp_Params, { encode: false });
     let hmac = crypto.createHmac("sha512", config.vnp_HashSecret);
     let validHash = hmac.update(signData, "utf-8").digest("hex");
@@ -174,6 +177,14 @@ export const vnpayReturn = async (req, res) => {
           );
 
           console.log("PaymentTransaction updated - new status:", updatedTransaction.status);
+
+          // Create invoice for successful payment (non-blocking)
+          try {
+            await createInvoice(orderId);
+            console.log("Invoice created for transaction:", orderId);
+          } catch (invErr) {
+            console.error("Error creating invoice for transaction:", orderId, invErr);
+          }
         }
 
         return res.redirect(`${process.env.FRONTEND_URL}/dashboard?payment=success`);

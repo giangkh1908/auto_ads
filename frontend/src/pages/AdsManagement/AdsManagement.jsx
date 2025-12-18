@@ -6,7 +6,7 @@ import "./AdsManagement.css";
 import CreateAdsWizard from "../../components/feature/CreateAdsWizard/CreateAdsWizard";
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup";
 import ProgressPopup from "../../components/common/ProgressPopup/Progress";
-import { handleSelectAll, handleSelectItem } from "../../utils/selectionUtils";
+import { handleSelectAll, handleSelectItem } from "../../utils/business-logic/selectionUtils";
 import {
   deleteCampaign,
   deleteAdSet,
@@ -14,21 +14,22 @@ import {
   archiveCampaign,
   archiveAdSet,
   archiveAd,
-} from "../../services/adService";
+} from "../../services/ads/adService";
 // import { getAdPerformance, refreshAdPerformance } from "../../services/adPerformanceService";
-import { toggleEntityStatus } from "../../services/toggleStatusService";
-import { useToast } from "../../hooks/useToast";
-import { useProgressState } from "../../hooks/useProgressState";
-import { useAdsSelection } from "../../hooks/useAdsSelection";
-import { useAdsAccount } from "./hooks/useAdsAccount";
-import { useAdsDataFetching } from "./hooks/useAdsDataFetching";
-import { useAdsSync } from "./hooks/useAdsSync";
-import { useAdsTableState } from "./hooks/useAdsTableState";
-import { invalidateCache } from "./services/adsCacheService";
-import AdsToolbar from "./components/AdsToolbar";
-import AdsTabs from "./components/AdsTabs";
-import AdsTable from "./components/AdsTable";
-import AdsBreadcrumb from "./components/AdsBreadcrumb";
+import { toggleEntityStatus } from "../../services/ads/toggleStatusService";
+import { useToast } from "../../hooks/common/useToast";
+import { useProgressState } from "../../hooks/common/useProgressState";
+import { useAdsSelection } from "../../hooks/ads/useAdsSelection";
+import { useAdsAccount } from "../../hooks/ads/useAdsAccount";
+import { useAdsDataFetching } from "../../hooks/ads/useAdsDataFetching";
+import { useAdsSync } from "../../hooks/ads/useAdsSync";
+import { useAdsTableState } from "../../hooks/ads/useAdsTableState";
+import { invalidateCache } from "../../services/ads/adsCacheService";
+import AdsToolbar from "../../components/feature/AdsManagement/AdsToolbar";
+import AdsTabs from "../../components/feature/AdsManagement/AdsTabs";
+import AdsTable from "../../components/feature/AdsManagement/AdsTable";
+import AdsBreadcrumb from "../../components/feature/AdsManagement/AdsBreadcrumb";
+import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverlay";
 import { RefreshCw } from "lucide-react";
 
 function AdsManagement() {
@@ -245,6 +246,94 @@ function AdsManagement() {
     fetchAdsForAdset,
     fetchAllAdsForAccount,
   ]);
+
+  // Fetch insights cho visible items (current page) - lazy load
+  // Sử dụng ref để track rows đã fetch insights
+  const fetchedInsightsForRef = useRef(new Set());
+  
+  useEffect(() => {
+    console.log("🔍 Insights useEffect:", { 
+      rowsLength: rows?.length, 
+      switchingAccount, 
+      activeTab,
+      firstRowExternalId: rows?.[0]?.external_id 
+    });
+    
+    if (!rows || rows.length === 0) {
+      console.log("⏭️ Skip - no rows");
+      return;
+    }
+    
+    if (switchingAccount) {
+      console.log("⏭️ Skip - switching account");
+      return;
+    }
+    
+    // TTL cho insights: 1 giờ
+    const INSIGHTS_TTL = 60 * 60 * 1000; // 1 hour in ms
+    const now = Date.now();
+    
+    // Lọc items chưa có insights HOẶC insights đã cũ (> 1 giờ)
+    const itemsNeedInsights = rows.filter(item => {
+      if (!item.external_id) return false;
+      if (fetchedInsightsForRef.current.has(item.external_id)) return false;
+      
+      // Check nếu insights đã cũ (stale)
+      const insightsUpdatedAt = item.insights?.insights_updated_at || item.insights_updated_at;
+      const isStale = insightsUpdatedAt 
+        ? (now - new Date(insightsUpdatedAt).getTime()) > INSIGHTS_TTL 
+        : true; // Nếu không có timestamp thì coi như stale
+      
+      // Có data thực và còn fresh → skip
+      const hasRealData = (item.insights?.impressions > 0 || item.insights?.spend > 0 || item.insights?.clicks > 0) ||
+                         (item.impressions > 0 || item.spend > 0 || item.clicks > 0);
+      
+      if (hasRealData && !isStale) return false;
+      
+      return true;
+    });
+    
+    console.log("📊 Items need insights:", itemsNeedInsights.length);
+    
+    if (itemsNeedInsights.length === 0) {
+      console.log("⏭️ Skip - no items need insights");
+      return;
+    }
+    
+    // Mark as fetching to avoid duplicate requests
+    itemsNeedInsights.forEach(item => {
+      fetchedInsightsForRef.current.add(item.external_id);
+    });
+    
+    // Determine endpoint based on activeTab
+    const endpoint = activeTab === "campaigns" 
+      ? '/api/campaigns/insights'
+      : activeTab === "adsets" 
+        ? '/api/adsets/insights' 
+        : '/api/ads/insights';
+    
+    console.log("🔄 Fetching insights for", itemsNeedInsights.length, "items from", endpoint);
+    
+    // Fetch insights in background
+    fetchInsightsForVisibleItems(itemsNeedInsights, endpoint)
+      .then(result => {
+        console.log("✅ Insights fetched:", Object.keys(result || {}).length, "items");
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+          console.warn('Failed to fetch insights for visible items:', err.message);
+          // Remove from fetched set so it can retry
+          itemsNeedInsights.forEach(item => {
+            fetchedInsightsForRef.current.delete(item.external_id);
+          });
+        }
+      });
+  }, [rows, activeTab, switchingAccount, fetchInsightsForVisibleItems]);
+  
+  // Clear fetched insights ref when account changes
+  useEffect(() => {
+    fetchedInsightsForRef.current.clear();
+  }, [selectedAccountId]);
 
   // Toggle row
   const toggleRow = async (id) => {
@@ -833,14 +922,7 @@ function AdsManagement() {
 
   return (
     <div className="ads-management-layout">
-      {switchingAccount && (
-        <div className="account-switch-overlay">
-          <div className="account-switch-spinner">
-            <div className="spinner-icon"><RefreshCw size ={20}/></div>
-            <div className="spinner-text">Đang tải...</div>
-          </div>
-        </div>
-      )}
+      <LoadingOverlay isLoading={switchingAccount} message="Đang tải..." />
       <div className="ads-management-content">
         <div className="ads-management-center">
           <div className="ads-card">

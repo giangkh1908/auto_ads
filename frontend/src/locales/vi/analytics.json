@@ -1,0 +1,76 @@
+{
+    "title": "Phân tích thông minh",
+    "selectAccount": "Chọn tài khoản quảng cáo",
+    "selectObjective": "Chọn mục tiêu",
+    "searchPlaceholder": "Tìm kiếm theo tên, ID, ngày",
+    "dateRangePlaceholder": "dd/mm/yyyy - dd/mm/yyyy",
+    "syncButton": "Đồng bộ",
+    "syncing": "Đang đồng bộ...",
+    "loading": "Đang tải...",
+    "loadingData": "Đang tải dữ liệu...",
+    "syncing_data": "Đang đồng bộ dữ liệu...",
+    "emptyStates": {
+        "selectAccount": "Vui lòng chọn tài khoản để xem phân tích.",
+        "selectObjective": "Vui lòng chọn mục tiêu để xem dữ liệu.",
+        "noData": "Không có dữ liệu"
+    },
+    "entitlementAlert": "ChatBot AI đang bị khóa. Vui lòng nâng cấp lên gói ChatBot AI+ để sử dụng trợ lý phân tích trong trang này.",
+    "objectives": {
+        "ALL": "Tất cả mục tiêu",
+        "OUTCOME_AWARENESS": "Mức độ nhận biết",
+        "OUTCOME_TRAFFIC": "Lưu lượng truy cập",
+        "OUTCOME_ENGAGEMENT": "Tương tác",
+        "OUTCOME_LEADS": "Khách hàng tiềm năng",
+        "OUTCOME_SALES": "Doanh số",
+        "OUTCOME_APP_PROMOTION": "Quảng bá ứng dụng"
+    },
+    "breakdownOptions": {
+        "campaign_name": "Tên Campaign",
+        "adset_name": "Tên Ad Set",
+        "name": "Tên Quảng cáo",
+        "page_name": "Tên Trang",
+        "ad_text": "Nội dung Quảng cáo",
+        "age_range": "Độ tuổi",
+        "campaign_objective": "Mục tiêu Campaign",
+        "date": "Ngày"
+    },
+    "dataColumns": {
+        "reach": "Lượt tiếp cận",
+        "cpm": "CPM",
+        "spend": "Chi phí",
+        "frequency": "Tần suất",
+        "impressions": "Lượt hiển thị",
+        "cost_per_result": "Chi phí mỗi Kết quả",
+        "mobile_app_install": "Cài đặt Ứng dụng",
+        "cost_per_mobile_app_install": "Chi phí mỗi Cài đặt",
+        "link_clicks": "Nhấp chuột Liên kết",
+        "ctr": "CTR",
+        "post_engagement": "Tương tác Bài viết",
+        "cost_per_inline_post_engagement": "CPE",
+        "quality_ranking": "Xếp hạng Chất lượng",
+        "cpc": "CPC",
+        "leads": "Khách hàng tiềm năng",
+        "conversions": "Đăng ký",
+        "cost_per_lead": "CPL",
+        "conversion_rate": "Tỷ lệ Chuyển đổi",
+        "website_purchases": "Lượt mua hàng",
+        "cost_per_conversion": "Chi phí mỗi Chuyển đổi",
+        "website_purchase_roas": "ROAS",
+        "cost_per_action": "CPA"
+    },
+    "settings": {
+        "title": "Cài đặt",
+        "breakdown": "Phân tích",
+        "data": "Dữ liệu"
+    },
+    "toast": {
+        "selectAccountWarning": "Vui lòng chọn tài khoản để đồng bộ",
+        "syncSuccess": "Làm mới hoàn tất!",
+        "syncWarning": "{{message}} Vui lòng thử lại sau {{retryAfter}} giây.",
+        "syncError": "Lỗi đồng bộ: {{message}}"
+    },
+    "infoBar": {
+        "showing": "Hiển thị {{count}} / {{total}} ads có dữ liệu",
+        "updated": "Cập nhật: {{date}}"
+    }
+}

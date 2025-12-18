@@ -1,4 +1,5 @@
 import { X, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   METRICS_OPTIONS,
   OPERATORS_OPTIONS,
@@ -16,6 +17,7 @@ const ConditionRow = ({
   onRemove,
   onAdd,
 }) => {
+  const { t } = useTranslation('automationRule');
   return (
     <div className="auto-rule-popup-condition-row">
       <select
@@ -25,7 +27,7 @@ const ConditionRow = ({
       >
         {METRICS_OPTIONS.map((metric, idx) => (
           <option key={idx} value={metric} title={getMetricDescription(metric)}>
-            {metric}
+            {t(`metrics.${metric}`)}
           </option>
         ))}
       </select>
@@ -36,7 +38,7 @@ const ConditionRow = ({
       >
         {OPERATORS_OPTIONS.map((operator, idx) => (
           <option key={idx} value={operator}>
-            {operator}
+            {t(`operators.${operator}`)}
           </option>
         ))}
       </select>
@@ -45,7 +47,7 @@ const ConditionRow = ({
         className="auto-rule-popup-input auto-rule-popup-input-value"
         value={condition.value}
         onChange={(e) => onChange(index, "value", e.target.value)}
-        placeholder="Giá trị"
+        placeholder={t('conditionRow.valuePlaceholder')}
         step="any"
       />
       <select
@@ -55,7 +57,7 @@ const ConditionRow = ({
       >
         {getAvailableUnits(condition.metric).map((unit, idx) => (
           <option key={idx} value={unit}>
-            {unit || ""}
+            {t(`units.${unit}`)}
           </option>
         ))}
       </select>
@@ -65,13 +67,13 @@ const ConditionRow = ({
         onClick={onAdd}
       >
         <Plus size={14} />
-        Thêm
+        {t('conditionRow.addButton')}
       </button>
       <button
         type="button"
         className="auto-rule-popup-btn-remove"
         onClick={() => onRemove(index)}
-        title="Xóa điều kiện"
+        title={t('conditionRow.removeTooltip')}
       >
         <X size={16} />
       </button>

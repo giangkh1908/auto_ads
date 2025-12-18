@@ -20,6 +20,17 @@
     text-align: center;
 }
 
+/* Password Strength Bar Styling */
+.password-strength-bar {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.password-strength-bar .password-strength-bar-item {
+  height: 4px;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
@@ -39,6 +50,9 @@
     font-size: 13px;
     margin-top: 6px;
   }
+  .password-strength-bar {
+    margin-top: 6px;
+}
 }
 
 /* Mobile nhỏ (320px - 480px) */

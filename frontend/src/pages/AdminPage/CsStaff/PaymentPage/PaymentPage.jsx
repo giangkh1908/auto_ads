@@ -4,12 +4,12 @@ import "./PaymentPage.css";
 import { Search, ChevronDown, UserPlus, UserCheck, Eye } from "lucide-react";
 import DateRangePicker from "../../../../components/common/DateRangePicker/DateRangePicker";
 import Pagination from "../../../../components/common/Pagination/Pagination";
-import paymentTransactionService from "../../../../services/paymentTransactionService";
+import paymentTransactionService from "../../../../services/shop/paymentTransactionService";
 import { toast } from "sonner";
 import NoteEditor from "../../../../components/common/NoteEditor/NoteEditor";
-import { fetchLatestNotesBatch } from "../../../../utils/noteUtils";
-import { useAuth } from "../../../../hooks/useAuth";
-import axiosInstance from "../../../../utils/axios";
+import { fetchLatestNotesBatch } from "../../../../utils/business-logic/noteUtils";
+import { useAuth } from "../../../../hooks/auth/useAuth";
+import axiosInstance from "../../../../utils/api/axios";
 import Invoice from "../../../../components/feature/Invoice/Invoice";
 
 export default function PaymentPage() {
@@ -265,12 +265,12 @@ export default function PaymentPage() {
   const packagesList = useMemo(() => {
     if (serverPackages && serverPackages.length > 0) {
       const arr = serverPackages.map(p => ({ value: p, label: p }));
-      arr.sort((a,b) => a.label.localeCompare(b.label));
+      arr.sort((a, b) => a.label.localeCompare(b.label));
       return [{ value: "All", label: t("common.all") }, ...arr];
     }
     const setPackages = new Set(rows.map((r) => r.package).filter(Boolean));
     const arr = Array.from(setPackages).map(p => ({ value: p, label: p }));
-    arr.sort((a,b) => a.label.localeCompare(b.label));
+    arr.sort((a, b) => a.label.localeCompare(b.label));
     return [{ value: "All", label: t("common.all") }, ...arr];
   }, [rows, t, serverPackages]);
 
@@ -285,12 +285,12 @@ export default function PaymentPage() {
     };
     if (serverMethods && serverMethods.length > 0) {
       const arr = serverMethods.map(m => ({ value: m, label: methodMap[(m || "").toLowerCase()] || m }));
-      arr.sort((a,b) => a.label.localeCompare(b.label));
+      arr.sort((a, b) => a.label.localeCompare(b.label));
       return [{ value: "All", label: t("common.all") }, ...arr];
     }
     const setMethods = new Set(rows.map((r) => r.originalData?.method || r.method).filter(Boolean));
     const arr = Array.from(setMethods).map(m => ({ value: m, label: methodMap[(m || "").toLowerCase()] || m }));
-    arr.sort((a,b) => a.label.localeCompare(b.label));
+    arr.sort((a, b) => a.label.localeCompare(b.label));
     return [{ value: "All", label: t("common.all") }, ...arr];
   }, [rows, t, serverMethods]);
 
@@ -305,11 +305,11 @@ export default function PaymentPage() {
     };
     // Chỉ lấy từ server, không có fallback
     if (serverStatuses && serverStatuses.length > 0) {
-      const arr = serverStatuses.map(s => ({ 
+      const arr = serverStatuses.map(s => ({
         value: s, // value là raw status từ server để gửi lên backend
         label: statusMap[(s || "").toLowerCase()] || s // label là translated để hiển thị
       }));
-      arr.sort((a,b) => a.label.localeCompare(b.label));
+      arr.sort((a, b) => a.label.localeCompare(b.label));
       return [{ value: "All", label: t("common.all") }, ...arr];
     }
     // Nếu chưa có dữ liệu từ server, chỉ trả về "All"

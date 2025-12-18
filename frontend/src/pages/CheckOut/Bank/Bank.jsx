@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Copy, Check } from "lucide-react";
-import { useAuth } from "../../../hooks/useAuth";
+import { useAuth } from "../../../hooks/auth/useAuth";
 import "./Bank.css";
-import axiosInstance from "../../../utils/axios.js";
+import axiosInstance from "../../../utils/api/axios.js";
 import { toast } from "sonner";
-import paymentTransactionService from "../../../services/paymentTransactionService";
+import paymentTransactionService from "../../../services/shop/paymentTransactionService";
 // import { STORAGE_KEYS } from "../../constants/app.constants";
 
 function Bank() {
@@ -74,27 +74,27 @@ function Bank() {
     pollIntervalRef.current = setInterval(async () => {
       try {
         const response = await paymentTransactionService.getPaymentTransactionById(orderId);
-        
+
         if (response.success && response.data) {
           const status = response.data.status;
-          
+
           // If order is canceled, show toast and navigate
           if (status === "canceled" && !hasNavigatedRef.current) {
             hasNavigatedRef.current = true;
             setIsCanceled(true);
-            
+
             // Clear polling interval
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
             }
-            
+
             // Show toast notification
             toast.error(
-              t("bank.messages.timeout") || 
+              t("bank.messages.timeout") ||
               "Đơn hàng đã bị hủy do hết thời gian thanh toán"
             );
-            
+
             // Navigate to service-package page after 2 seconds
             setTimeout(() => {
               navigate("/service-package");

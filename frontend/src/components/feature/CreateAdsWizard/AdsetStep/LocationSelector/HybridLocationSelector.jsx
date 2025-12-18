@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MapPin, X, Search } from 'lucide-react';
-import { useMapboxGeocoding } from '../../../../../hooks/useMapboxGeocoding';
+import { useMapboxGeocoding } from '../../../../../hooks/targeting/useMapboxGeocoding';
 import MapboxMap from './MapboxMap';
 import './HybridLocationSelector.css';
 
@@ -24,11 +24,11 @@ const HybridLocationSelector = ({ value, onChange }) => {
   // Only initialize once when value is first provided
   const [isInitialized, setIsInitialized] = useState(false);
   const isInitializingRef = useRef(false);
-  
+
   useEffect(() => {
     if (value && !isInitialized && !isInitializingRef.current) {
       isInitializingRef.current = true;
-      
+
       // Parse existing value structure - only use custom_locations
       const customLocations = value.custom_locations || [];
 
@@ -69,7 +69,7 @@ const HybridLocationSelector = ({ value, onChange }) => {
   // Only call onChange when user makes changes (not during initialization)
   const prevPinSelectionRef = useRef(pinSelection);
   const isInitialMountRef = useRef(true);
-  
+
   useEffect(() => {
     // Skip on initial mount
     if (isInitialMountRef.current) {
@@ -85,7 +85,7 @@ const HybridLocationSelector = ({ value, onChange }) => {
     }
 
     // Check if pin selection actually changed
-    const pinChanged = 
+    const pinChanged =
       JSON.stringify(prevPinSelectionRef.current) !== JSON.stringify(pinSelection);
 
     if (pinChanged) {
@@ -152,84 +152,84 @@ const HybridLocationSelector = ({ value, onChange }) => {
     <div className="hybrid-location-selector">
       {/* Pin Drop Mode */}
       <div className="pin-mode">
-            {/* Mapbox Search */}
-            <div className="mapbox-search-wrapper">
-              <Search size={16} className="search-icon" />
-              <input
-                type="text"
-                className="mapbox-search-input"
-                placeholder="Tìm kiếm địa chỉ..."
-                value={mapboxSearchQuery}
-                onChange={(e) => handleMapboxSearch(e.target.value)}
-              />
-              {mapboxLoading && <div className="search-loading">...</div>}
-            </div>
+        {/* Mapbox Search */}
+        <div className="mapbox-search-wrapper">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            className="mapbox-search-input"
+            placeholder="Tìm kiếm địa chỉ..."
+            value={mapboxSearchQuery}
+            onChange={(e) => handleMapboxSearch(e.target.value)}
+          />
+          {mapboxLoading && <div className="search-loading">...</div>}
+        </div>
 
-            {/* Mapbox Search Results */}
-            {mapboxSearchQuery && mapboxResults.length > 0 && (
-              <div className="mapbox-suggestions">
-                {mapboxResults.map(result => (
-                  <div
-                    key={result.id}
-                    className="mapbox-suggestion-item"
-                    onClick={() => handleMapboxResultSelect(result)}
-                  >
-                    <MapPin size={14} />
-                    <span>{result.name}</span>
-                  </div>
-                ))}
+        {/* Mapbox Search Results */}
+        {mapboxSearchQuery && mapboxResults.length > 0 && (
+          <div className="mapbox-suggestions">
+            {mapboxResults.map(result => (
+              <div
+                key={result.id}
+                className="mapbox-suggestion-item"
+                onClick={() => handleMapboxResultSelect(result)}
+              >
+                <MapPin size={14} />
+                <span>{result.name}</span>
               </div>
-            )}
+            ))}
+          </div>
+        )}
 
-            {/* Map */}
-            <div className="mapbox-map-wrapper">
-              <MapboxMap
-                pins={pinSelection}
-                onPinAdd={handlePinAdd}
-                onPinRemove={handlePinRemove}
-                onPinUpdate={handlePinUpdate}
-                onRadiusChange={handlePinRadiusChange}
-                searchResult={selectedSearchResult}
-              />
-            </div>
+        {/* Map */}
+        <div className="mapbox-map-wrapper">
+          <MapboxMap
+            pins={pinSelection}
+            onPinAdd={handlePinAdd}
+            onPinRemove={handlePinRemove}
+            onPinUpdate={handlePinUpdate}
+            onRadiusChange={handlePinRadiusChange}
+            searchResult={selectedSearchResult}
+          />
+        </div>
 
-            {/* Selected Pins List */}
-            {pinSelection.length > 0 && (
-              <div className="selected-pins">
-                <div className="section-title">Vị trí đã chọn:</div>
-                <div className="selected-pins-list">
-                  {pinSelection.map(pin => (
-                    <div key={pin.id} className="pin-chip">
-                      <MapPin size={14} />
-                      <div className="chip-content">
-                        <span className="chip-name">{pin.address}</span>
-                        <div className="chip-radius">
-                          <label>
-                            Bán kính:
-                            <input
-                              type="number"
-                              min="1"
-                              max="80"
-                              value={pin.radius}
-                              onChange={(e) => handlePinRadiusChange(pin.id, e.target.value)}
-                              className="radius-input"
-                            />
-                            km
-                          </label>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="chip-remove"
-                        onClick={() => handlePinRemove(pin.id)}
-                      >
-                        <X size={14} />
-                      </button>
+        {/* Selected Pins List */}
+        {pinSelection.length > 0 && (
+          <div className="selected-pins">
+            <div className="section-title">Vị trí đã chọn:</div>
+            <div className="selected-pins-list">
+              {pinSelection.map(pin => (
+                <div key={pin.id} className="pin-chip">
+                  <MapPin size={14} />
+                  <div className="chip-content">
+                    <span className="chip-name">{pin.address}</span>
+                    <div className="chip-radius">
+                      <label>
+                        Bán kính:
+                        <input
+                          type="number"
+                          min="1"
+                          max="80"
+                          value={pin.radius}
+                          onChange={(e) => handlePinRadiusChange(pin.id, e.target.value)}
+                          className="radius-input"
+                        />
+                        km
+                      </label>
                     </div>
-                  ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="chip-remove"
+                    onClick={() => handlePinRemove(pin.id)}
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Location Counter */}

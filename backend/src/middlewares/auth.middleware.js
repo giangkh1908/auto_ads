@@ -1,9 +1,9 @@
 import { verifyAccessToken } from '../utils/jwt.js';
-import User from '../models/user.model.js';
-import UserRole from '../models/userRole.model.js';
-import Role from '../models/role.model.js';
+import User from '../models/user/user.model.js';
+import UserRole from '../models/user/userRole.model.js';
+import Role from '../models/admin/role.model.js';
 import Shop from '../models/shops/shop.model.js';
-import UserPackage from "../models/userPackage.model.js"
+import UserPackage from "../models/package/userPackage.model.js"
 import ShopUser from "../models/shops/shopUser.model.js"
 /**
  * 🧩 Middleware xác thực Access Token
@@ -100,7 +100,7 @@ export const authenticateSSE = async (req, res, next) => {
 };
 
 /**
- * 📨 Middleware kiểm tra email đã xác minh
+ * Middleware kiểm tra email đã xác minh
  */
 export const requireEmailVerification = (req, res, next) => {
   if (!req.user?.emailVerified) {
@@ -114,7 +114,7 @@ export const requireEmailVerification = (req, res, next) => {
 };
 
 /**
- * 🔒 Middleware kiểm tra quyền truy cập
+ * Middleware kiểm tra quyền truy cập
  * @param {String} moduleName - Tên module (ví dụ: "campaign", "ads", "shop")
  * @param {String} action - Hành động cụ thể (ví dụ: "create", "update", "delete", "view")
  */
@@ -150,7 +150,7 @@ export const authorize = (moduleName, action) => {
 };
 
 /**
- * 🔒 Middleware kiểm tra quyền truy cập trong shop cụ thể
+ * Middleware kiểm tra quyền truy cập trong shop cụ thể
  * @param {String} module - Tên module (ví dụ: "shop", "product")
  * @param {String} action - Hành động cụ thể (ví dụ: "create", "update", "delete", "view")
  */

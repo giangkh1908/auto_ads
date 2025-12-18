@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { saveNote } from "../../../utils/noteUtils";
-import { useToast } from "../../../hooks/useToast";
+import { saveNote } from "../../../utils/business-logic/noteUtils";
+import { useToast } from "../../../hooks/common/useToast";
 import "./NoteEditor.css";
 
 /**
@@ -74,7 +74,7 @@ export default function NoteEditor({
     }
 
     const noteText = note.trim();
-    
+
     // Nếu note rỗng và không có noteId, không cần save
     if (!noteText && !noteId) {
       setIsEditing(false);
@@ -96,7 +96,7 @@ export default function NoteEditor({
       if (savedNote) {
         setIsEditing(false);
         toast.success(t("noteEditor.saveSuccess"));
-        
+
         // Callback để parent component có thể update state
         if (onNoteSaved) {
           onNoteSaved({
@@ -111,8 +111,8 @@ export default function NoteEditor({
       console.error("Error saving note:", error);
       toast.error(
         error.response?.data?.message ||
-          error.message ||
-          t("noteEditor.saveErrorGeneric")
+        error.message ||
+        t("noteEditor.saveErrorGeneric")
       );
     } finally {
       setIsSaving(false);
@@ -190,9 +190,8 @@ export default function NoteEditor({
   // Nếu không edit, hiển thị text có thể click
   return (
     <div
-      className={`note-editor-display ${!note ? "note-editor-empty" : ""} ${
-        disabled ? "note-editor-disabled" : ""
-      }`}
+      className={`note-editor-display ${!note ? "note-editor-empty" : ""} ${disabled ? "note-editor-disabled" : ""
+        }`}
       onClick={handleClick}
       title={disabled ? disabledMessage : t("noteEditor.clickToEdit")}
     >

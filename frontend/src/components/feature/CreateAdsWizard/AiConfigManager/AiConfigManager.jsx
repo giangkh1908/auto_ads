@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit2, Trash2, Star, StarOff, Settings, Eye, FileText } from 'lucide-react';
-import { aiConfigService } from '../../../../services/aiConfigService';
-import { useToast } from '../../../../hooks/useToast';
+import { aiConfigService } from '../../../../services/chat/aiConfigService';
+import { useToast } from '../../../../hooks/common/useToast';
 import AiPromptConfig from '../AiPromptConfig/AiPromptConfig';
 import PromptPreviewModal from '../PromptPreview/PromptPreviewModal';
 import './AiConfigManager.css';
@@ -99,7 +99,7 @@ const AiConfigManager = ({ isOpen, onClose, onConfigSelect = null }) => {
 
   const handlePromptConfigSave = async (configData) => {
     if (!editingConfig) return;
-    
+
     try {
       console.log('Saving prompt config with data:', configData);
       const response = await aiConfigService.updateConfig(editingConfig._id, {
@@ -112,30 +112,30 @@ const AiConfigManager = ({ isOpen, onClose, onConfigSelect = null }) => {
         prompt_template_description: configData.prompt_template_description || '',
         use_custom_templates: configData.use_custom_templates || false,
       });
-      
+
       console.log('Config saved successfully:', response);
       toast.success('Đã cập nhật prompt config thành công');
-      
+
       // Reload config từ DB để có data mới nhất
       const updatedConfigResponse = await aiConfigService.getConfig(editingConfig._id);
       if (updatedConfigResponse.success && updatedConfigResponse.config) {
         const updatedConfig = updatedConfigResponse.config;
         console.log('Reloaded config from DB:', updatedConfig);
-        
+
         // Update editingConfig với config mới
         setEditingConfig(updatedConfig);
-        
+
         // Update previewConfig nếu đang được set
         if (previewConfig && previewConfig._id === editingConfig._id) {
           setPreviewConfig(updatedConfig);
         }
-        
+
         // Update config trong list
-        setConfigs(prevConfigs => 
+        setConfigs(prevConfigs =>
           prevConfigs.map(c => c._id === editingConfig._id ? updatedConfig : c)
         );
       }
-      
+
       setShowPromptConfig(false);
       loadConfigs();
     } catch (error) {

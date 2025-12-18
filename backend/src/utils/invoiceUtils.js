@@ -1,4 +1,4 @@
-import Invoice from "../models/invoice.model.js";
+import Invoice from "../models/invoice/invoice.model.js";
 
 /**
  * Generate invoice number với format: INV-YYYYMMDD-XXX
