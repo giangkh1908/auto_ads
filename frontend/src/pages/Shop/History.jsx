@@ -125,7 +125,7 @@ function History() {
           }
         }
       } catch (error) {
-        console.error("Error getting current shop:", error);
+        //console.error("Error getting current shop:", error);
         toast.error("Lỗi khi lấy shop hiện tại");
       }
     };
@@ -151,7 +151,7 @@ function History() {
           toast.error(data.message || "Không thể tải lịch sử");
         }
       } catch (err) {
-        console.error("Error fetching logs:", err);
+        //console.error("Error fetching logs:", err);
         toast.error(err.response?.data?.message || "Lỗi khi tải lịch sử");
       } finally {
         setLoading(false);

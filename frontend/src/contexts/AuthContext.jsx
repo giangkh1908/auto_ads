@@ -93,12 +93,12 @@ export const AuthProvider = ({ children }) => {
               logout(false) // Đăng xuất im lặng trong quá trình xác thực token
             }
           } catch (error) {
-            console.log('Token validation failed:', error)
+            // console.log('Token validation failed:', error)
             logout(false) // Đăng xuất im lặng trong quá trình xác thực token
           }
         }
       } catch (error) {
-        console.log('Error checking auth:', error)
+        // console.log('Error checking auth:', error)
         logout(false) // Đăng xuất im lặng trong quá trình xác thực token
       } finally {
         setLoading(false)
@@ -119,7 +119,7 @@ export const AuthProvider = ({ children }) => {
         return userWithShop
       }
     } catch (error) {
-      console.log('Error refreshing user with shop_id:', error)
+      // console.log('Error refreshing user with shop_id:', error)
     }
     return null
   }, [])
@@ -279,7 +279,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userWithShop)
       }
     }).catch((error) => {
-      console.log('Error refreshing user with shop_id (non-blocking):', error)
+      // console.log('Error refreshing user with shop_id (non-blocking):', error)
     })
 
     // Điều hướng giống login thường: kiểm tra internal_role để redirect
@@ -336,7 +336,7 @@ export const AuthProvider = ({ children }) => {
         return { success: true }
       }
       setTimeout(() => {
-        console.log('Navigating to:', ROUTES.HOME)
+        // console.log('Navigating to:', ROUTES.HOME)
         navigate(ROUTES.HOME)
       }, 2000)
     } catch (error) {

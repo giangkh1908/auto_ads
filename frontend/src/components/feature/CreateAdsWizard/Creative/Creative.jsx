@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, ExternalLink, MessageCircle, ThumbsUp, Share, MoreHorizontal, Globe } from 'lucide-react';
+import { Play, ExternalLink, MessageCircle, ThumbsUp, Share, MoreHorizontal, Globe, Camera, Image } from 'lucide-react';
 import './Creative.css';
 
 function Creative({ ad, campaign, adset }) { // eslint-disable-line no-unused-vars
@@ -26,13 +26,13 @@ function Creative({ ad, campaign, adset }) { // eslint-disable-line no-unused-va
       case 'video':
         return <Play size={20} className="media-icon" />;
       case 'carousel':
-        return <div className="carousel-icon">📷</div>;
+        return <div className="carousel-icon"><Camera size={20} /></div>;
       default:
-        return <div className="image-icon">🖼️</div>;
+        return <div className="image-icon"><Image size={20} /></div>;
     }
   };
 
-  // ✅ Lấy page info từ adset (ưu tiên facebookPage/facebookPageId từ UI, fallback page_name/page_id từ DB)
+  // Lấy page info từ adset (ưu tiên facebookPage/facebookPageId từ UI, fallback page_name/page_id từ DB)
   const pageName = adset?.facebookPage || adset?.page_name || null;
   const pageId = adset?.facebookPageId || adset?.page_id || null;
   const pageAvatar = adset?.facebookPageAvatar || null;
@@ -42,7 +42,7 @@ function Creative({ ad, campaign, adset }) { // eslint-disable-line no-unused-va
       <div className="creative-container">
         {/* Facebook Post Style Creative */}
         <div className="facebook-post">
-        
+
           {/* Header */}
           <div className="post-header">
             <div className="page-info">
@@ -69,7 +69,7 @@ function Creative({ ad, campaign, adset }) { // eslint-disable-line no-unused-va
                 <div className="page-name">{pageName || ad?.page || "Facebook Page"}</div>
                 <div className="post-meta">
                   <span className="sponsored-badge">Được tài trợ</span>
-                  <span className="post-time"><Globe size = {14}/></span>
+                  <span className="post-time"><Globe size={14} /></span>
                 </div>
               </div>
             </div>

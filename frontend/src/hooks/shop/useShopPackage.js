@@ -70,7 +70,7 @@ export const useShopPackage = () => {
         }
 
         setShopPkg(data.data);
-        console.log("Gói shop hiện tại:", data.data);
+        // console.log("Gói shop hiện tại:", data.data);
       } catch (err) {
         console.error("Lỗi fetch shop package:", err);
         setError(err.message || "Lỗi kết nối");
@@ -94,7 +94,7 @@ export const useShopPackage = () => {
   useEffect(() => {
     const handleShopChange = async (event) => {
       const newShop = event.detail;
-      console.log("useShopPackage - shopChanged event:", newShop);
+      // console.log("useShopPackage - shopChanged event:", newShop);
       
       if (!newShop) {
         setShopPkg(null);
@@ -112,7 +112,7 @@ export const useShopPackage = () => {
           },
         });
         setLoading(false);
-        console.log("useShopPackage - Using cache package (tạm thời):", newShop.package);
+        // console.log("useShopPackage - Using cache package (tạm thời):", newShop.package);
       }
 
       // Thêm delay nhỏ để đảm bảo database đã commit trước khi fetch từ API
@@ -135,11 +135,11 @@ export const useShopPackage = () => {
         });
 
         const data = res.data;
-        console.log("useShopPackage - API response after shop change:", data);
+        // console.log("useShopPackage - API response after shop change:", data);
         
         if (data.success && data.data) {
           setShopPkg(data.data);
-          console.log("useShopPackage - Updated shopPkg from API:", data.data);
+          // console.log("useShopPackage - Updated shopPkg from API:", data.data);
         } else {
           // Fallback về cache nếu API không trả về data
           if (newShop?.package) {
@@ -150,7 +150,7 @@ export const useShopPackage = () => {
                 shop_name: newShop.shop_name,
               },
             });
-            console.log("useShopPackage - Using cache package (fallback):", newShop.package);
+            // console.log("useShopPackage - Using cache package (fallback):", newShop.package);
           } else {
             setShopPkg(null);
           }

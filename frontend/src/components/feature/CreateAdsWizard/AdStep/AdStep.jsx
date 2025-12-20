@@ -21,6 +21,8 @@ import { useToast } from "../../../../hooks/common/useToast";
 import { validateNonEmpty } from "../../../../utils/validation/validation";
 import { CTA_OPTIONS } from "../../../../constants/ctaConstants";
 import { aiConfigService } from "../../../../services/chat/aiConfigService";
+import { useTranslation } from "react-i18next";
+
 function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -39,6 +41,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
     synonymousKeywords: '',
   });
   const toast = useToast();
+  const { t } = useTranslation('wizard');
 
   const ensureContentAi = () => {
     if (contentAiEnabled) return true;
@@ -54,16 +57,16 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
     switch (destType) {
       case 'ON_VIDEO':
         return {
-          title: '🎬 Mục tiêu: Lượt xem video',
+          title: 'Mục tiêu: Lượt xem video',
           mediaType: 'video',
           mediaLabel: 'Video',
           mediaAccept: 'video/*',
-          mediaDescription: '⚠️ BẮT BUỘC upload video',
+          mediaDescription: 'BẮT BUỘC upload video',
           requirements: [
-            '✅ Video phải hấp dẫn trong 3 giây đầu',
-            '✅ Độ dài khuyến nghị: 15-60 giây',
-            '✅ Định dạng: MP4, MOV (tối đa 4GB)',
-            '✅ Tỷ lệ: 9:16 (Stories), 1:1 (Feed), 16:9 (Landscape)',
+            '* Video phải hấp dẫn trong 3 giây đầu',
+            '* Độ dài khuyến nghị: 15-60 giây',
+            '* Định dạng: MP4, MOV (tối đa 4GB)',
+            '* Tỷ lệ: 9:16 (Stories), 1:1 (Feed), 16:9 (Landscape)',
           ],
           ctaRecommendations: ['Tìm hiểu thêm', 'Xem khuyến mãi', 'Nghe ngay'],
           destinationNote: 'URL đích sẽ hiển thị khi người dùng nhấp vào video hoặc CTA'
@@ -71,16 +74,16 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
       case 'ON_POST':
         return {
-          title: '💬 Mục tiêu: Tương tác bài viết',
+          title: 'Mục tiêu: Tương tác bài viết',
           mediaType: 'image-or-video',
           mediaLabel: 'Ảnh hoặc Video',
           mediaAccept: 'image/*,video/*',
-          mediaDescription: '📸 Ảnh hoặc video để tăng tương tác',
+          mediaDescription: 'Ảnh hoặc video để tăng tương tác',
           requirements: [
-            '✅ Nội dung văn bản phải khuyến khích tương tác (like, comment, share)',
-            '✅ Ảnh: Độ phân giải tối thiểu 1080x1080px',
-            '✅ Video: Độ dài 15-30 giây cho tương tác tốt nhất',
-            '✅ Sử dụng câu hỏi hoặc call-to-action trong văn bản',
+            '* Nội dung văn bản phải khuyến khích tương tác (like, comment, share)',
+            '* Ảnh: Độ phân giải tối thiểu 1080x1080px',
+            '* Video: Độ dài 15-30 giây cho tương tác tốt nhất',
+            '* Sử dụng câu hỏi hoặc call-to-action trong văn bản',
           ],
           ctaRecommendations: ['Tìm hiểu thêm', 'Liên hệ ngay', 'Nhận ưu đãi'],
           destinationNote: 'Tập trung vào engagement, URL đích là phụ (có thể dẫn đến trang fanpage hoặc website)'
@@ -88,66 +91,66 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
       case 'ON_PAGE':
         return {
-          title: '👍 Mục tiêu: Lượt thích trang',
+          title: 'Mục tiêu: Lượt thích trang',
           mediaType: 'image-or-video',
           mediaLabel: 'Ảnh hoặc Video',
           mediaAccept: 'image/*,video/*',
-          mediaDescription: '📸 Ảnh/video giới thiệu trang của bạn',
+          mediaDescription: 'Ảnh/video giới thiệu trang của bạn',
           requirements: [
-            '✅ Nội dung phải thể hiện rõ giá trị của trang Facebook',
-            '✅ Highlight những lợi ích khi like trang (cập nhật, ưu đãi...)',
-            '✅ Ảnh cover hoặc logo trang nên xuất hiện',
-            '✅ Văn bản chính: Mô tả ngắn gọn về trang',
+            '* Nội dung phải thể hiện rõ giá trị của trang Facebook',
+            '* Highlight những lợi ích khi like trang (cập nhật, ưu đãi...)',
+            '* Ảnh cover hoặc logo trang nên xuất hiện',
+            '* Văn bản chính: Mô tả ngắn gọn về trang',
           ],
           ctaRecommendations: ['Tìm hiểu thêm', 'Liên hệ ngay', 'Nhận ưu đãi'],
-          destinationNote: '🎯 Quảng cáo sẽ hiển thị nút "Thích trang" trực tiếp, URL đích thường là link trang Facebook'
+          destinationNote: 'Quảng cáo sẽ hiển thị nút "Thích trang" trực tiếp, URL đích thường là link trang Facebook'
         };
 
       case 'ON_EVENT':
         return {
-          title: '📅 Mục tiêu: Phản hồi sự kiện',
+          title: 'Mục tiêu: Phản hồi sự kiện',
           mediaType: 'image-or-video',
           mediaLabel: 'Ảnh hoặc Video',
           mediaAccept: 'image/*,video/*',
-          mediaDescription: '🎉 Ảnh/video về sự kiện',
+          mediaDescription: 'Ảnh/video về sự kiện',
           requirements: [
-            '✅ Hiển thị rõ thông tin sự kiện (ngày, giờ, địa điểm)',
-            '✅ Sử dụng ảnh chất lượng cao về venue hoặc sự kiện tương tự',
-            '✅ Văn bản chính: Mô tả highlights của sự kiện',
-            '✅ Tạo cảm giác FOMO (Fear of Missing Out)',
+            '* Hiển thị rõ thông tin sự kiện (ngày, giờ, địa điểm)',
+            '* Sử dụng ảnh chất lượng cao về venue hoặc sự kiện tương tự',
+            '* Văn bản chính: Mô tả highlights của sự kiện',
+            '* Tạo cảm giác FOMO (Fear of Missing Out)',
           ],
           ctaRecommendations: ['Đăng ký ngay', 'Đặt ngay', 'Nhận ưu đãi'],
-          destinationNote: '🎯 Quảng cáo sẽ hiển thị nút phản hồi sự kiện (Quan tâm/Tham gia), URL đích thường là link sự kiện Facebook'
+          destinationNote: 'Quảng cáo sẽ hiển thị nút phản hồi sự kiện (Quan tâm/Tham gia), URL đích thường là link sự kiện Facebook'
         };
 
       case 'MESSAGING_APPS':
         return {
-          title: '💬 Mục tiêu: Bắt đầu hội thoại',
+          title: 'Mục tiêu: Bắt đầu hội thoại',
           mediaType: 'image-or-video',
           mediaLabel: 'Ảnh hoặc Video',
           mediaAccept: 'image/*,video/*',
-          mediaDescription: '💬 Ảnh/video khuyến khích nhắn tin',
+          mediaDescription: 'Ảnh/video khuyến khích nhắn tin',
           requirements: [
-            '✅ Nội dung phải khuyến khích người dùng nhắn tin (Hỏi, Tư vấn, Hỗ trợ...)',
-            '✅ Văn bản chính: Đề cập rõ lợi ích khi nhắn tin (tư vấn miễn phí, ưu đãi...)',
-            '✅ Ảnh nên thể hiện sự thân thiện, sẵn sàng hỗ trợ',
-            '✅ Chuẩn bị auto-reply hoặc chatbot để phản hồi nhanh',
+            '* Nội dung phải khuyến khích người dùng nhắn tin (Hỏi, Tư vấn, Hỗ trợ...)',
+            '* Văn bản chính: Đề cập rõ lợi ích khi nhắn tin (tư vấn miễn phí, ưu đãi...)',
+            '* Ảnh nên thể hiện sự thân thiện, sẵn sàng hỗ trợ',
+            '* Chuẩn bị auto-reply hoặc chatbot để phản hồi nhanh',
           ],
           ctaRecommendations: ['Liên hệ ngay', 'Nhận ưu đãi', 'Tìm hiểu thêm'],
-          destinationNote: '🎯 Quảng cáo sẽ có nút "Nhắn tin" mở Messenger, URL đích không quan trọng (có thể để link fanpage)'
+          destinationNote: 'Quảng cáo sẽ có nút "Nhắn tin" mở Messenger, URL đích không quan trọng (có thể để link fanpage)'
         };
 
       default:
         return {
-          title: '📢 Tạo quảng cáo',
+          title: 'Tạo quảng cáo',
           mediaType: 'image-or-video',
           mediaLabel: 'Ảnh hoặc Video',
           mediaAccept: 'image/*,video/*',
           mediaDescription: 'Hỗ trợ ảnh hoặc video',
           requirements: [
-            '✅ Nội dung phải rõ ràng, hấp dẫn',
-            '✅ Ảnh: Độ phân giải tối thiểu 1080x1080px',
-            '✅ Video: Độ dài 15-60 giây',
+            '* Nội dung phải rõ ràng, hấp dẫn',
+            '* Ảnh: Độ phân giải tối thiểu 1080x1080px',
+            '* Video: Độ dài 15-60 giây',
           ],
           ctaRecommendations: ['Tìm hiểu thêm', 'Liên hệ ngay', 'Nhận ưu đãi'],
           destinationNote: 'URL đích là trang bạn muốn người dùng truy cập'
@@ -168,12 +171,12 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
   const getAiActionTooltip = () => {
     if (!contentAiEnabled) {
-      return "Nâng cấp lên Chatbot AI+ để dùng AI nội dung";
+      return "Nâng cấp lên Chatbot AI để dùng AI nội dung";
     }
     if (!contextId) {
       return "Thiết lập AI trước khi tạo nội dung";
     }
-    return "Sinh nội dung bằng AI";
+    return "Tạo nội dung bằng AI";
   };
 
   useEffect(() => {
@@ -199,7 +202,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // ✅ Validate file type based on destination type
+    // Validate file type based on destination type
     const fileType = file.type || "";
     const isVideoFile = fileType.startsWith("video/");
 
@@ -210,7 +213,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
       return;
     }
 
-    // ✅ Validate file size (max 100MB for video, 10MB for image)
+    // Validate file size (max 100MB for video, 10MB for image)
     const maxSizeVideo = 100 * 1024 * 1024; // 100MB
     const maxSizeImage = 10 * 1024 * 1024;  // 10MB
     const maxSize = isVideoFile ? maxSizeVideo : maxSizeImage;
@@ -222,7 +225,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
       return;
     }
 
-    // ✅ For video files, validate duration (optional - requires reading video metadata)
+    // For video files, validate duration (optional - requires reading video metadata)
     if (isVideoFile) {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -236,7 +239,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
           toast.warning("Video dài hơn 4 phút. Facebook khuyến nghị video 15-240 giây để tối ưu hiệu suất.");
         }
 
-        console.log(`📹 Video duration: ${duration.toFixed(1)}s`);
+        // console.log(`📹 Video duration: ${duration.toFixed(1)}s`);
       };
 
       video.src = URL.createObjectURL(file);
@@ -257,7 +260,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
+          // console.log(`Upload progress: ${percentCompleted}%`);
         }
       });
 
@@ -281,8 +284,8 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
         toast.success(
           mediaType === "video"
-            ? "✅ Upload video thành công!"
-            : "✅ Upload ảnh thành công!"
+            ? "Upload video thành công!"
+            : "Upload ảnh thành công!"
         );
       } else {
         toast.error(res.data?.message || "Upload thất bại");
@@ -498,7 +501,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
             </h3>
             <div className="guidance-banner-box">
               <h4 className="guidance-banner-box-header">
-                📋 Yêu cầu nội dung:
+                Yêu cầu nội dung:
               </h4>
               {guidance.requirements.map((req, idx) => (
                 <div key={idx} className="guidance-banner-requirement">
@@ -507,10 +510,10 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
               ))}
             </div>
             <div className="guidance-banner-cta-box">
-              <strong>💡 Gợi ý CTA:</strong> {guidance.ctaRecommendations.join(', ')}
+              <strong>Gợi ý CTA:</strong> {guidance.ctaRecommendations.join(', ')}
             </div>
             <div className="guidance-banner-note">
-              ℹ️ {guidance.destinationNote}
+              {guidance.destinationNote}
             </div>
           </div>
         )}
@@ -532,7 +535,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                 : "Nâng cấp lên Chatbot AI+ để dùng AI nội dung"
             }
           >
-            Tạo bằng AI
+            {t('ad_step.create_with_ai')}
             {!contentAiEnabled && (
               <span className="premium-badge">
                 <Crown size={12} />
@@ -648,7 +651,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
         <div className="config-section">
           <div className="section-header-ads">
             <Circle size={8} fill="#2563eb" color="#2563eb" />
-            <h3 className="section-title-ads">Tên quảng cáo</h3>
+            <h3 className="section-title-ads">{t('ad_step.ad_name_title')}</h3>
           </div>
           <input
             type="text"
@@ -658,7 +661,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
               setAd((prev) => ({ ...prev, name: e.target.value }))
             }
             onBlur={() => validateNonEmpty(ad.name, "tên quảng cáo", toast)}
-            placeholder="Quảng cáo mới"
+            placeholder={t('ad_step.ad_name_placeholder')}
           />
         </div>
 
@@ -666,13 +669,13 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
         <div className="config-section">
           <div className="section-header-ads">
             <FileText size={16} color="#2563eb" />
-            <h3 className="section-title-ads">Nội dung quảng cáo</h3>
+            <h3 className="section-title-ads">{t('ad_step.ad_content_title')}</h3>
           </div>
           <div className="ad-content-fields">
             {/* Headline */}
             <div className="field-group">
               <div className="field-label-container">
-                <label className="field-label">Tiêu đề</label>
+                <label className="field-label">{t('ad_step.headline_label')}</label>
                 <button
                   onClick={() => generateAIContent('headline', 40)}
                   disabled={
@@ -682,7 +685,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
-                  {isGenerating.headline ? 'Đang tạo...' : 'AI'}
+                  {isGenerating.headline ? t('ad_step.ai_generating') : t('ad_step.ai_button')}
                 </button>
               </div>
               <input
@@ -692,14 +695,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                 onChange={(e) =>
                   setAd((prev) => ({ ...prev, headline: e.target.value }))
                 }
-                placeholder="Sản phẩm/Dịch vụ chất lượng cao"
+                placeholder={t('ad_step.headline_placeholder')}
               />
             </div>
 
             {/* Primary Text */}
             <div className="field-group">
               <div className="field-label-container">
-                <label className="field-label">Văn bản chính</label>
+                <label className="field-label">{t('ad_step.primary_text_label')}</label>
                 <button
                   onClick={() => generateAIContent('primaryText', 125)}
                   disabled={
@@ -709,7 +712,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
-                  {isGenerating.primaryText ? 'Đang tạo...' : 'AI'}
+                  {isGenerating.primaryText ? t('ad_step.ai_generating') : t('ad_step.ai_button')}
                 </button>
               </div>
               <textarea
@@ -719,14 +722,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   setAd((prev) => ({ ...prev, primaryText: e.target.value }))
                 }
                 rows={4}
-                placeholder="Nội dung chính của quảng cáo..."
+                placeholder={t('ad_step.primary_text_placeholder')}
               />
             </div>
 
             {/* Description */}
             <div className="field-group">
               <div className="field-label-container">
-                <label className="field-label">Mô tả</label>
+                <label className="field-label">{t('ad_step.description_label')}</label>
                 <button
                   onClick={() => generateAIContent('description', 30)}
                   disabled={
@@ -736,7 +739,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   title={getAiActionTooltip()}
                 >
                   <Bot size={14} />
-                  {isGenerating.description ? 'Đang tạo...' : 'AI'}
+                  {isGenerating.description ? t('ad_step.ai_generating') : t('ad_step.ai_button')}
                 </button>
               </div>
               <textarea
@@ -746,14 +749,14 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   setAd((prev) => ({ ...prev, description: e.target.value }))
                 }
                 rows={3}
-                placeholder="Mô tả ngắn gọn bổ sung..."
+                placeholder={t('ad_step.description_placeholder')}
               />
             </div>
 
             {/* Call to Action */}
             <div className="field-group">
               <div className="field-label-container">
-                <label className="field-label">Nút kêu gọi hành động</label>
+                <label className="field-label">{t('ad_step.cta_label')}</label>
               </div>
               <select
                 className="cta-select"
@@ -772,7 +775,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
 
             {/* Destination URL */}
             <div className="field-group">
-              <label className="field-label">* URL đích</label>
+              <label className="field-label">{t('ad_step.destination_url_label')}</label>
               <input
                 type="url"
                 className="url-input"
@@ -783,24 +786,24 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                 onBlur={() =>
                   validateNonEmpty(ad.destinationUrl, "URL đích", toast)
                 }
-                placeholder="https://example.com"
+                placeholder={t('ad_step.url_placeholder')}
               />
             </div>
 
             {/* Media File */}
             <div className="field-group">
-              <label className="field-label">* File phương tiện ({guidance.mediaLabel})</label>
+              <label className="field-label">* {t('ad_step.media_file_label')} ({guidance.mediaLabel})</label>
               <small className="media-description-hint">
                 {guidance.mediaDescription}
               </small>
 
-              {/* ✅ Hiển thị thông tin file đã chọn */}
+              {/* Hiển thị thông tin file đã chọn */}
               {ad.mediaUrl && (
                 <div className="selected-file-info">
                   <span className="file-type-badge">
-                    {ad.media === 'video' ? '🎥 Video' : '🖼️ Ảnh'}
+                    {ad.media === 'video' ? 'Video' : 'Ảnh'}
                   </span>
-                  <span className="file-status">Đã upload thành công</span>
+                  <span className="file-status">{t('ad_step.upload_success')}</span>
                 </div>
               )}
 
@@ -811,12 +814,11 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   disabled={uploading}
                 >
                   <Image size={18} className="media-icon" />
-
                   {uploading
-                    ? "Đang tải lên..."
+                    ? t('ad_step.uploading')
                     : ad.mediaUrl
-                      ? `Thay đổi ${guidance.mediaLabel.toLowerCase()}`
-                      : `Thêm ${guidance.mediaLabel.toLowerCase()}`}
+                      ? `${t('ad_step.change_media')} ${guidance.mediaLabel.toLowerCase()}`
+                      : `${t('ad_step.add_media')} ${guidance.mediaLabel.toLowerCase()}`}
                 </button>
                 {guidance.mediaType !== 'video' && (
                   <button
@@ -839,7 +841,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                     title={getAiActionTooltip()}
                   >
                     <Image size={18} className="button-icon" />
-                    {isGeneratingImages ? "Đang tạo ảnh..." : "AI tạo ảnh"}
+                    {isGeneratingImages ? t('ad_step.generating_image') : t('ad_step.ai_generate_image')}
                   </button>
                 )}
               </div>
@@ -852,7 +854,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                       // Loading text with wave effect
                       <div className="loading-wave-container">
                         <div className="loading-wave-text">
-                          {'Vui lòng chờ đợi...'.split('').map((char, index) => (
+                          {t('ad_step.please_wait').split('').map((char, index) => (
                             <span key={index} style={{ animationDelay: `${index * 0.1}s` }}>
                               {char === ' ' ? '\u00A0' : char}
                             </span>
@@ -876,13 +878,13 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                   <div className="ai-info-section">
                     <div className="ai-info-text">
                       <div className="ai-info-line">
-                        Ảnh đã tạo {aiImages.length}/{aiImages.length}
+                        {t('ad_step.images_created')} {aiImages.length}/{aiImages.length}
                       </div>
                       <div className="ai-info-line">
-                        Ảnh có thể thêm {10 - aiImages.length}
+                        {t('ad_step.images_can_add')} {10 - aiImages.length}
                       </div>
                       <div className="ai-info-line">
-                        Ảnh đã chọn {selectedAiImages.length}/{selectedAiImages.length}
+                        {t('ad_step.images_selected')} {selectedAiImages.length}/{selectedAiImages.length}
                       </div>
                     </div>
                     <button
@@ -897,7 +899,7 @@ function AdStepInner({ ad, setAd, adset, contentAiEnabled = true }, ref) {
                         setSelectedAiImages(allSelected);
                       }}
                     >
-                      Chọn ảnh tự động
+                      {t('ad_step.auto_select_images')}
                     </button>
                   </div>
                 </div>

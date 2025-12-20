@@ -51,7 +51,7 @@ function MyShop() {
         const data = res.data;
         setCurrentUser(data.data.user);
       } catch (error) {
-        console.error("Error fetching user:", error);
+        //console.error("Error fetching user:", error);
         toast.error("Lỗi khi tải thông tin người dùng");
       }
     };
@@ -76,7 +76,7 @@ function MyShop() {
       const res = await axiosInstance.get("/api/shops/owner");
       const data = res.data;
 
-      console.log("🔹 API response:", data);
+      // console.log("🔹 API response:", data);
 
       if (data.success && Array.isArray(data.data)) {
         const formatted = data.data.map((shop) => {
@@ -134,12 +134,12 @@ function MyShop() {
 
         setShops(formatted);
       } else {
-        console.error("Failed to load shops:", data.message);
+        //console.error("Failed to load shops:", data.message);
         toast.error(data.message || "Không thể tải danh sách shop");
         setShops([]); // fallback an toàn
       }
     } catch (e) {
-      console.error("Load shops error:", e);
+      //console.error("Load shops error:", e);
       toast.error("Lỗi khi tải danh sách shop");
       setShops([]); // tránh lỗi map nếu lỗi API
     } finally {
@@ -153,7 +153,7 @@ function MyShop() {
       navigate(ROUTES.SERVICE_PACKAGE);
       return;
     }
-    console.log(`Action ${action} for shop ${shopId}`);
+    // console.log(`Action ${action} for shop ${shopId}`);
   };
 
   //Thêm page mới
@@ -358,7 +358,7 @@ function MyShop() {
                                   toast.error(data.message || "Không thể chuyển đổi shop");
                                 }
                               } catch (err) {
-                                console.error("Switch shop error:", err);
+                                //console.error("Switch shop error:", err);
                                 toast.error("Lỗi server khi chuyển đổi shop");
                               }
                             }}
@@ -485,7 +485,7 @@ function MyShop() {
                       industry: addForm.category,
                     };
 
-                    console.log("Submit Add:", payload);
+                    // console.log("Submit Add:", payload);
 
                     const res = await axiosInstance.post("/api/shops/", payload);
                     const data = res.data;
@@ -498,7 +498,7 @@ function MyShop() {
                       toast.error(data.message || "Không thể tạo shop");
                     }
                   } catch (err) {
-                    console.error("Error:", err);
+                    //console.error("Error:", err);
                     toast.error(err.response?.data?.message || "Lỗi server khi tạo shop");
                   } finally {
                     setIsCreating(false);
@@ -612,7 +612,7 @@ function MyShop() {
                       toast.error(data.message || "Không thể cập nhật shop");
                     }
                   } catch (err) {
-                    console.error("Error updating shop:", err);
+                    //console.error("Error updating shop:", err);
                     toast.error(err.response?.data?.message || "Lỗi server khi cập nhật shop");
                   } finally {
                     setIsUpdating(false);

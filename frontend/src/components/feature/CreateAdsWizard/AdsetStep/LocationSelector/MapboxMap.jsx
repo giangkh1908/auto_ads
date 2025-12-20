@@ -24,8 +24,8 @@ const MapboxMap = ({
   searchResult = null,
 }) => {
   const [viewState, setViewState] = useState({
-    longitude: 108.2772, // Center of Vietnam
-    latitude: 14.0583,
+    longitude: 105.8345, // Center of Vietnam
+    latitude: 21.0393,
     zoom: 6,
   });
   const [selectedPinId, setSelectedPinId] = useState(null);
@@ -48,9 +48,9 @@ const MapboxMap = ({
     const target = event.originalEvent?.target;
     if (!target) return;
 
-    if (target.closest('.mapboxgl-popup') || 
-        target.closest('.mapboxgl-marker') ||
-        target.closest('.mapbox-pin-info')) {
+    if (target.closest('.mapboxgl-popup') ||
+      target.closest('.mapboxgl-marker') ||
+      target.closest('.mapbox-pin-info')) {
       return; // Don't add pin if clicking on popup, marker, or info panel
     }
 

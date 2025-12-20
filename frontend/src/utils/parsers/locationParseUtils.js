@@ -11,7 +11,7 @@
 export function parseGeoLocationsToFrontend(targeting) {
   // PRIORITY 1: If targeting.locations exists (saved with names), use it directly
   if (targeting?.locations && typeof targeting.locations === 'object' && !Array.isArray(targeting.locations)) {
-    console.log('Using saved locations with names from database');
+    // console.log('Using saved locations with names from database');
     return {
       regions: targeting.locations.regions || [],
       cities: targeting.locations.cities || [],
@@ -44,7 +44,7 @@ export function parseGeoLocationsToFrontend(targeting) {
   // Parse regions
   if (geo_locations.regions && Array.isArray(geo_locations.regions)) {
     locations.regions = geo_locations.regions.map(r => r.key || r);
-    console.log(`Parsed ${locations.regions.length} regions from geo_locations`);
+    // console.log(`Parsed ${locations.regions.length} regions from geo_locations`);
   }
 
   // Parse cities
@@ -54,7 +54,7 @@ export function parseGeoLocationsToFrontend(targeting) {
       radius: c.radius || 20, // Default radius if not specified
       name: c.name || c.key || c, // Use name if available, fallback to key
     }));
-    console.log(`Parsed ${locations.cities.length} cities from geo_locations`);
+    // console.log(`Parsed ${locations.cities.length} cities from geo_locations`);
   }
 
   // Parse custom locations (pins)
@@ -64,18 +64,18 @@ export function parseGeoLocationsToFrontend(targeting) {
       lng: cl.longitude || cl.lng,
       radius: cl.radius || 10
     }));
-    console.log(`Parsed ${locations.custom_locations.length} custom locations`);
+    // console.log(`Parsed ${locations.custom_locations.length} custom locations`);
   }
 
   // Parse excluded locations
   if (geo_locations.excluded_geo_locations?.cities) {
     locations.excluded_ids = geo_locations.excluded_geo_locations.cities.map(c => c.key || c);
-    console.log(`Parsed ${locations.excluded_ids.length} excluded locations`);
+    // console.log(`Parsed ${locations.excluded_ids.length} excluded locations`);
   }
 
   // If only countries exist (old format), return empty (will use default)
   if (geo_locations.countries && !locations.regions.length && !locations.cities.length && !locations.custom_locations.length) {
-    console.log('Only countries found, returning empty locations (will use default)');
+    // console.log('Only countries found, returning empty locations (will use default)');
     return {
       regions: [],
       cities: [],
@@ -84,7 +84,7 @@ export function parseGeoLocationsToFrontend(targeting) {
     };
   }
 
-  console.log('Parsed geo_locations to frontend format:', locations);
+  // console.log('Parsed geo_locations to frontend format:', locations);
   return locations;
 }
 

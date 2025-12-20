@@ -45,12 +45,12 @@ export const clearAdsCache = () => {
     
     cacheKeysToRemove.forEach(key => {
       localStorage.removeItem(key);
-      console.log('✅ Đã xóa cache key:', key);
+      // console.log('✅ Đã xóa cache key:', key);
     });
     
-    console.log('✅ Đã xóa tất cả cache của ads accounts và ads khi chuyển shop');
+    // console.log('✅ Đã xóa tất cả cache của ads accounts và ads khi chuyển shop');
   } catch (error) {
-    console.error('❌ Lỗi khi xóa cache ads:', error);
+    //console.error('❌ Lỗi khi xóa cache ads:', error);
   }
 };
 
@@ -84,7 +84,7 @@ export const saveShopCache = (shop, previousShop = null) => {
       window.dispatchEvent(new CustomEvent(SHOP_CHANGE_EVENT, { detail: shop }));
     }, 0);
   } catch (error) {
-    console.error("Error saving shop cache:", error);
+    //console.error("Error saving shop cache:", error);
   }
 };
 
@@ -97,7 +97,7 @@ export const getShopCache = () => {
     const data = localStorage.getItem(CACHE_KEY);
     return data ? JSON.parse(data) : null;
   } catch (error) {
-    console.error("Error getting shop cache:", error);
+    //console.error("Error getting shop cache:", error);
     return null;
   }
 };
@@ -111,7 +111,7 @@ export const clearShopCache = () => {
     localStorage.removeItem(SHOP_ID_KEY);
     window.dispatchEvent(new CustomEvent(SHOP_CHANGE_EVENT, { detail: null }));
   } catch (error) {
-    console.error("Error clearing shop cache:", error);
+    //console.error("Error clearing shop cache:", error);
   }
 };
 

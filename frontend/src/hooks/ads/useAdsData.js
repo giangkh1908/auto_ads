@@ -86,7 +86,7 @@ export function useAdsData() {
     
     // Chỉ sync nếu chưa sync trong 30 giây hoặc force sync
     if (!forceSync && lastSync && (now - lastSync) < 30000) {
-      console.log('⏭️ Skip sync - cached recently');
+      // console.log('⏭️ Skip sync - cached recently');
       return;
     }
     
@@ -99,7 +99,7 @@ export function useAdsData() {
       
       // ✅ Update ref (không trigger re-render)
       cacheRef.current.lastSync = now;
-      console.log('✅ Sync completed at', new Date(now).toLocaleTimeString());
+      // console.log('✅ Sync completed at', new Date(now).toLocaleTimeString());
     } catch (error) {
       console.error('Sync error:', error);
     }
@@ -264,7 +264,7 @@ export function useAdsData() {
     if (!accountId) return;
     
     setLoading(true);
-    console.log('🔄 Fetching all data for account:', accountId);
+    // console.log('🔄 Fetching all data for account:', accountId);
     
     try {
       // Fetch tất cả data với limit lớn (không phân trang)
@@ -331,7 +331,7 @@ export function useAdsData() {
         ads
       });
 
-      console.log('✅ Fetched all data:', {
+      // console.log('✅ Fetched all data:', {
         campaigns: campaigns.length,
         adsets: adsets.length,
         ads: ads.length

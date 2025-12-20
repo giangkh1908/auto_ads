@@ -167,7 +167,7 @@ function Order() {
       totalPrice,
     };
 
-    console.log("Order data:", orderData);
+    // console.log("Order data:", orderData);
 
     // Gọi API
     try {
@@ -183,7 +183,7 @@ function Order() {
             orderId: transaction._id,
           },
         });
-        console.log("order: ", orderData, transaction._id);
+        // console.log("order: ", orderData, transaction._id);
       } else {
         toast.error(t("order.messages.createError"));
       }

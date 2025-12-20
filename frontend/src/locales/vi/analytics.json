@@ -25,13 +25,13 @@
         "OUTCOME_APP_PROMOTION": "Quảng bá ứng dụng"
     },
     "breakdownOptions": {
-        "campaign_name": "Tên Campaign",
-        "adset_name": "Tên Ad Set",
-        "name": "Tên Quảng cáo",
-        "page_name": "Tên Trang",
-        "ad_text": "Nội dung Quảng cáo",
+        "campaign_name": "Tên chiến dịch",
+        "adset_name": "Tên nhóm quảng cáo",
+        "name": "Tên quảng cáo",
+        "page_name": "Tên trang",
+        "ad_text": "Nội dung quảng cáo",
         "age_range": "Độ tuổi",
-        "campaign_objective": "Mục tiêu Campaign",
+        "campaign_objective": "Mục tiêu chiến dịch",
         "date": "Ngày"
     },
     "dataColumns": {

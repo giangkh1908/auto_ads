@@ -1,0 +1,226 @@
+{
+    "main": {
+        "create_title": "Create Campaign",
+        "edit_campaign_title": "Edit Campaign",
+        "edit_adset_title": "Edit Adset",
+        "edit_ad_title": "Edit Ad",
+        "tab_child": "New Adset or Ad",
+        "publishing": "Publishing Ad Campaign",
+        "updating": "Updating Ad Campaign",
+        "default_campaign_name": "New Campaign",
+        "default_adset_name": "New Adset",
+        "default_ad_name": "New Ad"
+    },
+    "target_step": {
+        "title": "Choose Campaign Objective",
+        "description": "Your campaign objective is the business goal you want to achieve when running ads. Choose an objective from the list on the left to continue.",
+        "header": "Choose campaign objective",
+        "suitable_for_title": "Suitable For"
+    },
+    "campaign_step": {
+        "name_title": "Campaign name",
+        "name_placeholder": "Enter campaign name",
+        "details_title": "Campaign details",
+        "budget_title": "Campaign budget",
+        "budget_description": "Set a single budget for the entire campaign. Now called Advantage+ campaign budget.",
+        "budget_learn_more": "Learn more about campaign budget",
+        "buy_method": "Buy method",
+        "buy_method_value": "Bid-based",
+        "adset_budget_title": "Adset budget",
+        "adset_budget_description": "Set bidding strategies or schedule policy adjustments separately for each ad group."
+    },
+    "adset_step": {
+        "name_placeholder": "Enter ad set name",
+        "select_objective": "Select objective",
+        "select_optimization_goal": "Select optimization goal",
+        "select_engagement_type": "Select engagement type",
+        "select_at_least_one_placement": "Select at least 1 placement",
+        "end_after_start": "End time must be at least 1 day after start time",
+        "facebook_page": "Facebook Page",
+        "no_page": "No Facebook Page"
+    },
+    "ad_step": {
+        "ai_generating": "Generating...",
+        "ai_button": "AI",
+        "ai_generate_image": "AI Generate Image",
+        "uploading": "Uploading...",
+        "please_wait": "Please wait...",
+        "setup_ai_first": "Please set up AI first",
+        "generating_sample": "AI image generation may take time. Using sample image instead.",
+        "timeout_error": "Timeout when generating image. Please try again later.",
+        "upload_failed": "Unable to upload file. Please try again.",
+        "select_media": "Please select media file",
+        "enter_keywords": "Please enter at least one main keyword",
+        "ad_name_title": "Ad Name",
+        "ad_content_title": "Ad Content",
+        "headline_label": "Headline",
+        "primary_text_label": "Primary Text",
+        "description_label": "Description",
+        "cta_label": "Call to Action",
+        "destination_url_label": "Destination URL",
+        "media_file_label": "Media File",
+        "upload_success": "Upload successful",
+        "change_media": "Change",
+        "add_media": "Add",
+        "create_with_ai": "Create with AI",
+        "generating_image": "Generating image...",
+        "auto_select_images": "Auto select images",
+        "images_created": "Images created",
+        "images_can_add": "Images can add",
+        "images_selected": "Images selected",
+        "ad_name_placeholder": "New ad",
+        "headline_placeholder": "High quality product/service",
+        "primary_text_placeholder": "Main ad content...",
+        "description_placeholder": "Brief additional description...",
+        "url_placeholder": "https://example.com"
+    },
+    "control": {
+        "create_campaign": "Create campaign",
+        "deleting_adset": "Deleting ad set...",
+        "deleting": "Deleting..."
+    },
+    "footer": {
+        "cancel": "Cancel",
+        "close": "Close",
+        "back": "Back",
+        "continue": "Continue",
+        "preview": "Preview",
+        "processing": "Processing...",
+        "success": "Success!",
+        "update": "Update",
+        "publish": "Publish",
+        "enter_campaign_name": "Please enter campaign name",
+        "enter_adset_name": "Please enter ad set name",
+        "enter_ad_details": "Please enter ad name, select media file and enter destination URL"
+    },
+    "create_child": {
+        "create_new_campaign_tab": "Create new campaign",
+        "create_new_adset": "Create new ad set",
+        "select_existing_adset": "Select from existing",
+        "loading": "Loading...",
+        "select_account": "Select ad account",
+        "select_campaign_placeholder": " ~ Select campaign ~",
+        "select_campaign_first": "Select campaign first",
+        "select_adset_placeholder": " ~ Select ad set ~",
+        "adset_name_placeholder": "Name this ad set",
+        "ad_name_placeholder": "Name this ad",
+        "campaign_section_title": "Campaign",
+        "adset_section_title": "Adset",
+        "select_campaign": "Select campaign",
+        "select_adset": "Select adset",
+        "select_ad": "Select ad"
+    },
+    "ai_popup": {
+        "enter_config_name": "Please enter config name",
+        "enter_main_keyword_first": "Please enter main keyword first",
+        "enter_at_least_one_keyword": "Please enter at least one main keyword",
+        "using_config": "Using config: {{name}}",
+        "generating": "Generating..."
+    },
+    "ai_config_manager": {
+        "enter_config_name": "Please enter config name",
+        "enter_character": "Please enter Character",
+        "loading": "Loading..."
+    },
+    "prompt_preview": {
+        "loading": "Loading..."
+    },
+    "location_selector": {
+        "select_account_first": "⚠️ Please select Ads Account first"
+    },
+    "save_draft": {
+        "title": "Save draft before exiting?",
+        "message": "Do you want to save the current campaign as a draft? You can continue editing later.",
+        "confirm": "Save draft",
+        "cancel": "Cancel",
+        "discard": "Don't save",
+        "success": "Draft saved successfully!",
+        "error": "Error saving draft: {{message}}"
+    },
+    "validation": {
+        "enter_campaign_name": "enter campaign name",
+        "enter_adset_name": "enter ad set name",
+        "select_campaign": "Please select campaign",
+        "campaign_not_found": "Campaign not found",
+        "adset_not_found": "Ad set not found",
+        "load_info_error": "Error loading information. Please try again.",
+        "pixel_required_sales": "Pixel ID is required for Sales campaign",
+        "page_required_leads": "Page ID is required for Leads campaign",
+        "app_required_promotion": "Application ID is required for App Promotion campaign",
+        "select_optimization_goal_first": "Please select optimization goal first"
+    },
+    "toast": {
+        "draft_saved": "Draft saved successfully!",
+        "using_sample_image": "Using sample image"
+    },
+    "objective_schema": {
+        "name_title": "Ad set name",
+        "performance_goal_title": "Performance goal",
+        "optimization_goal_label": "Optimization goal",
+        "billing_title": "Billing",
+        "billing_event_label": "Billing event",
+        "budget_title": "Budget",
+        "budget_type_label": "Budget type",
+        "amount_label": "Amount",
+        "schedule_title": "Schedule",
+        "start_time_label": "Start date",
+        "end_time_label": "End date",
+        "targeting_title": "Custom audience",
+        "age_label": "Age",
+        "gender_label": "Gender",
+        "language_label": "Language",
+        "location_title": "Geographic location",
+        "detailed_targeting_title": "Detailed targeting",
+        "detailed_targeting_label": "Interests, behaviors, demographics",
+        "bid_strategy_title": "Bid strategy",
+        "strategy_label": "Strategy",
+        "bid_cap_label": "Bid cap",
+        "conversion_destination_title": "Conversion Destination",
+        "promoted_object_title": "Promoted Object"
+    },
+    "objective_details": {
+        "awareness": {
+            "title": "Awareness",
+            "description": "Show ads to people most likely to remember them.",
+            "suitable_0": "Reach",
+            "suitable_1": "Brand awareness",
+            "suitable_2": "Video views"
+        },
+        "traffic": {
+            "title": "Traffic",
+            "description": "Send people to a destination, such as a website, app, page, or Facebook event.",
+            "suitable_0": "Link clicks",
+            "suitable_1": "Landing page views",
+            "suitable_2": "Profile visits",
+            "suitable_3": "Calls"
+        },
+        "engagement": {
+            "title": "Engagement",
+            "description": "Increase messages, purchases via messages, video views, post engagement, page likes, or event responses.",
+            "suitable_0": "Post engagement",
+            "suitable_1": "Purchases via messaging",
+            "suitable_2": "Page likes",
+            "suitable_3": "Event responses",
+            "suitable_4": "Conversations"
+        },
+        "leads": {
+            "title": "Leads",
+            "description": "Collect lead information from people interested in your products or services.",
+            "suitable_0": "Instant forms",
+            "suitable_1": "Conversations"
+        },
+        "app_promotion": {
+            "title": "App Promotion",
+            "description": "Find people to install your app or take specific actions within it.",
+            "suitable_0": "App installs",
+            "suitable_1": "App events"
+        },
+        "sales": {
+            "title": "Sales",
+            "description": "Find people most likely to buy your products or services.",
+            "suitable_0": "Website conversions",
+            "suitable_1": "App conversions",
+            "suitable_2": "Purchases via messaging"
+        }
+    }
+}

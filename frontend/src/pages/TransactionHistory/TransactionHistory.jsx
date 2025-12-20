@@ -271,7 +271,7 @@ export default function TransactionHistory() {
           setFilterOptions(response.data);
         }
       } catch (error) {
-        console.error("Error fetching filter options:", error);
+        //console.error("Error fetching filter options:", error);
       }
     };
     fetchFilterOptions();
@@ -339,7 +339,7 @@ export default function TransactionHistory() {
         setRows([]);
       }
     } catch (error) {
-      console.error("Error fetching payment transactions:", error);
+      //console.error("Error fetching payment transactions:", error);
       toast.error("Lỗi khi tải lịch sử giao dịch");
       setRows([]);
     } finally {

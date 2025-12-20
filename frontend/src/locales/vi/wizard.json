@@ -1,0 +1,239 @@
+{
+    "main": {
+        "create_title": "Tạo chiến dịch",
+        "edit_campaign_title": "Chỉnh sửa chiến dịch",
+        "edit_adset_title": "Chỉnh sửa nhóm quảng cáo",
+        "edit_ad_title": "Chỉnh sửa quảng cáo",
+        "tab_child": "Nhóm quảng cáo hoặc quảng cáo mới",
+        "publishing": "Đang đăng chiến dịch quảng cáo",
+        "updating": "Đang cập nhật chiến dịch quảng cáo",
+        "default_campaign_name": "Chiến dịch mới",
+        "default_adset_name": "Nhóm quảng cáo mới",
+        "default_ad_name": "Quảng cáo mới"
+    },
+    "target_step": {
+        "title": "Chọn mục tiêu chiến dịch",
+        "description": "Mục tiêu chiến dịch là mục tiêu kinh doanh mà bạn mong muốn đạt được khi chạy quảng cáo. Hãy chọn một mục tiêu từ danh sách bên trái để tiếp tục.",
+        "header": "Chọn mục tiêu chiến dịch",
+        "suitable_for_title": "Phù hợp với"
+    },
+    "campaign_step": {
+        "name_title": "Tên chiến dịch",
+        "name_placeholder": "Nhập tên chiến dịch",
+        "details_title": "Chi tiết chiến dịch",
+        "budget_title": "Ngân sách chiến dịch",
+        "budget_description": "Đặt một ngân sách duy nhất cho toàn bộ chiến dịch. Bây còn gọi là ngân sách chiến dịch Avantage+.",
+        "budget_learn_more": "Giới thiệu về ngân sách chiến dịch",
+        "buy_method": "Cách mua",
+        "buy_method_value": "Đấu giá",
+        "adset_budget_title": "Ngân sách nhóm quảng cáo",
+        "adset_budget_description": "Đặt chiến lược giá thầu hoặc lên lịch điều chỉnh chính sách riêng cho từng nhóm quảng cáo."
+    },
+    "adset_step": {
+        "name_placeholder": "Nhập tên nhóm quảng cáo",
+        "select_objective": "Vui lòng chọn mục tiêu",
+        "select_optimization_goal": "Vui lòng chọn mục tiêu tối ưu hóa",
+        "select_engagement_type": "Chọn loại tương tác",
+        "select_at_least_one_placement": "Vui lòng chọn ít nhất 1 vị trí",
+        "end_after_start": "Thời gian kết thúc phải lớn hơn thời gian bắt đầu ít nhất 1 ngày",
+        "facebook_page": "Trang Facebook",
+        "no_page": "Chưa có Trang"
+    },
+    "ad_step": {
+        "ai_generating": "Đang tạo...",
+        "ai_button": "AI",
+        "ai_generate_image": "AI tạo ảnh",
+        "uploading": "Đang tải lên...",
+        "please_wait": "Vui lòng chờ đợi...",
+        "setup_ai_first": "Vui lòng thiết lập AI trước",
+        "generating_sample": "Việc tạo ảnh AI có thể mất nhiều thời gian. Đang sử dụng ảnh mẫu thay thế.",
+        "timeout_error": "Quá thời gian chờ khi tạo ảnh. Vui lòng thử lại sau.",
+        "upload_failed": "Không thể upload file. Vui lòng thử lại.",
+        "select_media": "Vui lòng chọn file phương tiện",
+        "enter_keywords": "Vui lòng nhập ít nhất một từ khóa chính",
+        "ad_name_title": "Tên quảng cáo",
+        "ad_content_title": "Nội dung quảng cáo",
+        "headline_label": "Tiêu đề",
+        "primary_text_label": "Văn bản chính",
+        "description_label": "Mô tả",
+        "cta_label": "Nút kêu gọi hành động",
+        "destination_url_label": "URL đích",
+        "media_file_label": "File phương tiện",
+        "upload_success": "Đã upload thành công",
+        "change_media": "Thay đổi",
+        "add_media": "Thêm",
+        "create_with_ai": "Tạo bằng AI",
+        "generating_image": "Đang tạo ảnh...",
+        "auto_select_images": "Chọn ảnh tự động",
+        "images_created": "Ảnh đã tạo",
+        "images_can_add": "Ảnh có thể thêm",
+        "images_selected": "Ảnh đã chọn",
+        "ad_name_placeholder": "Quảng cáo mới",
+        "headline_placeholder": "Sản phẩm/Dịch vụ chất lượng cao",
+        "primary_text_placeholder": "Nội dung chính của quảng cáo...",
+        "description_placeholder": "Mô tả ngắn gọn bổ sung...",
+        "url_placeholder": "https://example.com"
+    },
+    "control": {
+        "create_campaign": "Tạo chiến dịch",
+        "create_adset": "Tạo nhóm quảng cáo",
+        "create_ad": "Tạo quảng cáo",
+        "delete": "Xóa",
+        "deleting_adset": "Đang xóa nhóm quảng cáo...",
+        "deleting": "Đang xóa ...",
+        "deleted_adset_facebook": "Đã xóa nhóm quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu",
+        "deleted_adset_db": "Đã xóa nhóm quảng cáo trong cơ sở dữ liệu",
+        "delete_adset_error": "Lỗi khi xóa nhóm quảng cáo",
+        "deleted_ad_facebook": "Đã xóa quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu",
+        "deleted_ad_db": "Đã xóa quảng cáo trong cơ sở dữ liệu",
+        "delete_ad_error": "Lỗi khi xóa quảng cáo"
+    },
+    "footer": {
+        "cancel": "Hủy",
+        "close": "Đóng",
+        "back": "Quay lại",
+        "continue": "Tiếp tục",
+        "preview": "Xem trước",
+        "processing": "Đang xử lý...",
+        "success": "Thành công!",
+        "update": "Cập nhật",
+        "publish": "Đăng quảng cáo",
+        "enter_campaign_name": "Vui lòng nhập tên chiến dịch",
+        "enter_adset_name": "Vui lòng nhập tên nhóm quảng cáo",
+        "enter_ad_details": "Vui lòng nhập tên quảng cáo, chọn file phương tiện và nhập URL đích"
+    },
+    "create_child": {
+        "create_new_campaign_tab": "Tạo chiến dịch mới",
+        "create_new_adset": "Tạo nhóm quảng cáo mới",
+        "select_existing_adset": "Chọn từ nhóm có sẵn",
+        "loading": "Đang tải...",
+        "select_account": "Chọn tài khoản quảng cáo",
+        "select_campaign_placeholder": " ~ Chọn chiến dịch ~",
+        "select_campaign_first": "Chọn chiến dịch trước",
+        "select_adset_placeholder": " ~ Chọn nhóm quảng cáo ~",
+        "adset_name_placeholder": "Đặt tên cho nhóm quảng cáo này",
+        "ad_name_placeholder": "Đặt tên cho quảng cáo này",
+        "campaign_section_title": "Chiến dịch",
+        "adset_section_title": "Nhóm quảng cáo",
+        "select_campaign": "Chọn chiến dịch",
+        "select_adset": "Chọn nhóm quảng cáo",
+        "select_ad": "Chọn quảng cáo"
+    },
+    "ai_popup": {
+        "enter_config_name": "Vui lòng nhập tên config",
+        "enter_main_keyword_first": "Vui lòng nhập từ khóa chính trước",
+        "enter_at_least_one_keyword": "Vui lòng nhập ít nhất một từ khóa chính",
+        "using_config": "Đang sử dụng config: {{name}}",
+        "generating": "Đang tạo..."
+    },
+    "ai_config_manager": {
+        "enter_config_name": "Vui lòng nhập tên config",
+        "enter_character": "Vui lòng nhập Character",
+        "loading": "Đang tải..."
+    },
+    "prompt_preview": {
+        "loading": "Đang tải..."
+    },
+    "location_selector": {
+        "select_account_first": "⚠️ Vui lòng chọn Ads Account trước"
+    },
+    "save_draft": {
+        "title": "Lưu nháp trước khi thoát?",
+        "message": "Bạn có muốn lưu nháp chiến dịch hiện tại không? Bạn có thể tiếp tục chỉnh sửa sau.",
+        "confirm": "Lưu nháp",
+        "cancel": "Hủy",
+        "discard": "Không lưu",
+        "success": "Đã lưu nháp thành công!",
+        "error": "Lỗi khi lưu nháp: {{message}}"
+    },
+    "validation": {
+        "enter_campaign_name": "tên chiến dịch",
+        "enter_adset_name": "tên nhóm quảng cáo",
+        "select_campaign": "Vui lòng chọn campaign",
+        "campaign_not_found": "Không tìm thấy campaign",
+        "adset_not_found": "Không tìm thấy adset",
+        "load_info_error": "Lỗi khi tải thông tin. Vui lòng thử lại.",
+        "pixel_required_sales": "Pixel ID là bắt buộc cho chiến dịch Sales",
+        "page_required_leads": "Page ID là bắt buộc cho chiến dịch Leads",
+        "app_required_promotion": "Application ID là bắt buộc cho chiến dịch App Promotion",
+        "select_optimization_goal_first": "Vui lòng chọn mục tiêu tối ưu hóa trước"
+    },
+    "toast": {
+        "draft_saved": "Đã lưu nháp thành công!",
+        "using_sample_image": "Sử dụng ảnh mẫu"
+    },
+    "objective_schema": {
+        "name_title": "Tên nhóm quảng cáo",
+        "performance_goal_title": "Mục tiêu hiệu quả",
+        "optimization_goal_label": "Mục tiêu tối ưu",
+        "billing_title": "Thanh toán",
+        "billing_event_label": "Sự kiện tính phí",
+        "budget_title": "Ngân sách",
+        "budget_type_label": "Loại ngân sách",
+        "amount_label": "Số tiền",
+        "schedule_title": "Thời gian",
+        "start_time_label": "Ngày bắt đầu",
+        "end_time_label": "Ngày kết thúc",
+        "targeting_title": "Đối tượng tùy chỉnh",
+        "age_label": "Tuổi",
+        "gender_label": "Giới tính",
+        "language_label": "Ngôn ngữ",
+        "location_title": "Vị trí địa lý",
+        "detailed_targeting_title": "Nhắm mục tiêu chi tiết",
+        "detailed_targeting_label": "Sở thích, hành vi, nhân khẩu học",
+        "bid_strategy_title": "Chiến lược giá thầu",
+        "strategy_label": "Chiến lược",
+        "bid_cap_label": "Giới hạn giá thầu",
+        "conversion_destination_title": "Vị trí chuyển đổi",
+        "promoted_object_title": "Đối tượng được quảng cáo"
+    },
+    "objective_details": {
+        "awareness": {
+            "title": "Mức độ nhận biết",
+            "description": "Hiển thị quảng cáo cho những người có nhiều khả năng nhớ đến quảng cáo nhất.",
+            "suitable_0": "Số người tiếp cận",
+            "suitable_1": "Mức độ nhận biết thương hiệu",
+            "suitable_2": "Lượt xem video"
+        },
+        "traffic": {
+            "title": "Lưu lượng truy cập",
+            "description": "Chuyển mọi người tới một đích đến nào đó, chẳng hạn như trang web, ứng dụng, trang cá nhân hoặc sự kiện trên Facebook.",
+            "suitable_0": "Lượt click vào liên kết",
+            "suitable_1": "Lượt xem trang đích",
+            "suitable_2": "Lượt truy cập vào trang cá nhân",
+            "suitable_3": "Cuộc gọi"
+        },
+        "engagement": {
+            "title": "Tương tác",
+            "description": "Tăng số tin nhắn, lượt mua qua tin nhắn, lượt xem video, lượt tương tác với bài viết, lượt thích Trang hoặc phản hồi sự kiện.",
+            "suitable_0": "Fanpage",
+            "suitable_1": "Lượt xem video",
+            "suitable_2": "Lượt tương tác với bài viết",
+            "suitable_3": "Lượt chuyển đổi",
+            "suitable_4": "Cuộc gọi"
+        },
+        "leads": {
+            "title": "Khách hàng tiềm năng",
+            "description": "Tìm kiếm khách hàng tiềm năng cho doanh nghiệp hoặc thương hiệu của bạn.",
+            "suitable_0": "Trang web và mẫu phản hồi tức thì",
+            "suitable_1": "Mẫu phản hồi thức thì",
+            "suitable_2": "Fanpage",
+            "suitable_3": "Lượt chuyển đổi",
+            "suitable_4": "Cuộc gọi"
+        },
+        "app_promotion": {
+            "title": "Quảng bá ứng dụng",
+            "description": "Thu hút những người mới cài đặt và tiếp tục sử dụng ứng dụng của bạn.",
+            "suitable_0": "Lượt cài đặt ứng dụng",
+            "suitable_1": "Sự kiện trong ứng dụng"
+        },
+        "sales": {
+            "title": "Doanh số",
+            "description": "Tìm những người có khả năng sẽ mua sản phẩm hoặc dịch vụ của bạn.",
+            "suitable_0": "Lịch sử chuyển dổi",
+            "suitable_1": "Doanh số theo danh mục",
+            "suitable_2": "Cuộc gọi",
+            "suitable_3": "Fanpage"
+        }
+    }
+}

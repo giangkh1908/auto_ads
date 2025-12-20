@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import "./FooterWizard.css";
 import { FB_OBJECTIVE_MAP } from "../../../../constants/wizardConstants";
 
@@ -19,12 +20,14 @@ function FooterWizard({
   onClose,
   handlePublish,
 }) {
+  const { t } = useTranslation('wizard');
+
   return (
     <div className="ads-modal-footer">
       {wizardStep === 0 ? (
         <>
           <button className="btn-secondary" onClick={onClose}>
-            Hủy
+            {t('footer.cancel')}
           </button>
           <div className="spacer" />
           <button
@@ -32,13 +35,13 @@ function FooterWizard({
             onClick={() => setWizardStep(1)}
             disabled={!Object.keys(FB_OBJECTIVE_MAP).includes(campaign.objective)}
           >
-            Tiếp tục
+            {t('footer.continue')}
           </button>
         </>
       ) : (
         <>
           <button className="btn-secondary" onClick={onClose}>
-            Đóng
+            {t('footer.close')}
           </button>
           <div className="spacer" />
           {wizardStep > 1 && (
@@ -46,7 +49,7 @@ function FooterWizard({
               className="btn-secondary"
               onClick={() => setWizardStep((prev) => Math.max(0, prev - 1))}
             >
-              Quay lại
+              {t('footer.back')}
             </button>
           )}
 
@@ -80,16 +83,16 @@ function FooterWizard({
               title={
                 wizardStep === 1
                   ? !campaign?.name || campaign.name.trim() === ""
-                    ? "Vui lòng nhập tên chiến dịch"
+                    ? t('footer.enter_campaign_name')
                     : undefined
                   : wizardStep === 2
                     ? !adset?.name || adset.name.trim() === ""
-                      ? "Vui lòng nhập tên nhóm quảng cáo"
+                      ? t('footer.enter_adset_name')
                       : undefined
                     : undefined
               }
             >
-              Tiếp tục
+              {t('footer.continue')}
             </button>
           )}
           {wizardStep === 3 && (
@@ -117,12 +120,12 @@ function FooterWizard({
                     !ad?.mediaUrl ||
                     !ad?.destinationUrl ||
                     String(ad.destinationUrl).trim() === ""
-                    ? "Vui lòng nhập tên quảng cáo, chọn file phương tiện và nhập URL đích"
+                    ? t('footer.enter_ad_details')
                     : undefined
                   : undefined
               }
             >
-              Xem trước
+              {t('footer.preview')}
             </button>
           )}
           {wizardStep === 4 && (
@@ -134,12 +137,12 @@ function FooterWizard({
                   disabled={loading}
                 >
                   {loading
-                    ? "Đang xử lý..."
+                    ? t('footer.processing')
                     : success
-                      ? "Thành công!"
+                      ? t('footer.success')
                       : mode === "edit" && campaign?.status !== "DRAFT"
-                        ? "Cập nhật"
-                        : "Đăng quảng cáo"}
+                        ? t('footer.update')
+                        : t('footer.publish')}
                 </button>
               )}
             </>

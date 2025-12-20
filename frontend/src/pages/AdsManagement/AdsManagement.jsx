@@ -168,6 +168,9 @@ function AdsManagement() {
   useEffect(() => {
     if (selectedAccountId && initialized) {
       syncDataRef.current(selectedAccountId);
+    } else if (initialized && !selectedAccountId) {
+      // Khi khởi tạo xong nhưng không có account được chọn, tắt loading
+      setSwitchingAccount(false);
     }
   }, [selectedAccountId, initialized]);
 
@@ -221,8 +224,11 @@ function AdsManagement() {
             console.error("Error fetching data:", error);
           }
         } finally {
-          // Ensure switching indicator is cleared when fetch completes (success/error)
-          setSwitchingAccount(false);
+          // Ensure switching indicator is cleared when fetch completes (success/error/abort)
+          // Only clear if this is still the active controller
+          if (abortControllerRef.current === abortController) {
+            setSwitchingAccount(false);
+          }
         }
       };
 
@@ -231,8 +237,13 @@ function AdsManagement() {
       return () => {
         if (abortControllerRef.current === abortController) {
           abortController.abort();
+          // Tắt loading khi cleanup nếu controller này vẫn đang active
+          setSwitchingAccount(false);
         }
       };
+    } else if (initialized && !selectedAccountId) {
+      // Đảm bảo tắt loading nếu không có account được chọn
+      setSwitchingAccount(false);
     }
   }, [
     selectedAccountId,
@@ -250,78 +261,78 @@ function AdsManagement() {
   // Fetch insights cho visible items (current page) - lazy load
   // Sử dụng ref để track rows đã fetch insights
   const fetchedInsightsForRef = useRef(new Set());
-  
+
   useEffect(() => {
-    console.log("🔍 Insights useEffect:", { 
-      rowsLength: rows?.length, 
-      switchingAccount, 
-      activeTab,
-      firstRowExternalId: rows?.[0]?.external_id 
-    });
-    
+    // console.log("Insights useEffect:", {
+    //   rowsLength: rows?.length,
+    //   switchingAccount,
+    //   activeTab,
+    //   firstRowExternalId: rows?.[0]?.external_id
+    // });
+
     if (!rows || rows.length === 0) {
-      console.log("⏭️ Skip - no rows");
+      // console.log("Skip - no rows");
       return;
     }
-    
+
     if (switchingAccount) {
-      console.log("⏭️ Skip - switching account");
+      // console.log("Skip - switching account");
       return;
     }
-    
+
     // TTL cho insights: 1 giờ
     const INSIGHTS_TTL = 60 * 60 * 1000; // 1 hour in ms
     const now = Date.now();
-    
+
     // Lọc items chưa có insights HOẶC insights đã cũ (> 1 giờ)
     const itemsNeedInsights = rows.filter(item => {
       if (!item.external_id) return false;
       if (fetchedInsightsForRef.current.has(item.external_id)) return false;
-      
+
       // Check nếu insights đã cũ (stale)
       const insightsUpdatedAt = item.insights?.insights_updated_at || item.insights_updated_at;
-      const isStale = insightsUpdatedAt 
-        ? (now - new Date(insightsUpdatedAt).getTime()) > INSIGHTS_TTL 
+      const isStale = insightsUpdatedAt
+        ? (now - new Date(insightsUpdatedAt).getTime()) > INSIGHTS_TTL
         : true; // Nếu không có timestamp thì coi như stale
-      
+
       // Có data thực và còn fresh → skip
       const hasRealData = (item.insights?.impressions > 0 || item.insights?.spend > 0 || item.insights?.clicks > 0) ||
-                         (item.impressions > 0 || item.spend > 0 || item.clicks > 0);
-      
+        (item.impressions > 0 || item.spend > 0 || item.clicks > 0);
+
       if (hasRealData && !isStale) return false;
-      
+
       return true;
     });
-    
-    console.log("📊 Items need insights:", itemsNeedInsights.length);
-    
+
+    //console.log("Items need insights:", itemsNeedInsights.length);
+
     if (itemsNeedInsights.length === 0) {
-      console.log("⏭️ Skip - no items need insights");
+      //console.log("Skip - no items need insights");
       return;
     }
-    
+
     // Mark as fetching to avoid duplicate requests
     itemsNeedInsights.forEach(item => {
       fetchedInsightsForRef.current.add(item.external_id);
     });
-    
+
     // Determine endpoint based on activeTab
-    const endpoint = activeTab === "campaigns" 
+    const endpoint = activeTab === "campaigns"
       ? '/api/campaigns/insights'
-      : activeTab === "adsets" 
-        ? '/api/adsets/insights' 
+      : activeTab === "adsets"
+        ? '/api/adsets/insights'
         : '/api/ads/insights';
-    
-    console.log("🔄 Fetching insights for", itemsNeedInsights.length, "items from", endpoint);
-    
+
+    //console.log("Fetching insights for", itemsNeedInsights.length, "items from", endpoint);
+
     // Fetch insights in background
     fetchInsightsForVisibleItems(itemsNeedInsights, endpoint)
       .then(result => {
-        console.log("✅ Insights fetched:", Object.keys(result || {}).length, "items");
+        //console.log("Insights fetched:", Object.keys(result || {}).length, "items");
       })
       .catch(err => {
         if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-          console.warn('Failed to fetch insights for visible items:', err.message);
+          //console.warn('Failed to fetch insights for visible items:', err.message);
           // Remove from fetched set so it can retry
           itemsNeedInsights.forEach(item => {
             fetchedInsightsForRef.current.delete(item.external_id);
@@ -329,7 +340,7 @@ function AdsManagement() {
         }
       });
   }, [rows, activeTab, switchingAccount, fetchInsightsForVisibleItems]);
-  
+
   // Clear fetched insights ref when account changes
   useEffect(() => {
     fetchedInsightsForRef.current.clear();
@@ -880,7 +891,7 @@ function AdsManagement() {
 
       toast.success(t('toasts.refresh_success'));
     } catch (error) {
-      console.error("Error refreshing data:", error);
+      //console.error("Error refreshing data:", error);
       toast.error(t('toasts.refresh_error'));
     } finally {
       setRefreshing(false);
@@ -908,14 +919,16 @@ function AdsManagement() {
         }
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      //console.error("Error fetching data:", error);
     }
   }, [selectedAccountId, activeTab, selectedCampaign, selectedAdset, fetchCampaignsForAccount, fetchAdsetsForCampaign, fetchAllAdsetsForAccount, fetchAdsForAdset, fetchAllAdsForAccount]);
 
   // Tab change handler
   const handleTabChange = (tab) => {
-    // show loading while switching tabs
-    setSwitchingAccount(true);
+    // Only show loading if there's an account selected (otherwise no data to load)
+    if (selectedAccountId) {
+      setSwitchingAccount(true);
+    }
     setActiveTab(tab);
     resetSelection();
   };

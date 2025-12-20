@@ -164,7 +164,7 @@ export function useAdsDataFetching(
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
           }, {});
-          console.log(`📊 Backend returned campaigns by status:`, statusCount);
+          // console.log(`📊 Backend returned campaigns by status:`, statusCount);
         }
         
         const mapped = items.map(transformCampaign);
@@ -204,7 +204,7 @@ export function useAdsDataFetching(
              a.status !== "ARCHIVED"
       );
       if (cachedAdsets.length > 0) {
-        console.log(`✅ Using ${cachedAdsets.length} cached adsets for campaign ${campaignId}`);
+        // console.log(`✅ Using ${cachedAdsets.length} cached adsets for campaign ${campaignId}`);
         return;
       }
     }
@@ -228,7 +228,7 @@ export function useAdsDataFetching(
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
           }, {});
-          console.log(`📊 Backend returned adsets by status:`, statusCount);
+          // console.log(`📊 Backend returned adsets by status:`, statusCount);
         }
         
         const mapped = items.map((adset) => transformAdset(adset, campaignId));
@@ -273,7 +273,7 @@ export function useAdsDataFetching(
              a.status !== "ARCHIVED"
       );
       if (cachedAds.length > 0) {
-        console.log(`✅ Using ${cachedAds.length} cached ads for adset ${adsetId}`);
+        // console.log(`✅ Using ${cachedAds.length} cached ads for adset ${adsetId}`);
         return;
       }
     }
@@ -298,7 +298,7 @@ export function useAdsDataFetching(
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
           }, {});
-          console.log(`📊 Backend returned ads by status:`, statusCount);
+          // console.log(`📊 Backend returned ads by status:`, statusCount);
         }
         
         const mapped = items.map((ad) => ({
@@ -344,7 +344,7 @@ export function useAdsDataFetching(
         a => a.status !== "DELETED" && a.status !== "ARCHIVED"
       );
       if (cachedAdsets.length > 0) {
-        console.log(`✅ Using ${cachedAdsets.length} cached adsets for account ${accountId}`);
+        // console.log(`✅ Using ${cachedAdsets.length} cached adsets for account ${accountId}`);
         return;
       }
     }
@@ -368,7 +368,7 @@ export function useAdsDataFetching(
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
           }, {});
-          console.log(`📊 Backend returned adsets by status:`, statusCount);
+          // console.log(`📊 Backend returned adsets by status:`, statusCount);
         }
         
         const mapped = items.map((adset) => transformAdset(adset));
@@ -409,7 +409,7 @@ export function useAdsDataFetching(
         a => a.status !== "DELETED" && a.status !== "ARCHIVED"
       );
       if (cachedAds.length > 0) {
-        console.log(`✅ Using ${cachedAds.length} cached ads for account ${accountId}`);
+        // console.log(`✅ Using ${cachedAds.length} cached ads for account ${accountId}`);
         return;
       }
     }
@@ -452,7 +452,7 @@ export function useAdsDataFetching(
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
           }, {});
-          console.log(`📊 Backend returned ads by status:`, statusCount);
+          // console.log(`📊 Backend returned ads by status:`, statusCount);
         }
         
         const mapped = items.map((ad) => ({

@@ -92,7 +92,7 @@ export function useAdsSync(cache, setCache, activeTab) {
     if (!accountId) return;
     
     if (syncingRef.current) {
-      console.log("⏭️ Skip sync - already syncing");
+      // console.log("⏭️ Skip sync - already syncing");
       return;
     }
     
@@ -102,7 +102,7 @@ export function useAdsSync(cache, setCache, activeTab) {
     // Check localStorage cho last sync time (persist qua page refresh)
     const storedLastSync = getStoredLastSync(accountId);
     if (!forceSync && storedLastSync && (now - storedLastSync) < SYNC_COOLDOWN) {
-      console.log(`⏭️ Skip sync - synced ${Math.round((now - storedLastSync) / 1000)}s ago (cooldown: ${SYNC_COOLDOWN / 1000}s)`);
+      // console.log(`⏭️ Skip sync - synced ${Math.round((now - storedLastSync) / 1000)}s ago (cooldown: ${SYNC_COOLDOWN / 1000}s)`);
       return;
     }
     
@@ -146,7 +146,7 @@ export function useAdsSync(cache, setCache, activeTab) {
     });
     
     if (needsSync.length === 0) {
-      console.log("⏭️ Skip sync - all entities cached");
+      // console.log("⏭️ Skip sync - all entities cached");
       return;
     }
     
@@ -161,7 +161,7 @@ export function useAdsSync(cache, setCache, activeTab) {
       
       // 1. Campaigns
       if (needsSync.includes('campaigns')) {
-        console.log("🔄 Syncing Campaigns...");
+        // console.log("🔄 Syncing Campaigns...");
         await axiosInstance.get("/api/campaigns/live", { 
           params: { account_id: accountId },
           timeout: SYNC_TIMEOUT
@@ -170,7 +170,7 @@ export function useAdsSync(cache, setCache, activeTab) {
 
       // 2. AdSets
       if (needsSync.includes('adsets')) {
-        console.log("🔄 Syncing AdSets...");
+        // console.log("🔄 Syncing AdSets...");
         await axiosInstance.get("/api/adsets/live", { 
           params: { account_id: accountId },
           timeout: SYNC_TIMEOUT
@@ -179,14 +179,14 @@ export function useAdsSync(cache, setCache, activeTab) {
 
       // 3. Ads
       if (needsSync.includes('ads')) {
-        console.log("🔄 Syncing Ads...");
+        // console.log("🔄 Syncing Ads...");
         await axiosInstance.get("/api/ads/live", { 
           params: { account_id: accountId },
           timeout: SYNC_TIMEOUT
         });
       }
       
-      console.log(`✅ Live sync completed for: ${needsSync.join(', ')}`);
+      // console.log(`✅ Live sync completed for: ${needsSync.join(', ')}`);
       
       // Lưu vào localStorage để persist qua page refresh
       setStoredLastSync(accountId, now);

@@ -50,7 +50,7 @@ function ConnectPage() {
               }
             }
           } catch (apiError) {
-            console.error("Error fetching shops:", apiError);
+            //console.error("Error fetching shops:", apiError);
           }
         }
 
@@ -59,7 +59,7 @@ function ConnectPage() {
         const realPages = pagesRes?.data?.pages || [];
         setFbPages(realPages);
       } catch (e) {
-        console.error("Load facebook pages error:", e);
+        //console.error("Load facebook pages error:", e);
         toast.error(t('connect_page.toast_load_error'));
       } finally {
         setLoading(false);
@@ -84,7 +84,7 @@ function ConnectPage() {
       return "PAGE";
     };
     return (fbPages || []).map((p) => {
-      // ✅ Page đã được connect với shop nào đó (không phân biệt shop nào)
+      // Page đã được connect với shop nào đó (không phân biệt shop nào)
       const isConnected = p.connected_shop !== null && p.connected_shop !== undefined;
       const isConnectedToCurrentShop = p.connected_shop?.is_current_shop || false;
       const isConnectedToOtherShop = isConnected && !isConnectedToCurrentShop;
@@ -104,7 +104,7 @@ function ConnectPage() {
         connectedBy: p.connected_shop?.shop_name || null,
         isConnectedToCurrentShop,
         isConnectedToOtherShop,
-        // ✅ Chỉ cho phép connect nếu page chưa được connect với shop nào (can_connect = true)
+        // Chỉ cho phép connect nếu page chưa được connect với shop nào (can_connect = true)
         canConnect: p.can_connect === true && !isConnected,
         isSelected: false,
         pageAccessToken: p.pageAccessToken,
@@ -123,7 +123,7 @@ function ConnectPage() {
     setSelectedPages((prev) =>
       prev.filter((pageId) => {
         const page = pages.find((p) => p.id === pageId);
-        // ✅ Chỉ giữ lại page chưa được connect với shop nào và có thể connect
+        // Chỉ giữ lại page chưa được connect với shop nào và có thể connect
         return page && page.canConnect && !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop;
       })
     );
@@ -132,7 +132,7 @@ function ConnectPage() {
   //Xử lý chọn page
   const handlePageSelect = (pageId) => {
     const page = pages.find((p) => p.id === pageId);
-    // ✅ Không cho phép chọn page:
+    // Không cho phép chọn page:
     // - Đã kết nối với shop nào đó (current shop hoặc shop khác)
     // - Không có quyền ADMIN
     // - Không thể kết nối (canConnect = false)
@@ -154,7 +154,7 @@ function ConnectPage() {
 
   //Xử lý chọn tất cả
   const handleSelectAll = () => {
-    // ✅ Chỉ chọn các page chưa được connect với shop nào và có quyền ADMIN
+    // Chỉ chọn các page chưa được connect với shop nào và có quyền ADMIN
     const selectablePages = filteredPages.filter(
       (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
@@ -194,7 +194,7 @@ function ConnectPage() {
       toast.success(t('connect_page.toast_connect_success', { count: selected.length }));
       navigate("/dashboard");
     } catch (e) {
-      console.error("Connect page error:", e);
+      //console.error("Connect page error:", e);
       toast.error(t('connect_page.toast_connect_error'));
     }
   };
@@ -219,7 +219,7 @@ function ConnectPage() {
         toast.error(response.message || t('connect_page.toast_refresh_error'));
       }
     } catch (error) {
-      console.log("Refresh token error:", error);
+      // console.log("Refresh token error:", error);
       toast.error(t('connect_page.toast_refresh_error_detail', { error: error.message || "Unknown error" }));
     }
   };
@@ -264,10 +264,10 @@ function ConnectPage() {
 
       if (linkResponse.data.success) {
         const { user: updatedUser, pages } = linkResponse.data.data;
-        
+
         // Cập nhật user trong context (không cần đăng nhập lại)
         updateUser(updatedUser);
-        
+
         // Reload danh sách pages
         const pagesRes = await shopService.fetchFacebookPages();
         const realPages = pagesRes?.data?.pages || [];
@@ -275,7 +275,7 @@ function ConnectPage() {
         toast.success("Kết nối Facebook thành công!");
       } else {
         const errorCode = linkResponse.data?.error?.code;
-        
+
         if (errorCode === "FACEBOOK_ALREADY_BOUND") {
           toast.error("Tài khoản Facebook này đã được liên kết với tài khoản khác. Vui lòng sử dụng tài khoản Facebook khác.");
         } else {
@@ -283,9 +283,9 @@ function ConnectPage() {
         }
       }
     } catch (error) {
-      console.error("Facebook link error:", error);
+      //console.error("Facebook link error:", error);
       const errorCode = error.response?.data?.error?.code;
-      
+
       if (errorCode === "FACEBOOK_ALREADY_BOUND") {
         toast.error("Tài khoản Facebook này đã được liên kết với tài khoản khác. Vui lòng sử dụng tài khoản Facebook khác.");
       } else {
@@ -327,7 +327,7 @@ function ConnectPage() {
     const matchesSearch = page.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    // ✅ Check page đã được connect với shop nào (current hoặc other)
+    // Check page đã được connect với shop nào (current hoặc other)
     const isConnected = page.isConnectedToCurrentShop || page.isConnectedToOtherShop;
     const matchesStatus =
       statusFilter === "status" ||
@@ -338,7 +338,7 @@ function ConnectPage() {
 
   // Cập nhật trạng thái selectAll khi selectedPages thay đổi
   useEffect(() => {
-    // ✅ Chỉ đếm các page chưa được connect với shop nào và có thể connect
+    // Chỉ đếm các page chưa được connect với shop nào và có thể connect
     const selectablePages = filteredPages.filter(
       (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
     );
@@ -415,7 +415,7 @@ function ConnectPage() {
                       onChange={handleSelectAll}
                       className="select-all-checkbox"
                       disabled={
-                        // ✅ Disable khi không còn page nào chưa được connect với shop nào
+                        // Disable khi không còn page nào chưa được connect với shop nào
                         filteredPages.filter(
                           (page) => !page.isConnectedToCurrentShop && !page.isConnectedToOtherShop && page.role === "ADMIN" && page.canConnect
                         ).length === 0

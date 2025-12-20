@@ -71,8 +71,6 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
       // Hiển thị error message rõ ràng cho các lỗi khác (403, 401, etc.)
       const errorMessage = result.error || t("auth.login_failed");
       setErrors({ submit: errorMessage });
-      // Toast đã được hiển thị trong AuthContext, nhưng cũng hiển thị trong form để rõ ràng hơn
-      toast.error(errorMessage);
     }
   };
 
@@ -95,7 +93,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
           xfbml: true,
           version: "v23.0",
         });
-        console.log("Facebook SDK initialized");
+        // console.log("Facebook SDK initialized");
       };
 
       // Load Facebook SDK script
@@ -126,13 +124,13 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
     // Sử dụng FB.login với config_id cho Business Login
     window.FB.login(
       function (response) {
-        console.log("Facebook Business Login Response:", response);
+        // console.log("Facebook Business Login Response:", response);
 
         if (response.status === "connected") {
           // Xử lý khi đăng nhập thành công
           handleFacebookLoginSuccess(response);
         } else {
-          console.log("User cancelled login or did not fully authorize.");
+          // console.log("User cancelled login or did not fully authorize.");
           setFbLoading(false);
         }
       },
@@ -152,10 +150,10 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
         toast.error(t("auth.login_failed"));
         return;
       }
-      console.log("Facebook Auth Response:", authResponse);
+      // console.log("Facebook Auth Response:", authResponse);
 
       // 🔹 Gọi trực tiếp backend để BE xử lý tất cả (xác thực + lấy user info + pages)
-      console.log("Calling backend API...");
+      // console.log("Calling backend API...");
 
       const loginResponse = await axios.post(
         `${API_BASE_URL}/api/auth/facebook`,
@@ -169,13 +167,13 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
         }
       );
 
-      console.log("Backend Response:", loginResponse.data);
+      // console.log("Backend Response:", loginResponse.data);
 
       // 🔹 Xử lý kết quả trả về
       if (loginResponse.data.success) {
         const { user, tokens, pages } = loginResponse.data.data;
 
-        console.log("Facebook Login Success!");
+        // console.log("Facebook Login Success!");
 
         // 🔹 Cập nhật AuthContext để đồng bộ UI
         // Await completeExternalLogin vì nó là async function
@@ -201,13 +199,13 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
         console.error("Backend login failed:", loginResponse.data);
         toast.error(
           errorResponse?.error?.message ||
-            errorResponse?.message ||
-            t("auth.login_failed")
+          errorResponse?.message ||
+          t("auth.login_failed")
         );
         setFbLoading(false);
       }
     } catch (error) {
-      console.error("Backend login error:", error);
+      //console.error("Backend login error:", error);
 
       // Kiểm tra xem có phải lỗi inactive/banned không
       const errorResponse = error.response?.data;
@@ -230,8 +228,8 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
         console.error("❌ Error response:", error.response?.data);
         toast.error(
           errorResponse?.error?.message ||
-            errorResponse?.message ||
-            t("common.error")
+          errorResponse?.message ||
+          t("common.error")
         );
       }
       setFbLoading(false);

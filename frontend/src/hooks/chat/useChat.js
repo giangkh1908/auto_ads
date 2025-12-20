@@ -10,6 +10,11 @@ export function useChat(accountId) {
   const [conversationId, setConversationId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [contextEntities, setContextEntities] = useState([]);
+  
+  // Use ref to track current messages (for conversationHistory)
+  const messagesRef = useRef([]);
+  
   const toast = useToast();
   const { user, isAuthenticated } = useAuth();
   const userId = user?._id || user?.id || null;
@@ -57,6 +62,7 @@ export function useChat(accountId) {
     const initConversation = async () => {
       if (!sessionKey) {
         setMessages([]);
+        messagesRef.current = [];
         setConversationId(null);
         return;
       }
@@ -65,7 +71,9 @@ export function useChat(accountId) {
       if (cached?.conversation_id) {
         if (isMounted) {
           setConversationId(cached.conversation_id);
-          setMessages(cached.messages || []);
+          const cachedMessages = cached.messages || [];
+          setMessages(cachedMessages);
+          messagesRef.current = cachedMessages;
         }
         return;
       }
@@ -76,6 +84,7 @@ export function useChat(accountId) {
         if (isMounted && response?.success && response.conversation_id) {
           setConversationId(response.conversation_id);
           setMessages([]);
+          messagesRef.current = [];
           persistSessionState({
             conversation_id: response.conversation_id,
             messages: [],
@@ -103,7 +112,9 @@ export function useChat(accountId) {
 
   const resetChat = useCallback(() => {
     setMessages([]);
+    messagesRef.current = [];
     setConversationId(null);
+    setContextEntities([]);
     // Lấy key từ ref để đảm bảo xóa đúng session cũ
     const keyToRemove = sessionKeyRef.current;
     if (keyToRemove) {
@@ -128,7 +139,23 @@ export function useChat(accountId) {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      // Build conversationHistory from current messages in ref (BEFORE adding new message)
+      // Limit to last 20 messages to avoid huge payloads
+      const recentMessages = messagesRef.current.slice(-20);
+      const conversationHistory = recentMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        createdAt: msg.timestamp,
+        data: msg.raw_data || null
+      }));
+
+      // Update state and ref
+      setMessages((prev) => {
+        const newMessages = [...prev, userMessage];
+        messagesRef.current = newMessages;
+        return newMessages;
+      });
+      
       setIsSending(true);
 
       try {
@@ -137,6 +164,10 @@ export function useChat(accountId) {
           message,
           account_id: accountId,
           conversation_id: conversationId,
+          conversationHistory, // Send history from ref (previous messages only)
+          context: {
+            entities: contextEntities, // Send tracked entities
+          },
         });
 
         if (response.success) {
@@ -157,7 +188,16 @@ export function useChat(accountId) {
             suggestions: response.suggestions || [], // Save suggestions
           };
 
-          setMessages((prev) => [...prev, aiMessage]);
+          setMessages((prev) => {
+            const newMessages = [...prev, aiMessage];
+            messagesRef.current = newMessages;
+            return newMessages;
+          });
+          
+          // Update context entities from response
+          if (response.entities && response.entities.length > 0) {
+            setContextEntities(response.entities);
+          }
         } else {
           throw new Error(response.message);
         }
@@ -172,7 +212,11 @@ export function useChat(accountId) {
           isError: true,
         };
 
-        setMessages((prev) => [...prev, errorMessage]);
+        setMessages((prev) => {
+          const newMessages = [...prev, errorMessage];
+          messagesRef.current = newMessages;
+          return newMessages;
+        });
       } finally {
         setIsSending(false);
       }

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Megaphone,
   ArrowRight,
@@ -18,36 +19,37 @@ import target from "../../../../assets/wizard/target.jpg";
 import "./TargetStep.css";
 
 function TargetStep({ campaign, setCampaign }) {
+  const { t } = useTranslation(['wizard', 'ads']);
   const objectives = [
     {
       key: "AWARENESS",
       icon: <Megaphone size={16} />,
-      label: "Mức độ nhận biết",
+      label: t('ads:objectives.AWARENESS'),
     },
     {
       key: "TRAFFIC",
       icon: <ArrowRight size={16} />,
-      label: "Lưu lượng truy cập",
+      label: t('ads:objectives.TRAFFIC'),
     },
     {
       key: "ENGAGEMENT",
       icon: <MessageCircle size={16} />,
-      label: "Tương tác",
+      label: t('ads:objectives.ENGAGEMENT'),
     },
     {
       key: "LEADS",
       icon: <Search size={16} />,
-      label: "Khách hàng tiềm năng",
+      label: t('ads:objectives.LEADS'),
     },
     {
       key: "APP_PROMOTION",
       icon: <Users size={16} />,
-      label: "Quảng bá ứng dụng",
+      label: t('ads:objectives.APP_PROMOTION'),
     },
     {
       key: "SALES",
       icon: <ShoppingBag size={16} />,
-      label: "Doanh số",
+      label: t('ads:objectives.SALES'),
     },
   ];
 
@@ -72,68 +74,68 @@ function TargetStep({ campaign, setCampaign }) {
 
   const objectiveDetails = {
     AWARENESS: {
-      title: "Mức độ nhận biết",
-      description: "Hiển thị quảng cáo cho những người có nhiều khả năng nhớ đến quảng cáo nhất.",
+      title: t('wizard:objective_details.awareness.title'),
+      description: t('wizard:objective_details.awareness.description'),
       image: Image_1,
       suitableFor: [
-        "Số người tiếp cận",
-        "Mức độ nhận biết thương hiệu",
-        "Lượt xem video",
+        t('wizard:objective_details.awareness.suitable_0'),
+        t('wizard:objective_details.awareness.suitable_1'),
+        t('wizard:objective_details.awareness.suitable_2'),
       ],
     },
     TRAFFIC: {
-      title: "Lưu lượng truy cập",
-      description: "Chuyển mọi người tới một đích đến nào đó, chẳng hạn như trang web, ứng dụng, trang cá nhân hoặc sự kiện trên Facebook.",
+      title: t('wizard:objective_details.traffic.title'),
+      description: t('wizard:objective_details.traffic.description'),
       image: Image_2,
       suitableFor: [
-        "Lượt click vào liên kết",
-        "Lượt xem trang đích",
-        "Lượt truy cập vào trang cá nhân",
-        "Cuộc gọi",
+        t('wizard:objective_details.traffic.suitable_0'),
+        t('wizard:objective_details.traffic.suitable_1'),
+        t('wizard:objective_details.traffic.suitable_2'),
+        t('wizard:objective_details.traffic.suitable_3'),
       ],
     },
     ENGAGEMENT: {
-      title: "Tương tác",
-      description: "Tăng số tin nhắn, lượt mua qua tin nhắn, lượt xem video, lượt tương tác với bài viết, lượt thích Trang hoặc phản hồi sự kiện.",
+      title: t('wizard:objective_details.engagement.title'),
+      description: t('wizard:objective_details.engagement.description'),
       image: Image_3,
       suitableFor: [
-        "Fanpage",
-        "Lượt xem video",
-        "Lượt tương tác với bài viết",
-        "Lượt chuyển đổi",
-        "Cuộc gọi",
+        t('wizard:objective_details.engagement.suitable_0'),
+        t('wizard:objective_details.engagement.suitable_1'),
+        t('wizard:objective_details.engagement.suitable_2'),
+        t('wizard:objective_details.engagement.suitable_3'),
+        t('wizard:objective_details.engagement.suitable_4'),
       ],
     },
     LEADS: {
-      title: "Khách hàng tiềm năng",
-      description: "Tìm kiếm khách hàng tiềm năng cho doanh nghiệp hoặc thương hiệu của bạn.",
+      title: t('wizard:objective_details.leads.title'),
+      description: t('wizard:objective_details.leads.description'),
       image: Image_4,
       suitableFor: [
-        "Trang web và mẫu phản hồi tức thì",
-        "Mẫu phản hồi thức thì",
-        "Fanpage",
-        "Lượt chuyển đổi",
-        "Cuộc gọi",
+        t('wizard:objective_details.leads.suitable_0'),
+        t('wizard:objective_details.leads.suitable_1'),
+        t('wizard:objective_details.leads.suitable_2'),
+        t('wizard:objective_details.leads.suitable_3'),
+        t('wizard:objective_details.leads.suitable_4'),
       ],
     },
     APP_PROMOTION: {
-      title: "Quảng bá ứng dụng",
-      description: "Thu hút những người mới cài đặt và tiếp tục sử dụng ứng dụng của bạn.",
+      title: t('wizard:objective_details.app_promotion.title'),
+      description: t('wizard:objective_details.app_promotion.description'),
       image: Image_5,
       suitableFor: [
-        "Lượt cài đặt ứng dụng",
-        "Sự kiện trong ứng dụng",
+        t('wizard:objective_details.app_promotion.suitable_0'),
+        t('wizard:objective_details.app_promotion.suitable_1'),
       ],
     },
     SALES: {
-      title: "Doanh số",
-      description: "Tìm những người có khả năng sẽ mua sản phẩm hoặc dịch vụ của bạn.",
+      title: t('wizard:objective_details.sales.title'),
+      description: t('wizard:objective_details.sales.description'),
       image: Image_6,
       suitableFor: [
-        "Lịch sử chuyển dổi",
-        "Doanh số theo danh mục",
-        "Cuộc gọi",
-        "Fanpage",
+        t('wizard:objective_details.sales.suitable_0'),
+        t('wizard:objective_details.sales.suitable_1'),
+        t('wizard:objective_details.sales.suitable_2'),
+        t('wizard:objective_details.sales.suitable_3'),
       ],
     },
   };
@@ -141,10 +143,10 @@ function TargetStep({ campaign, setCampaign }) {
   const currentObjective = campaign.objective && objectiveDetails[campaign.objective]
     ? objectiveDetails[campaign.objective]
     : {
-      title: "Chọn mục tiêu chiến dịch",
-      description: "Mục tiêu chiến dịch là mục tiêu kinh doanh mà bạn mong muốn đạt được khi chạy quảng cáo. Hãy chọn một mục tiêu từ danh sách bên trái để tiếp tục.",
+      title: t('wizard:target_step.title'),
+      description: t('wizard:target_step.description'),
       image: target,
-      suitableFor: ['Chọn mục tiêu để xem chi tiết'],
+      suitableFor: [t('wizard:target_step.title')],
     };
 
   return (
@@ -153,7 +155,7 @@ function TargetStep({ campaign, setCampaign }) {
         {/* Left Panel - Objectives List */}
         <div className="objectives-sidebar">
           <div className="objectives-title">
-            Chọn mục tiêu chiến dịch
+            {t('wizard:target_step.header')}
           </div>
           <div className="objectives-list">
             {objectives.map((item) => (
@@ -199,7 +201,7 @@ function TargetStep({ campaign, setCampaign }) {
             {currentObjective.description}
           </div>
           <div className="suitable-for-section">
-            <div className="suitable-for-title">Phù hợp với</div>
+            <div className="suitable-for-title">{t('wizard:target_step.suitable_for_title')}</div>
             <div className="suitable-tags">
               {currentObjective.suitableFor.map((tag, index) => (
                 <span key={index} className="suitable-tag">

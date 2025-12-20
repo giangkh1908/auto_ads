@@ -101,7 +101,7 @@ const AiConfigManager = ({ isOpen, onClose, onConfigSelect = null }) => {
     if (!editingConfig) return;
 
     try {
-      console.log('Saving prompt config with data:', configData);
+      // console.log('Saving prompt config with data:', configData);
       const response = await aiConfigService.updateConfig(editingConfig._id, {
         character: configData.character,
         skills: configData.skills,
@@ -113,14 +113,14 @@ const AiConfigManager = ({ isOpen, onClose, onConfigSelect = null }) => {
         use_custom_templates: configData.use_custom_templates || false,
       });
 
-      console.log('Config saved successfully:', response);
+      // console.log('Config saved successfully:', response);
       toast.success('Đã cập nhật prompt config thành công');
 
       // Reload config từ DB để có data mới nhất
       const updatedConfigResponse = await aiConfigService.getConfig(editingConfig._id);
       if (updatedConfigResponse.success && updatedConfigResponse.config) {
         const updatedConfig = updatedConfigResponse.config;
-        console.log('Reloaded config from DB:', updatedConfig);
+        // console.log('Reloaded config from DB:', updatedConfig);
 
         // Update editingConfig với config mới
         setEditingConfig(updatedConfig);

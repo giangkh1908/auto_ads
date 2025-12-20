@@ -24,6 +24,11 @@ import review_6 from "../../assets/home/review_6.png";
 import review_7 from "../../assets/home/review_7.png";
 import review_8 from "../../assets/home/review_8.png";
 import review_9 from "../../assets/home/review_9.png";
+import rule1_tutorial from "../../assets/home/autorule_1.png";
+import rule2_tutorial from "../../assets/home/autorule_2.png";
+import rule3_tutorial from "../../assets/home/autorule_3.png";
+import rule4_tutorial from "../../assets/home/autorule_4.png";
+
 
 function Home({ onLoginClick }) {
   const [name, setName] = useState("");
@@ -431,45 +436,45 @@ function Home({ onLoginClick }) {
             <div className="tutorial-card">
               <div className="tutorial-thumbnail">
                 <img
-                  src="https://images.unsplash.com/photo-1636819488524-1f019c4e1c44?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHw3fHxjaGF0Ym90JTIwcm9ib3QlMjB0ZWNobm9sb2d5JTIwdHV0b3JpYWwlMjBlZHVjYXRpb258ZW58MHwwfHxibHVlfDE3NjAwMTEyMjN8MA&ixlib=rb-4.1.0&q=85"
+                  src={rule1_tutorial}
                   alt="Chatbot tutorial - Andy Hermawan on Unsplash"
                 />
-                <div className="play-button">
+                {/* <div className="play-button">
                   <Play size={32} fill="white" />
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="tutorial-card">
               <div className="tutorial-thumbnail">
                 <img
-                  src="https://images.unsplash.com/photo-1617791160588-241658c0f566?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwzfHx0dXRvcmlhbCUyMHNldHVwJTIwaW50ZXJmYWNlJTIwY29sb3JmdWwlMjBndWlkZXxlbnwwfDB8fHB1cnBsZXwxNzYwMDExMjI3fDA&ixlib=rb-4.1.0&q=85"
+                  src={rule2_tutorial}
                   alt="Setup tutorial - Milad Fakurian on Unsplash"
                 />
-                <div className="play-button">
+                {/* <div className="play-button">
                   <Play size={32} fill="white" />
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="tutorial-card">
               <div className="tutorial-thumbnail">
                 <img
-                  src="https://images.unsplash.com/photo-1656821991475-86b1b2ba3c32?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwxfHxnaWZ0cyUyMHNhbGVzJTIwYXV0b21hdGlvbiUyMGNvbG9yZnVsJTIwdHV0b3JpYWx8ZW58MHwwfHxyZWR8MTc2MDAxMTIyOXww&ixlib=rb-4.1.0&q=85"
+                  src={rule3_tutorial}
                   alt="Sales automation tutorial - Scarlett Alt on Unsplash"
                 />
-                <div className="play-button">
+                {/* <div className="play-button">
                   <Play size={32} fill="white" />
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="tutorial-card">
               <div className="tutorial-thumbnail">
                 <img
-                  src="https://images.unsplash.com/photo-1657192809008-729aa92d1228?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwzfHxnYW1lJTIwd2hlZWwlMjBwcml6ZXMlMjBjZWxlYnJhdGlvbiUyMGNvbG9yZnVsfGVufDB8MHx8b3JhbmdlfDE3NjAwMTEyMjh8MA&ixlib=rb-4.1.0&q=85"
+                  src={rule4_tutorial}
                   alt="Game features tutorial - Maxim Berg on Unsplash"
                 />
-                <div className="play-button">
+                {/* <div className="play-button">
                   <Play size={32} fill="white" />
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

@@ -2,12 +2,9 @@ import { contextManager } from "./contextManager.js";
 import { intentClassifier } from "./intentClassifier.js";
 import { analyticsTools } from "./analyticsTools.js";
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import Ads from "../../models/ads/ads.model.js";
-import NodeCache from 'node-cache';
-import crypto from 'crypto';
 
 // ============================================
 // HELPER: Simple Entity Resolution
@@ -32,36 +29,12 @@ async function simpleEntityResolution(accountId, entityName, type) {
 // ============================================
 export class AgentExecutor {
   constructor() {
-    const useOpenAI = !!process.env.OPENAI_API_KEY;
-    this.llm = useOpenAI
-      ? new ChatOpenAI({ modelName: "gpt-4o-mini", temperature: 0.3 })
-      : new ChatGoogleGenerativeAI({ modelName: "gemini-2.0-flash-exp", temperature: 0.3 });
-    
-    this.toolCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
-  }
-
-  _normalizeParams(params) {
-    const normalized = {};
-    const sortedKeys = Object.keys(params).sort();
-    for (const key of sortedKeys) {
-      const value = params[key];
-      if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          normalized[key] = value.sort().join(',');
-        } else if (typeof value === 'object') {
-          normalized[key] = JSON.stringify(value);
-        } else {
-          normalized[key] = String(value);
-        }
-      }
-    }
-    return normalized;
-  }
-
-  _generateCacheKey(intent, toolName, params) {
-    const normalized = this._normalizeParams(params);
-    const keyString = `${intent}_${toolName}_${JSON.stringify(normalized)}`;
-    return crypto.createHash('md5').update(keyString).digest('hex');
+    this.llm = new ChatOpenAI({ 
+      modelName: "gpt-4o", 
+      temperature: 0.3,
+      timeout: 30000,
+      maxRetries: 1,
+    });
   }
 
   _extractRankFromResult(toolResult, rankPosition) {
@@ -75,7 +48,7 @@ export class AgentExecutor {
         ...toolResult,
         top: [requestedItem],
         requested_rank: rankPosition,
-        total_in_cache: toolResult.top.length,
+        total_in_list: toolResult.top.length,
         cache_used: toolResult.cache_used || false
       };
     } else {
@@ -83,36 +56,19 @@ export class AgentExecutor {
         ...toolResult,
         top: [],
         requested_rank: rankPosition,
-        total_in_cache: toolResult.top.length,
+        total_in_list: toolResult.top.length,
         cache_used: toolResult.cache_used || false,
         error: `Không có item thứ ${rankPosition} trong kết quả (chỉ có ${toolResult.top.length} items)`
       };
     }
   }
 
-  async _executeToolWithCache(intent, toolName, params, tool, rankPosition = null) {
-    const cacheKey = this._generateCacheKey(intent, toolName, params);
-    
-    let cachedResult = this.toolCache.get(cacheKey);
-    
-    if (cachedResult) {
-      console.log(`[AgentExecutor] Cache HIT for ${toolName}: ${cacheKey}`);
-      
-      if (rankPosition) {
-        return this._extractRankFromResult(cachedResult, rankPosition);
-      }
-      
-      return { ...cachedResult, cache_used: true };
-    }
-    
-    console.log(`[AgentExecutor] Cache MISS for ${toolName}: ${cacheKey}, querying DB...`);
+  async _executeTool(intent, toolName, params, tool, rankPosition = null) {
+    console.log(`[AgentExecutor] Executing tool ${toolName}...`);
     
     try {
       const rawResult = await tool.invoke(params);
       const toolResult = JSON.parse(rawResult);
-      
-      this.toolCache.set(cacheKey, toolResult);
-      console.log(`[AgentExecutor] Cached result for ${toolName}: ${cacheKey}`);
       
       if (rankPosition) {
         return this._extractRankFromResult(toolResult, rankPosition);
@@ -125,7 +81,270 @@ export class AgentExecutor {
     }
   }
 
-  async processMessage(userId, accountId, message, conversationHistory = []) {
+  // ============================================
+  // DIRECT HTML FORMATTERS (BYPASS LLM)
+  // ============================================
+
+  _formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+  }
+
+  _formatNumber(value) {
+    if (!value && value !== 0) return '0';
+    return new Intl.NumberFormat('vi-VN').format(value);
+  }
+
+  _formatRankingResponse(toolResult, plan) {
+    if (!toolResult || toolResult.error) {
+      return `<p>⚠️ ${toolResult?.error || 'Không thể lấy dữ liệu'}: ${toolResult?.message || ''}</p>`;
+    }
+
+    const level = toolResult.level || plan.level || 'campaign';
+    const levelLabels = {
+      campaign: 'Tên chiến dịch',
+      adset: 'Tên nhóm quảng cáo',
+      ad: 'Tên quảng cáo'
+    };
+
+    const sortMetric = toolResult.sort_by_metric || (plan.metrics && plan.metrics[0]);
+    const metricLabel = sortMetric && sortMetric !== 'spend' ? 'Chỉ số chính' : 'Chi phí';
+
+    let html = '';
+
+    // Date range
+    if (toolResult.date_range_effective) {
+      html += `<p style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Từ ngày ${this._formatDate(toolResult.date_range_effective.from)} đến ${this._formatDate(toolResult.date_range_effective.to)}</p>\n`;
+    }
+
+    // Note if sorted by specific metric
+    if (sortMetric && sortMetric !== 'spend') {
+      const metricNames = {
+        ctr: 'CTR',
+        cpc: 'CPC',
+        cpm: 'CPM',
+        cpa: 'CPA',
+        cpl: 'CPL'
+      };
+      html += `<p style="font-size: 13px; color: #059669; margin-bottom: 12px;">⚡ Xếp hạng theo: ${metricNames[sortMetric] || sortMetric.toUpperCase()} (Chi phí chỉ để tham khảo)</p>\n`;
+    }
+
+    // Get data to display - handle both "top" array and "groups" object
+    let items = [];
+    let hasGroups = false;
+    
+    if (toolResult.groups && typeof toolResult.groups === 'object') {
+      // When grouped by objectives (objective=null in request)
+      hasGroups = true;
+      // Flatten all groups into one array
+      items = Object.values(toolResult.groups).flat();
+    } else if (toolResult.top && Array.isArray(toolResult.top)) {
+      // When filtering by specific objective
+      items = toolResult.top;
+    }
+    
+    if (items.length === 0) {
+      html += '<p>Không có dữ liệu trong khoảng thời gian này.</p>';
+      return html;
+    }
+
+    // If has groups, display by objective sections
+    if (hasGroups && toolResult.groups) {
+      const objectiveLabels = {
+        OUTCOME_SALES: '🛒 Doanh số',
+        OUTCOME_LEADS: '📋 Khách hàng tiềm năng',
+        OUTCOME_TRAFFIC: '🔗 Lưu lượng truy cập',
+        OUTCOME_AWARENESS: '👁️ Mức độ nhận biết',
+        OUTCOME_ENGAGEMENT: '💬 Tương tác',
+        OUTCOME_APP_PROMOTION: '📱 Quảng bá ứng dụng'
+      };
+
+      for (const [objective, groupItems] of Object.entries(toolResult.groups)) {
+        if (!groupItems || groupItems.length === 0) continue;
+
+        const objLabel = objectiveLabels[objective] || objective;
+        // Get primary metric label from first item
+        const primaryMetricLabel = groupItems[0]?.primary_metric?.label || 'Chỉ số chính';
+        
+        html += `<h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 20px 0 12px 0;">${objLabel}</h3>\n`;
+
+        html += `<table style="width: 100%; border-collapse: collapse; margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">\n`;
+        html += `  <thead>\n`;
+        html += `    <tr style="background-color: #667eea; color: white;">\n`;
+        html += `      <th style="padding: 12px 16px; text-align: left; font-weight: 600; font-size: 14px; border: none;">${levelLabels[level]}</th>\n`;
+        html += `      <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">${primaryMetricLabel}</th>\n`;
+        html += `      <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">Chi phí</th>\n`;
+        html += `    </tr>\n`;
+        html += `  </thead>\n`;
+        html += `  <tbody>\n`;
+
+        groupItems.forEach((item, idx) => {
+          const bgColor = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+          const primaryValue = item.primary_metric?.formatted || this._formatNumber(item.primary_metric?.value || 0);
+          const spendValue = item.spend?.formatted || '0₫';
+
+          html += `    <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${bgColor};">\n`;
+          html += `      <td style="padding: 14px 16px; font-weight: 500; color: #1f2937;">${item.entity_name || item.name || 'N/A'}</td>\n`;
+          html += `      <td style="padding: 14px 16px; text-align: right; color: #059669; font-weight: 600; font-size: 15px;">${primaryValue}</td>\n`;
+          html += `      <td style="padding: 14px 16px; text-align: right; color: #6b7280; font-weight: 500;">${spendValue}</td>\n`;
+          html += `    </tr>\n`;
+        });
+
+        html += `  </tbody>\n`;
+        html += `</table>\n`;
+      }
+    } else {
+      // Single table (when objective was specified)
+      const primaryMetricLabel = items[0]?.primary_metric?.label || metricLabel;
+      
+      html += `<table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">\n`;
+      html += `  <thead>\n`;
+      html += `    <tr style="background-color: #667eea; color: white;">\n`;
+      html += `      <th style="padding: 12px 16px; text-align: left; font-weight: 600; font-size: 14px; border: none;">${levelLabels[level]}</th>\n`;
+      html += `      <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">${primaryMetricLabel}</th>\n`;
+      html += `      <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">Chi phí</th>\n`;
+      html += `    </tr>\n`;
+      html += `  </thead>\n`;
+      html += `  <tbody>\n`;
+
+      items.forEach((item, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+        const primaryValue = item.primary_metric?.formatted || this._formatNumber(item.primary_metric?.value || 0);
+        const spendValue = item.spend?.formatted || '0₫';
+
+        html += `    <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${bgColor};">\n`;
+        html += `      <td style="padding: 14px 16px; font-weight: 500; color: #1f2937;">${item.entity_name || item.name || 'N/A'}</td>\n`;
+        html += `      <td style="padding: 14px 16px; text-align: right; color: #059669; font-weight: 600; font-size: 15px;">${primaryValue}</td>\n`;
+        html += `      <td style="padding: 14px 16px; text-align: right; color: #6b7280; font-weight: 500;">${spendValue}</td>\n`;
+        html += `    </tr>\n`;
+      });
+
+      html += `  </tbody>\n`;
+      html += `</table>\n`;
+    }
+
+    return html;
+  }
+
+  _formatQueryDataResponse(toolResult, plan) {
+    if (!toolResult || toolResult.error) {
+      return `<p>⚠️ ${toolResult?.error || 'Không thể lấy dữ liệu'}: ${toolResult?.message || ''}</p>`;
+    }
+
+    const queryType = toolResult.query_type || plan.query_type;
+
+    // COUNT already handled in _generateResponse
+    if (queryType === 'count') {
+      const entityType = toolResult.entity_type || 'campaign';
+      const entityLabels = { campaign: 'chiến dịch', adset: 'nhóm quảng cáo', ad: 'quảng cáo' };
+      const count = toolResult.count || 0;
+      return `<p>Hiện tại tài khoản này đang có <strong>${count}</strong> ${entityLabels[entityType]}.</p>`;
+    }
+
+    // OVERVIEW
+    if (queryType === 'overview') {
+      const metrics = toolResult.metrics || {};
+      let html = '<h4>📊 Tổng quan hiệu suất</h4>\n';
+      
+      if (toolResult.period) {
+        html += `<p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">Từ ngày ${this._formatDate(toolResult.period.from)} đến ${this._formatDate(toolResult.period.to)}</p>\n`;
+      }
+
+      html += '<table style="width: 100%; border-collapse: collapse; margin: 16px 0;">\n';
+      html += '  <tbody>\n';
+      
+      const metricRows = [
+        { label: 'Chi phí', value: metrics.spend?.formatted || '0₫', color: '#dc2626' },
+        { label: 'Lượt hiển thị', value: metrics.impressions?.formatted || '0', color: '#3b82f6' },
+        { label: 'Lượt nhấp', value: metrics.clicks?.formatted || '0', color: '#059669' },
+        { label: 'CTR', value: metrics.ctr?.formatted || '0%', color: '#8b5cf6' },
+        { label: 'CPC', value: metrics.cpc?.formatted || '0₫', color: '#f59e0b' },
+        { label: 'Kết quả', value: metrics.results?.formatted || '0', color: '#10b981' },
+      ];
+
+      metricRows.forEach(row => {
+        html += `    <tr style="border-bottom: 1px solid #e5e7eb;">\n`;
+        html += `      <td style="padding: 12px 16px; font-weight: 500; color: #374151;">${row.label}</td>\n`;
+        html += `      <td style="padding: 12px 16px; text-align: right; color: ${row.color}; font-weight: 600; font-size: 16px;">${row.value}</td>\n`;
+        html += `    </tr>\n`;
+      });
+
+      html += '  </tbody>\n';
+      html += '</table>';
+      return html;
+    }
+
+    // LIST
+    if (queryType === 'list') {
+      const entities = toolResult.entities || [];
+      const entityType = toolResult.entity_type || 'campaign';
+      const entityLabels = { campaign: 'Chiến dịch', adset: 'Nhóm quảng cáo', ad: 'Quảng cáo' };
+
+      if (entities.length === 0) {
+        return `<p>Không tìm thấy ${entityLabels[entityType].toLowerCase()} nào.</p>`;
+      }
+
+      let html = `<h4>📋 Danh sách ${entityLabels[entityType]}</h4>\n`;
+      html += '<ul style="list-style: none; padding: 0; margin: 12px 0;">\n';
+
+      entities.forEach(entity => {
+        const statusColors = {
+          ACTIVE: '#10b981',
+          PAUSED: '#f59e0b',
+          ARCHIVED: '#6b7280'
+        };
+        const statusColor = statusColors[entity.status] || '#6b7280';
+
+        html += `  <li style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">\n`;
+        html += `    <span style="font-weight: 500; color: #1f2937;">${entity.name}</span>\n`;
+        html += `    <span style="margin-left: 12px; padding: 4px 8px; border-radius: 4px; font-size: 12px; background-color: ${statusColor}20; color: ${statusColor};">${entity.status}</span>\n`;
+        html += `  </li>\n`;
+      });
+
+      html += '</ul>';
+      return html;
+    }
+
+    // TOP_BOTTOM
+    if (queryType === 'top_bottom') {
+      const results = toolResult.results || [];
+      const metric = toolResult.metric || 'spend';
+      const entityType = toolResult.entity_type || 'campaign';
+      const entityLabels = { campaign: 'Chiến dịch', adset: 'Nhóm quảng cáo', ad: 'Quảng cáo' };
+      const metricLabels = {
+        spend: 'Chi phí',
+        ctr: 'CTR',
+        cpc: 'CPC',
+        clicks: 'Lượt nhấp'
+      };
+
+      if (results.length === 0) {
+        return '<p>Không có dữ liệu để hiển thị.</p>';
+      }
+
+      let html = `<h4>🏆 Top ${entityLabels[entityType]} theo ${metricLabels[metric] || metric}</h4>\n`;
+      html += '<table style="width: 100%; border-collapse: collapse; margin: 16px 0;">\n';
+      html += '  <tbody>\n';
+
+      results.forEach((item, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+        const metricValue = item[metric]?.formatted || item[metric]?.value || '-';
+
+        html += `    <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${bgColor};">\n`;
+        html += `      <td style="padding: 12px 16px; font-weight: 500; color: #1f2937;">${idx + 1}. ${item.name}</td>\n`;
+        html += `      <td style="padding: 12px 16px; text-align: right; color: #059669; font-weight: 600;">${metricValue}</td>\n`;
+        html += `    </tr>\n`;
+      });
+
+      html += '  </tbody>\n';
+      html += '</table>';
+      return html;
+    }
+
+    return '<p>Không thể hiển thị dữ liệu.</p>';
+  }
+
+  async processMessage(userId, accountId, message, conversationHistory = [], frontendContext = null) {
     try {
       // 1. Build Context
       let context;
@@ -153,6 +372,28 @@ export class AgentExecutor {
           reasoning: "Classification failed"
         };
       }
+
+      // 2.5. Merge context entities if user uses reference words
+      if (frontendContext?.entities && frontendContext.entities.length > 0) {
+        const hasReference = /\b(này|đó|nó|it|this|that)\b/i.test(message);
+        
+        if (hasReference) {
+          // Override plan entities with context (even if plan has entities)
+          // Because LLM might extract wrong entity type from reference
+          plan.entities = frontendContext.entities;
+          console.log("[AgentExecutor] Merged context entities (override):", plan.entities);
+        } else if (!plan.entities || plan.entities.length === 0) {
+          // No reference word, but plan has no entities
+          // Check if message mentions entity type keywords
+          const hasEntityKeyword = /\b(chiến dịch|campaign|adset|nhóm quảng cáo|quảng cáo|ads?)\b/i.test(message);
+          if (hasEntityKeyword) {
+            plan.entities = frontendContext.entities;
+            console.log("[AgentExecutor] Merged context entities (no entities in plan):", plan.entities);
+          }
+        }
+      }
+      
+      console.log("[AgentExecutor] Final plan.entities:", plan.entities);
 
       // 3. Execute Tool based on Intent
       let toolResult = null;
@@ -189,7 +430,7 @@ export class AgentExecutor {
           };
           
           try {
-            toolResult = await this._executeToolWithCache(plan.intent, toolName, params, tool, plan.rank_position);
+            toolResult = await this._executeTool(plan.intent, toolName, params, tool, plan.rank_position);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
             toolResult = { error: "Failed to rank campaigns/adsets/ads", message: e.message };
@@ -220,7 +461,7 @@ export class AgentExecutor {
               date_to: today
             };
             try {
-              const fallbackResult = await this._executeToolWithCache(plan.intent, toolName, fallbackParams, tool, plan.rank_position);
+              const fallbackResult = await this._executeTool(plan.intent, toolName, fallbackParams, tool, plan.rank_position);
               const hasFallbackData =
                 (Array.isArray(fallbackResult?.top) && fallbackResult.top.length > 0) ||
                 (fallbackResult?.groups && Object.keys(fallbackResult.groups).length > 0);
@@ -243,6 +484,19 @@ export class AgentExecutor {
         toolName = "get_entity_metadata";
         const tool = analyticsTools.find(t => t.name === toolName);
         
+        // Check if entities are available (from plan or context)
+        if (!plan.entities || plan.entities.length === 0) {
+          // No entity context - provide clarification
+          return {
+            response: "<p>⚠️ Xin lỗi, tôi không rõ bạn đang hỏi về entity nào. Vui lòng cung cấp tên <strong>campaign/adset/ad</strong> cụ thể.</p><p style=\"margin-top: 12px; color: #6b7280;\">Ví dụ: \"Campaign ABC thuộc về mục tiêu gì?\" hoặc \"Adset XYZ thuộc campaign nào?\"</p>",
+            intent: "GENERAL_CHAT",
+            tool_used: null,
+            data: null,
+            suggestions: ["Xem danh sách campaigns", "Top campaigns hiệu quả"],
+            entities: []
+          };
+        }
+        
         if (tool) {
           let entityIds = [];
           
@@ -251,23 +505,12 @@ export class AgentExecutor {
               const res = await simpleEntityResolution(accountId, ent.name, ent.type);
               if (res) entityIds.push(res.id);
             }
-          } else {
-            const lastResult = conversationHistory
-              .filter(m => m.role === "assistant" && m.data)
-              .slice(-1)[0]?.data;
-            
-            if (lastResult && lastResult.top && Array.isArray(lastResult.top)) {
-              entityIds = lastResult.top.map(e => e.entity_id);
-            } else if (lastResult && lastResult.groups) {
-              const allEntities = Object.values(lastResult.groups).flat();
-              entityIds = allEntities.map(e => e.entity_id);
-            }
           }
           
           if (entityIds.length === 0) {
             toolResult = { 
               error: "Không tìm thấy entity IDs", 
-              message: "Vui lòng chỉ định rõ entities cần query hoặc hỏi sau khi đã có kết quả ranking." 
+              message: "Vui lòng chỉ định rõ entities cần xem thông tin." 
             };
           } else {
             const params = {
@@ -277,7 +520,7 @@ export class AgentExecutor {
             };
             
             try {
-              toolResult = await this._executeToolWithCache(plan.intent, toolName, params, tool);
+              toolResult = await this._executeTool(plan.intent, toolName, params, tool);
             } catch (e) {
               console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
               toolResult = { error: "Failed to get metadata", message: e.message };
@@ -303,18 +546,15 @@ export class AgentExecutor {
           
           // Add entity info if present
           if (plan.entities && plan.entities.length > 0) {
-            const resolvedIds = [];
-            for (const ent of plan.entities) {
-              if (ent.name) {
-                const res = await simpleEntityResolution(accountId, ent.name, ent.type);
-                if (res) resolvedIds.push(res.id);
-              }
+            // Pass entity names directly to tool - let tool handle resolution
+            const entityNames = plan.entities.map(e => e.name).filter(Boolean);
+            if (entityNames.length > 0) {
+              params.entity_ids = entityNames; // Tool will resolve names → IDs
+              params.entity_type = plan.entities[0].type;
+            } else {
+              // No names provided, just type (for count queries)
+              params.entity_type = plan.entities[0].type;
             }
-            if (resolvedIds.length > 0) {
-              params.entity_ids = resolvedIds;
-            }
-            // Always set entity_type from entities array (even if no names, for count queries)
-            params.entity_type = plan.entities[0].type;
           } else if (plan.level) {
             // Fallback: use level if entities not provided
             params.entity_type = plan.level;
@@ -326,7 +566,7 @@ export class AgentExecutor {
           }
           
           try {
-            toolResult = await this._executeToolWithCache(plan.intent, toolName, params, tool);
+            toolResult = await this._executeTool(plan.intent, toolName, params, tool);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
             toolResult = { error: "Failed to fetch data", message: e.message };
@@ -350,19 +590,16 @@ export class AgentExecutor {
             date_to: plan.time_range?.to || today,
           };
           
-          // Add entity filter if present
+          // Add entity name directly - getTrendTool will handle resolution
           if (plan.entities && plan.entities.length > 0) {
             const ent = plan.entities[0];
-            const res = await simpleEntityResolution(accountId, ent.name, ent.type);
-            if (res) {
-              if (ent.type === "campaign") params.campaign_id = res.id;
-              else if (ent.type === "adset") params.adset_id = res.id;
-              else if (ent.type === "ad") params.ad_id = res.id;
-            }
+            if (ent.type === "campaign") params.campaign_id = ent.name;
+            else if (ent.type === "adset") params.adset_id = ent.name;
+            else if (ent.type === "ad") params.ad_id = ent.name;
           }
           
           try {
-            toolResult = await this._executeToolWithCache(plan.intent, toolName, params, tool);
+            toolResult = await this._executeTool(plan.intent, toolName, params, tool);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
             toolResult = { error: "Failed to fetch data", message: e.message };
@@ -392,7 +629,8 @@ export class AgentExecutor {
         intent: plan.intent,
         tool_used: toolName,
         data: toolResult,
-        suggestions: []
+        suggestions: [],
+        entities: plan.entities || [] // Return entities for frontend tracking
       };
 
     } catch (error) {
@@ -401,7 +639,8 @@ export class AgentExecutor {
         response: "⚠️ Xin lỗi, hệ thống đang gặp sự cố. Vui lòng thử lại sau.",
         intent: "GENERAL_CHAT",
         error: error.message,
-        suggestions: []
+        suggestions: [],
+        entities: [] // Return empty entities array on error
       };
     }
   }
@@ -410,6 +649,29 @@ export class AgentExecutor {
   // RESPONSE GENERATION
   // ============================================
   async _generateResponse(userMessage, plan, toolResult, context, conversationHistory = []) {
+    console.log('[AgentExecutor] Generating response with direct formatting (bypassing LLM when possible)...');
+
+    // ============================================
+    // FAST PATH: Direct HTML formatting (NO LLM)
+    // ============================================
+
+    // 1. RANK_CAMPAIGNS/RANK_ADSETS/RANK_ADS → Direct HTML table
+    if ((plan.intent === 'RANK_CAMPAIGNS' || plan.intent === 'RANK_ADSETS' || plan.intent === 'RANK_ADS') && toolResult && !toolResult.error) {
+      console.log('[AgentExecutor] Using direct HTML formatting for ranking');
+      return { content: this._formatRankingResponse(toolResult, plan) };
+    }
+
+    // 2. QUERY_DATA (count, overview, list, top_bottom) → Direct HTML
+    if (plan.intent === 'QUERY_DATA' && toolResult && !toolResult.error) {
+      console.log('[AgentExecutor] Using direct HTML formatting for query data');
+      return { content: this._formatQueryDataResponse(toolResult, plan) };
+    }
+
+    // ============================================
+    // SLOW PATH: Use LLM (for complex cases)
+    // ============================================
+    console.log('[AgentExecutor] Using LLM for complex response generation...');
+
     // Check if user is asking about system features/capabilities
     const lowerMessage = userMessage.toLowerCase();
     const systemFeatureKeywords = [
@@ -464,22 +726,6 @@ export class AgentExecutor {
       return { content: systemFeaturesContent };
     }
 
-    // Nếu là QUERY_DATA + count (đếm số lượng) và đã có toolResult hợp lệ
-    // → bỏ qua LLM2, trả lời trực tiếp cho nhanh
-    if (plan.intent === "QUERY_DATA" && plan.query_type === "count" && toolResult && !toolResult.error) {
-      const entityType = toolResult.entity_type || (plan.entities && plan.entities[0]?.type) || "campaign";
-      const entityLabelMap = {
-        campaign: "chiến dịch",
-        adset: "nhóm quảng cáo",
-        ad: "quảng cáo"
-      };
-      const label = entityLabelMap[entityType] || "đối tượng";
-      const count = typeof toolResult.count === "number" ? toolResult.count : 0;
-      
-      const content = `<p>Hiện tại tài khoản này đang có <strong>${count}</strong> ${label}.</p>`;
-      return { content };
-    }
-
     // Check if we have real data (not GENERAL_CHAT)
     const hasRealData = plan.intent !== "GENERAL_CHAT" &&
                        toolResult && 
@@ -505,153 +751,32 @@ export class AgentExecutor {
       }
     }
     
-    // Build conversation history context
-    const recentHistory = (conversationHistory || [])
-      .filter(m => m && m.content && typeof m.content === 'string' && m.content.trim().length > 0)
-      .slice(-5)
-      .map(m => ({ role: m.role, content: m.content }));
+    // Note: conversationHistory is passed to intentClassifier for context,
+    // but we don't use it here in response generation anymore.
     
-    // Extract previous toolResult from conversation history if available
-    let previousToolResult = null;
-    if (conversationHistory && conversationHistory.length > 0) {
-      const lastAssistantMessage = conversationHistory
-        .filter(m => m.role === "assistant" && m.data)
-        .slice(-1)[0];
-      if (lastAssistantMessage && lastAssistantMessage.data) {
-        // If data is a string (JSON), parse it
-        if (typeof lastAssistantMessage.data === 'string') {
-          try {
-            previousToolResult = JSON.parse(lastAssistantMessage.data);
-          } catch (e) {
-            // If parse fails, try to use as-is
-            previousToolResult = lastAssistantMessage.data;
-          }
-        } else {
-          previousToolResult = lastAssistantMessage.data;
-        }
-      }
-    }
-    
+    // Simplified prompt for GENERAL_CHAT, ANALYZE_TREND, GET_ENTITY_METADATA
     const systemPrompt = `
 You are a Senior Marketing Consultant for Facebook Ads.
-Your goal is to provide actionable insights, not just data.
+Provide concise, actionable insights in Vietnamese.
 
 CONTEXT:
 - Account: ${context.account?.name || "Unknown"}
-- Today's Spend: ${context.today_stats?.spend || "N/A"}
 - User Intent: ${plan.intent}
-- Query Type: ${plan.query_type || "N/A"}
-- Level: ${plan.level || toolResult?.level || "N/A"}
-- Sort By Metric: ${plan.metrics?.[0] || toolResult?.sort_by_metric || "default (effectiveness score)"}
 - Date Range: ${dateRangeText || "N/A"}
 
-CONTEXT SUMMARY (from LLM1 analysis of conversation history):
-${plan.context_summary || "No previous context"}
-
-DATA FROM TOOLS (current query):
+DATA:
 ${JSON.stringify(toolResult, null, 2)}
 
-PREVIOUS QUERY DATA (from conversation history):
-${previousToolResult ? JSON.stringify(previousToolResult, null, 2) : "No previous data"}
+RULES:
+1. Use HTML formatting (no markdown)
+2. For ANALYZE_TREND: Show date range, describe trend direction, mention key insights
+3. For GET_ENTITY_METADATA: Answer relationship questions clearly (e.g., "Ads X thuộc Adset Y, Campaign Z")
+4. For GENERAL_CHAT: Be friendly and helpful
+5. Keep responses concise and actionable
+6. Use <h4> for headers, <p> for paragraphs, <strong> for emphasis
+7. Always respond in Vietnamese
 
-CRITICAL RULES:
-1. **Date Range Display**: 
-   - ONLY show date range (e.g., "Từ ngày DD/MM/YYYY đến DD/MM/YYYY") if:
-     * Intent is QUERY_DATA, ANALYZE_TREND, RANK_CAMPAIGNS, or RANK_ADSETS
-     * AND there is actual data from tools (not "General conversation - no tool needed")
-     * AND date range is available
-   - If toolResult has date_range_effective, use that instead of plan.time_range
-   - If toolResult has data_coverage_notes, include them in your response
-   - DO NOT show date range for GENERAL_CHAT or questions without data
-   - If showing date range, put it on a single line at the start, then add ONE blank line before content
-2. **Follow-up Questions**: 
-   - If user asks about "bao lâu", "thời gian", "khoảng thời gian" after a ranking query:
-     * Check toolResult.date_range_effective or plan.time_range
-     * Answer with the ACTUAL date range used, not generic advice
-     * Example: "Kết quả được tính từ ngày DD/MM/YYYY đến DD/MM/YYYY"
-   - If user asks about "thuộc adset nào", "thuộc campaign nào", "adset/campaign của ads này":
-     * FIRST: Check CONTEXT SUMMARY to understand which entities user is referring to (e.g., "3 ads: X, Y, Z")
-     * SECOND: Check if current toolResult has the data (toolResult.top or toolResult.groups)
-     * THIRD: If not, check PREVIOUS QUERY DATA from conversation history (previousToolResult)
-     * Look for entities with adset_id, adset_name, campaign_id, campaign_name fields
-     * Match entity names from context_summary with entities in toolResult/previousToolResult
-     * If found, use them directly to answer
-     * Format: "Ads [name] thuộc Adset [adset_name] (ID: [adset_id]), Campaign [campaign_name] (ID: [campaign_id])"
-     * If parent info is missing in both current and previous data, mention that information is not available
-   - Use conversation history to understand context of follow-up questions
-3. **Parent Information (for RANK_ADS)**: 
-   - When toolResult contains ranking results with level="ad", check if each entity has:
-     * adset_id, adset_name (parent adset)
-     * campaign_id, campaign_name (parent campaign)
-   - If user asks "ads này thuộc adset/campaign nào", list all ads with their parent info
-   - Format parent info clearly in your response
-4. **Use HTML for formatting** - Output will be rendered as HTML
-5. **For ranking tables (RANK_CAMPAIGNS/RANK_ADSETS/RANK_ADS)**: 
-   - ALWAYS render ranking results using a 3-column table. DO NOT add more columns.
-   - **Column 1 Header** (MUST match level from toolResult.level or plan.level):
-     * level="campaign" → "Tên chiến dịch"
-     * level="adset" → "Tên nhóm quảng cáo"  
-     * level="ad" → "Tên quảng cáo"
-   - **Column 2 Header** (MUST match sort_by_metric from toolResult or plan.metrics):
-     * If sort_by_metric is "spend" or null/undefined → "Chi phí" (show spend.formatted or spend value)
-     * If sort_by_metric is "ctr" → "Chỉ số chính" (show CTR with %)
-     * If sort_by_metric is "cpc" → "Chỉ số chính" (show CPC)
-     * If sort_by_metric is "cpm" → "Chỉ số chính" (show CPM)
-     * If sort_by_metric is "cpa" → "Chỉ số chính" (show CPA)
-     * If sort_by_metric is "cpl" → "Chỉ số chính" (show CPL)
-     * If sort_by_metric is NOT "spend", add note above table: "Xếp hạng theo: [metric_name] (Chi phí chỉ để tham khảo)"
-   - **Column 3 Header**: "Điểm hiệu quả" (format score correctly)
-   - **Score Formatting** (CRITICAL):
-     * Check toolResult.top[].score.value format:
-     * If score.value is 0-1 range (e.g., 0.888) → multiply by 100, add % → "88.8%"
-     * If score.value is 0-100 range (e.g., 88.8) → keep as is, add % → "88.8%"
-     * If score.value is index/rank → use "Điểm" label, no % → "85"
-     * Use score.formatted if available from toolResult
-   - **Score Color**: Use dark gray (#374151) or dark text color. DO NOT use red (#dc2626) for scores.
-   - **Table Template** (use this exact structure):
-   <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-     <thead>
-       <tr style="background-color: #667eea; color: white;">
-         <th style="padding: 12px 16px; text-align: left; font-weight: 600; font-size: 14px; border: none;">[Column 1: Entity name based on level]</th>
-         <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">[Column 2: Metric based on sort_by_metric]</th>
-         <th style="padding: 12px 16px; text-align: right; font-weight: 600; font-size: 14px; border: none;">Điểm hiệu quả</th>
-       </tr>
-     </thead>
-     <tbody>
-       <tr style="border-bottom: 1px solid #e5e7eb;">
-         <td style="padding: 14px 16px; font-weight: 500; color: #1f2937;">[Entity Name]</td>
-         <td style="padding: 14px 16px; text-align: right; color: #059669; font-weight: 500;">[Metric Value]</td>
-         <td style="padding: 14px 16px; text-align: right; color: #374151; font-weight: 600; font-size: 15px;">[Score]</td>
-       </tr>
-       <tr style="border-bottom: 1px solid #e5e7eb; background-color: #f9fafb;">
-         <td style="padding: 14px 16px; font-weight: 500; color: #1f2937;">[Entity Name 2]</td>
-         <td style="padding: 14px 16px; text-align: right; color: #059669; font-weight: 500;">[Metric Value 2]</td>
-         <td style="padding: 14px 16px; text-align: right; color: #374151; font-weight: 600; font-size: 15px;">[Score 2]</td>
-       </tr>
-     </tbody>
-   </table>
-   - **Important Notes**:
-     * Header: Purple background (#667eea), white text, horizontal
-     * Rows: Alternate background (#ffffff and #f9fafb)
-     * Metric value: Green (#059669) for spend, neutral (#1f2937) for other metrics
-     * Score: Dark gray (#374151), bold, right-aligned, NO red color
-     * All text must be horizontal (no vertical rotation)
-     * If toolResult has score_method or metric_score_explain, add below table: "<p style='font-size: 12px; color: #6b7280; margin-top: 8px;'>Cách tính điểm: [explanation]</p>"
-6. **For other tables**: Use clean HTML tables with proper styling, but keep it simple
-7. **Highlighting**: 
-   - Use <strong> for important items
-   - Use <span style="color: #1890ff"> for metric labels
-   - Use <h4> for section titles (NO ### headers)
-8. **NO MARKDOWN**: Do not use ###, **, or markdown syntax
-9. **NO FOLLOW-UP QUESTIONS**: Do not generate suggestions
-10. **Language**: ALWAYS respond in VIETNAMESE (Tiếng Việt)
-11. **Be concise**: Keep analysis brief and actionable
-12. **Minimize whitespace**: 
-   - Remove extra blank lines (max 1 blank line between sections)
-   - Remove trailing spaces
-   - Keep paragraphs compact
-
-If data is missing or error, politely explain what went wrong.
+If data is missing, explain politely.
 `;
 
     if (!userMessage || !userMessage.trim()) {
@@ -661,7 +786,6 @@ If data is missing or error, politely explain what went wrong.
     try {
       const messages = [
         { role: "system", content: systemPrompt },
-        ...recentHistory,
         { role: "user", content: userMessage }
       ];
       

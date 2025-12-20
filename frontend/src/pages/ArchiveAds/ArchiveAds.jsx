@@ -267,7 +267,7 @@ function ArchiveAds() {
 
   //   try {
   //     // TODO: Implement restore API calls
-  //     console.log(`Khôi phục ${idsToRestore.length} items:`, idsToRestore);
+  //     // console.log(`Khôi phục ${idsToRestore.length} items:`, idsToRestore);
 
   //     // Simulate API call
   //     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -811,7 +811,7 @@ function ArchiveAds() {
         }
       }
 
-      console.log("✅ Data refreshed successfully");
+      // console.log("✅ Data refreshed successfully");
       toast.success(t('toasts.refresh_success'));
     } catch (error) {
       console.error("❌ Error refreshing data:", error);

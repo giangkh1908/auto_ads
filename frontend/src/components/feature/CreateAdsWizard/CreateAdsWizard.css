@@ -92,7 +92,7 @@ body {
 /* Tab-specific modal sizing */
 .ads-modal.campaign-tab { 
   width: 1000px; 
-  height: 630px; 
+  height: 615px; 
 }
 
 .ads-modal.child-tab { 
@@ -137,7 +137,7 @@ body {
   background: #f3f4f6;
   color: #374151;
 }
-.ads-modal-body { display: flex; min-height: 520px; }
+.ads-modal-body { display: flex; min-height: 510px; }
 
 .wizard-content { 
     flex: 1;  

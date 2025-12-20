@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Folder,
   Grid,
@@ -30,6 +31,7 @@ function Control({
   setSelectedAdIndex,
   mode = "create",
 }) {
+  const { t } = useTranslation('wizard');
   const toast = useToast();
   const [expandedItems, setExpandedItems] = useState({
     campaigns: {},
@@ -126,14 +128,14 @@ function Control({
       objective: currentCampaign.objective,
       budgetType: currentCampaign.budgetType,
       id: Date.now(),
-      name: `Chiến dịch ${campaignsList.length + 1}`,
+      name: `${t('ads:labels.campaign')} ${campaignsList.length + 1}`,
       createdAt: new Date().toISOString(),
       adsets: [
         {
           ...INITIAL_DATA.adset,
           id: Date.now() + 1,
           _id: firstAdsetId, // ✅ Set _id cho adset
-          name: "Nhóm quảng cáo mới",
+          name: t('main.default_adset_name'),
           // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
           targeting: {
             ...INITIAL_DATA.adset.targeting,
@@ -149,7 +151,7 @@ function Control({
             {
               ...INITIAL_DATA.ad,
               id: Date.now() + 2,
-              name: "Quảng cáo mới",
+              name: t('main.default_ad_name'),
               adset_id: firstAdsetId, // ✅ Set adset_id cho ad
             },
           ],
@@ -207,7 +209,7 @@ function Control({
         ...INITIAL_DATA.adset,
         id: Date.now(),
         _id: newAdsetId,
-        name: `Nhóm quảng cáo ${(currentCampaign.adsets || []).length + 1}`,
+        name: `${t('ads:labels.adset')} ${(currentCampaign.adsets || []).length + 1}`,
         // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
         targeting: {
           ...INITIAL_DATA.adset.targeting,
@@ -233,7 +235,7 @@ function Control({
           {
             ...INITIAL_DATA.ad,
             id: Date.now() + 1,
-            name: "Quảng cáo mới",
+            name: t('main.default_ad_name'),
             adset_id: newAdsetId, // ✅ Link ad với adset
           },
         ],
@@ -259,14 +261,14 @@ function Control({
     // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
     if (isEditMode && adsetId) {
       try {
-        toast.info("Đang xóa nhóm quảng cáo...");
+        toast.info(t('control.deleting_adset'));
         await deleteAdSet(adsetId);
         toast.success(hasExternalId
-          ? "Đã xóa nhóm quảng cáo trên Facebook và cập nhật trong cơ sở dữ liệu"
-          : "Đã xóa nhóm quảng cáo trong cơ sở dữ liệu");
+          ? t('control.deleted_adset_facebook')
+          : t('control.deleted_adset_db'));
       } catch (error) {
         console.error("Error deleting adset:", error);
-        toast.error(error?.response?.data?.message || "Lỗi khi xóa nhóm quảng cáo");
+        toast.error(error?.response?.data?.message || t('control.delete_adset_error'));
         return; // Không xóa khỏi UI nếu API thất bại
       }
     }
@@ -308,7 +310,7 @@ function Control({
       const newAd = {
         ...INITIAL_DATA.ad,
         id: Date.now(),
-        name: `Quảng cáo ${(currentAdset.ads || []).length + 1}`,
+        name: `${t('ads:labels.ad')} ${(currentAdset.ads || []).length + 1}`,
         adset_id: currentAdset._id, // ✅ Set adset_id
       };
 
@@ -333,14 +335,14 @@ function Control({
     // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
     if (isEditMode && adId) {
       try {
-        toast.info("Đang xóa ...");
+        toast.info(t('control.deleting'));
         await deleteAdAPI(adId);
         toast.success(hasExternalId
-          ? "Đã xóa"
-          : "Đã xóa");
+          ? t('control.deleted_ad_facebook')
+          : t('control.deleted_ad_db'));
       } catch (error) {
         console.error("Error deleting ad:", error);
-        toast.error(error?.response?.data?.message || "Lỗi khi xóa quảng cáo");
+        toast.error(error?.response?.data?.message || t('control.delete_ad_error'));
         return; // Không xóa khỏi UI nếu API thất bại
       }
     }
@@ -406,7 +408,7 @@ function Control({
                     <Folder size={16} />
                   </div>
                   <div className="hierarchy-content">
-                    <div className="hierarchy-label">Chiến dịch</div>
+                    <div className="hierarchy-label">{t('ads:labels.campaign')}</div>
                     <div className="hierarchy-name">{campaign.name}</div>
                   </div>
                   <div className="hierarchy-actions">
@@ -432,7 +434,7 @@ function Control({
                             }}
                           >
                             <Plus size={14} />
-                            Tạo chiến dịch
+                            {t('control.create_campaign')}
                           </button>
                           {canDelete && (
                             <button
@@ -444,7 +446,7 @@ function Control({
                               }}
                             >
                               <Trash2 size={14} />
-                              Xóa
+                              {t('control.delete')}
                             </button>
                           )}
                         </div>
@@ -510,7 +512,7 @@ function Control({
                             </div>
                             <div className="hierarchy-content">
                               <div className="hierarchy-label">
-                                Nhóm quảng cáo
+                                {t('ads:labels.adset')}
                               </div>
                               <div className="hierarchy-name">{adset.name}</div>
                             </div>
@@ -541,7 +543,7 @@ function Control({
                                         }}
                                       >
                                         <Plus size={14} />
-                                        Tạo nhóm quảng cáo
+                                        {t('control.create_adset')}
                                       </button>
                                       {canDeleteAdset && (
                                         <button
@@ -553,7 +555,7 @@ function Control({
                                           }}
                                         >
                                           <Trash2 size={14} />
-                                          Xóa
+                                          {t('control.delete')}
                                         </button>
                                       )}
                                     </div>
@@ -608,7 +610,7 @@ function Control({
                                       </div>
                                       <div className="hierarchy-content">
                                         <div className="hierarchy-label">
-                                          Quảng cáo
+                                          {t('ads:labels.ad')}
                                         </div>
                                         <div className="hierarchy-name">
                                           {ad.name}
@@ -641,7 +643,7 @@ function Control({
                                                   }}
                                                 >
                                                   <Plus size={14} />
-                                                  Tạo quảng cáo
+                                                  {t('control.create_ad')}
                                                 </button>
                                                 {canDeleteAd && (
                                                   <button
@@ -657,7 +659,7 @@ function Control({
                                                     }}
                                                   >
                                                     <Trash2 size={14} />
-                                                    Xóa
+                                                    {t('control.delete')}
                                                   </button>
                                                 )}
                                               </div>

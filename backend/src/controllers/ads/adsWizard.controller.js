@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { 
-  publishWizard, 
+import {
+  publishWizard,
   updateWizard,
   publishCampaignService,
   publishAdsetService,
@@ -203,7 +203,7 @@ export async function updateAdsWizard(req, res) {
     // CASE 1: If campaign.adsets exists → use cascade update
     if (campaign?.adsets && Array.isArray(campaign.adsets) && campaign.adsets.length > 0) {
       console.log(`[Wizard] Sử dụng cascade update cho campaign: ${campaign.name}`);
-      
+
       // Enrich campaign data
       const enrichedCampaign = {
         ...campaign,
@@ -217,13 +217,13 @@ export async function updateAdsWizard(req, res) {
           })) || []
         }))
       };
-      
+
       const result = await updateFlexibleService({
         ad_account_id,
         access_token,
         campaignsList: [enrichedCampaign], // Wrap single campaign
       });
-      
+
       return res.status(200).json({
         success: result.success,
         message: `Cập nhật ${result.totalUpdated} entities, tạo mới ${result.totalCreated} entities`,
@@ -233,7 +233,7 @@ export async function updateAdsWizard(req, res) {
 
     // CASE 2: Fallback - use updateWizard for backward compatibility
     console.log(`[Wizard] Sử dụng update riêng lẻ (legacy) cho account: ${ad_account_id}`);
-    
+
     // Handle bid_strategy conflict for adset
     if (adset?.bid_strategy === "LOWEST_COST_WITHOUT_CAP" && adset?.bid_amount !== undefined) {
       console.log("Controller (update): Phát hiện xung đột bid_strategy và bid_amount");
@@ -692,7 +692,28 @@ export async function publishFlexibleController(req, res) {
       campaignsList: enrichedCampaignsList,
       dry_run,
     });
-
+    // Log tạo campaigns thành công
+    if (result.success && !dry_run) {
+      // Log for each created campaign
+      for (const campaign of campaignsList) {
+        await saveLog({
+          user_id: req.user._id,
+          user_name: user.full_name,
+          shop_id: account.shop_id || req.user.shop_id,
+          action: "CREATE_CAMPAIGN",
+          target_type: "Campaign",
+          target_id: result.data?.campaigns?.[campaignsList.indexOf(campaign)]?._id?.toString() || campaign.name,
+          target_name: campaign.name,
+          request: {
+            campaign_name: campaign.name,
+            objective: campaign.objective,
+            adsets_count: campaign.adsets?.length || 0
+          },
+          ip_address: req.ip,
+          user_agent: req.headers?.['user-agent'],
+        });
+      }
+    }
     return res.status(200).json({
       success: result.success,
       message: result.message,
@@ -787,7 +808,30 @@ export async function updateFlexibleController(req, res) {
       access_token,
       campaignsList: enrichedCampaignsList,
     });
-
+    // Log cập nhật campaigns thành công
+    if (result.success && result.totalUpdated > 0) {
+      // Log for each updated campaign
+      for (const campaign of campaignsList) {
+        if (campaign._id || campaign.external_id) {
+          await saveLog({
+            user_id: req.user._id,
+            user_name: user.full_name,
+            shop_id: account.shop_id || req.user.shop_id,
+            action: "UPDATE_CAMPAIGN",
+            target_type: "Campaign",
+            target_id: campaign._id?.toString() || campaign.external_id,
+            target_name: campaign.name,
+            request: {
+              campaign_name: campaign.name,
+              objective: campaign.objective,
+              adsets_count: campaign.adsets?.length || 0
+            },
+            ip_address: req.ip,
+            user_agent: req.headers?.['user-agent'],
+          });
+        }
+      }
+    }
     return res.status(200).json({
       success: result.success,
       message: result.message,
@@ -823,14 +867,14 @@ function isValidObjectId(id) {
 export async function saveDraftController(req, res) {
   try {
     const { ad_account_id, campaigns } = req.body;
-    
+
     if (!ad_account_id) {
       return res.status(400).json({
         success: false,
         message: "Thiếu ad_account_id"
       });
     }
-    
+
     if (!campaigns || campaigns.length === 0) {
       return res.status(400).json({
         success: false,
@@ -863,35 +907,35 @@ export async function saveDraftController(req, res) {
       // Create or update Campaign draft (check ObjectId hợp lệ)
       const campaignDoc = isValidObjectId(campaignData._id)
         ? await AdsCampaign.findByIdAndUpdate(
-            campaignData._id,
-            {
-              name: campaignData.name,
-              objective: campaignData.objective,
-              status: 'DRAFT',
-              daily_budget: campaignData.daily_budget,
-              lifetime_budget: campaignData.lifetime_budget,
-              external_account_id: ad_account_id,
+          campaignData._id,
+          {
+            name: campaignData.name,
+            objective: campaignData.objective,
+            status: 'DRAFT',
+            daily_budget: campaignData.daily_budget,
+            lifetime_budget: campaignData.lifetime_budget,
+            external_account_id: ad_account_id,
             // Remove page_id and page_name from campaign (moved to adset)
-              // page_id: campaignData.facebookPageId,
-              // page_name: campaignData.facebookPage,
-              updated_at: new Date()
-            },
-            { new: true }
-          )
-        :             await AdsCampaign.create({
-              name: campaignData.name,
-              objective: campaignData.objective,
-              status: 'DRAFT',
-              daily_budget: campaignData.daily_budget,
-              lifetime_budget: campaignData.lifetime_budget,
-              external_account_id: ad_account_id,
-            // Remove page_id and page_name from campaign (moved to adset)
-              // page_id: campaignData.facebookPageId,
-              // page_name: campaignData.facebookPage,
-              account_id: account._id,
-              shop_id: account.shop_id,
-              created_by: req.user._id,
-            });
+            // page_id: campaignData.facebookPageId,
+            // page_name: campaignData.facebookPage,
+            updated_at: new Date()
+          },
+          { new: true }
+        )
+        : await AdsCampaign.create({
+          name: campaignData.name,
+          objective: campaignData.objective,
+          status: 'DRAFT',
+          daily_budget: campaignData.daily_budget,
+          lifetime_budget: campaignData.lifetime_budget,
+          external_account_id: ad_account_id,
+          // Remove page_id and page_name from campaign (moved to adset)
+          // page_id: campaignData.facebookPageId,
+          // page_name: campaignData.facebookPage,
+          account_id: account._id,
+          shop_id: account.shop_id,
+          created_by: req.user._id,
+        });
 
       savedItems.campaigns.push(campaignDoc);
 
@@ -901,28 +945,11 @@ export async function saveDraftController(req, res) {
           // Create or update AdSet draft (check ObjectId valid)
           const adsetDoc = isValidObjectId(adsetData._id)
             ? await AdsSet.findByIdAndUpdate(
-                adsetData._id,
-                {
-                  name: adsetData.name,
-                  status: 'DRAFT',
-                  campaign_id: campaignDoc._id,
-                  daily_budget: adsetData.budgetAmount,
-                  targeting: adsetData.targeting,
-                  optimization_goal: adsetData.optimization_goal,
-                  billing_event: adsetData.billing_event,
-                  bid_strategy: adsetData.bid_strategy,
-                  // Add page_id and page_name from adset (moved from campaign)
-                  ...(adsetData.facebookPageId && { page_id: adsetData.facebookPageId }),
-                  ...(adsetData.facebookPage && { page_name: adsetData.facebookPage }),
-                  updated_at: new Date()
-                },
-                { new: true }
-              )
-            : await AdsSet.create({
+              adsetData._id,
+              {
                 name: adsetData.name,
                 status: 'DRAFT',
                 campaign_id: campaignDoc._id,
-                external_account_id: ad_account_id,
                 daily_budget: adsetData.budgetAmount,
                 targeting: adsetData.targeting,
                 optimization_goal: adsetData.optimization_goal,
@@ -931,8 +958,25 @@ export async function saveDraftController(req, res) {
                 // Add page_id and page_name from adset (moved from campaign)
                 ...(adsetData.facebookPageId && { page_id: adsetData.facebookPageId }),
                 ...(adsetData.facebookPage && { page_name: adsetData.facebookPage }),
-                created_by: req.user._id, 
-              });
+                updated_at: new Date()
+              },
+              { new: true }
+            )
+            : await AdsSet.create({
+              name: adsetData.name,
+              status: 'DRAFT',
+              campaign_id: campaignDoc._id,
+              external_account_id: ad_account_id,
+              daily_budget: adsetData.budgetAmount,
+              targeting: adsetData.targeting,
+              optimization_goal: adsetData.optimization_goal,
+              billing_event: adsetData.billing_event,
+              bid_strategy: adsetData.bid_strategy,
+              // Add page_id and page_name from adset (moved from campaign)
+              ...(adsetData.facebookPageId && { page_id: adsetData.facebookPageId }),
+              ...(adsetData.facebookPage && { page_name: adsetData.facebookPage }),
+              created_by: req.user._id,
+            });
 
           savedItems.adsets.push(adsetDoc);
 
@@ -942,22 +986,22 @@ export async function saveDraftController(req, res) {
               // Create or update Ad draft (check ObjectId valid)
               const adDoc = isValidObjectId(adData._id)
                 ? await Ads.findByIdAndUpdate(
-                    adData._id,
-                    {
-                      name: adData.name,
-                      status: 'DRAFT',
-                      set_id: adsetDoc._id,
-                      updated_at: new Date()
-                    },
-                    { new: true }
-                  )
-                : await Ads.create({
+                  adData._id,
+                  {
                     name: adData.name,
                     status: 'DRAFT',
                     set_id: adsetDoc._id,
-                    external_account_id: ad_account_id,
-                    created_by: req.user._id,
-                  });
+                    updated_at: new Date()
+                  },
+                  { new: true }
+                )
+                : await Ads.create({
+                  name: adData.name,
+                  status: 'DRAFT',
+                  set_id: adsetDoc._id,
+                  external_account_id: ad_account_id,
+                  created_by: req.user._id,
+                });
 
               savedItems.ads.push(adDoc);
 
@@ -966,7 +1010,7 @@ export async function saveDraftController(req, res) {
                 try {
                   // Check if creative exists for this ad
                   let creativeDoc = await Creative.findOne({ ads_id: adDoc._id });
-                  
+
                   const creativeData = {
                     name: adData.name + ' Creative',
                     ads_id: adDoc._id,

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Folder, Grid, FileText, X } from "lucide-react";
 import axiosInstance from "../../../../utils/api/axios";
 import { transformCampaign, transformAdset } from "../../../../services/ads/adsDataService";
 import "./CreateChild.css";
 
 function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = null }) {
+  const { t } = useTranslation(['wizard', 'ads']);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
@@ -156,8 +158,8 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
       {!isFullMode && (
         <div className="create-child-header">
           <div className="create-child-tabs">
-            <button className="tab-button inactive">Tạo chiến dịch mới</button>
-            <button className="tab-button active">Nhóm quảng cáo hoặc quảng cáo mới</button>
+            <button className="tab-button inactive">{t('createChild.newCampaignTab')}</button>
+            <button className="tab-button active">{t('createChild.newAdsetOrAdTab')}</button>
           </div>
           <button className="close-button" onClick={onClose}>
             <X size={16} />
@@ -172,7 +174,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
             <div className="section-icon">
               <Folder size={16} />
             </div>
-            <div className="section-label">Chiến dịch</div>
+            <div className="section-label">{t('create_child.campaign_section_title')}</div>
           </div>
           <div className="input-container">
             <select
@@ -182,7 +184,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
               disabled={loadingCampaigns || !selectedAccountId}
             >
               <option value="">
-                {loadingCampaigns ? "Đang tải..." : !selectedAccountId ? "Chọn tài khoản quảng cáo" : " ~ Chọn chiến dịch ~"}
+                {loadingCampaigns ? t('common.loading') : !selectedAccountId ? t('create_child.select_ad_account') : t('create_child.select_campaign')}
               </option>
               {campaigns.map((campaign) => (
                 <option key={campaign.id} value={campaign.id}>
@@ -207,7 +209,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
             <div className="section-icon">
               <Grid size={16} />
             </div>
-            <div className="section-label">Nhóm quảng cáo</div>
+            <div className="section-label">{t('create_child.adset_section_title')}</div>
           </div>
           <div className="form-row-child">
             <select
@@ -216,8 +218,8 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
               onChange={(e) => setAdsetMode(e.target.value)}
               disabled={!selectedCampaignId}
             >
-              <option value="createNew">Tạo nhóm quảng cáo mới</option>
-              <option value="selectExisting">Chọn từ nhóm có sẵn</option>
+              <option value="createNew">{t('create_child.create_new_adset')}</option>
+              <option value="selectExisting">{t('create_child.select_existing_adset')}</option>
             </select>
             {adsetMode === "createNew" ? (
               <div className="input-container" style={{ flex: 1 }}>
@@ -226,7 +228,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
                   value={adsetName}
                   onChange={(e) => setAdsetName(e.target.value)}
                   className="form-input-child"
-                  placeholder="Đặt tên cho nhóm quảng cáo này"
+                  placeholder={t('create_child.adset_name_placeholder')}
                   disabled={!selectedCampaignId}
                 />
                 {adsetName && (
@@ -247,7 +249,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
                   disabled={loadingAdsets || !selectedCampaignId}
                 >
                   <option value="">
-                    {loadingAdsets ? "Đang tải..." : !selectedCampaignId ? "Chọn chiến dịch trước" : " ~ Chọn nhóm quảng cáo ~"}
+                    {loadingAdsets ? t('common.loading') : !selectedCampaignId ? t('create_child.select_campaign_first') : t('create_child.select_adset')}
                   </option>
                   {adsets.map((adset) => (
                     <option key={adset.id} value={adset.id}>
@@ -274,7 +276,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
             <div className="section-icon">
               <FileText size={16} />
             </div>
-            <div className="section-label">Quảng cáo</div>
+            <div className="section-label">{t('ads:labels.ad')}</div>
           </div>
           <div className="input-container">
             <input
@@ -282,7 +284,7 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
               value={adName}
               onChange={(e) => setAdName(e.target.value)}
               className="form-input-child"
-              placeholder="Đặt tên cho quảng cáo này"
+              placeholder={t('create_child.ad_name_placeholder')}
               disabled={(adsetMode === "selectExisting" && !selectedAdsetId) || (adsetMode === "createNew" && !adsetName)}
             />
             {adName && (
@@ -300,14 +302,14 @@ function CreateChild({ onClose, onSave, isFullMode = false, selectedAccountId = 
       <div className="create-child-footer">
         <div className="spacer"></div>
         <button className="btn-secondary" onClick={onClose}>
-          Hủy
+          {t('footer.cancel')}
         </button>
         <button
           className="btn-primary"
           onClick={handleSave}
           disabled={!isFormValid()}
         >
-          Tiếp tục
+          {t('footer.continue')}
         </button>
       </div>
     </>

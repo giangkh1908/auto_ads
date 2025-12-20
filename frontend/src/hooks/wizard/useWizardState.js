@@ -41,7 +41,7 @@ export function useWizardState() {
 export function useWizardData() {
   // Support multiple campaigns with nested adsets and ads
   const [campaignsList, setCampaignsList] = useState(() => {
-    // ✅ Generate unique ID cho adset và ad đầu tiên
+    // Generate unique ID cho adset và ad đầu tiên
     const firstAdsetId = `temp_adset_${Date.now()}`;
 
     return [
@@ -50,11 +50,11 @@ export function useWizardData() {
         adsets: [
           {
             ...INITIAL_DATA.adset,
-            _id: firstAdsetId, // ✅ Set _id cho adset đầu tiên
+            _id: firstAdsetId, // Set _id cho adset đầu tiên
             ads: [
               {
                 ...INITIAL_DATA.ad,
-                adset_id: firstAdsetId, // ✅ Set adset_id cho ad đầu tiên
+                adset_id: firstAdsetId, // Set adset_id cho ad đầu tiên
               },
             ],
           },
@@ -126,7 +126,7 @@ export function useWizardData() {
         const currentAdset = next[selectedAdsetIndex] || {};
         const currentAds = currentAdset.ads || [];
 
-        // ✅ Bỏ processAds, giữ nguyên adset_id từ Control.jsx
+        // Bỏ processAds, giữ nguyên adset_id từ Control.jsx
         const updatedAds =
           typeof updater === "function" ? updater(currentAds) : updater;
 

@@ -1323,7 +1323,7 @@ export async function publishCampaignService({
       const campaignPayload = {
         name: campaign.name,
         objective: campaign.objective,
-        status: "PAUSED",
+        status: "ACTIVE",
         special_ad_categories: campaign?.special_ad_categories || ["NONE"],
         // Thêm các field khác nếu cần
         ...(campaign.daily_budget && { daily_budget: campaign.daily_budget }),
@@ -1352,7 +1352,7 @@ export async function publishCampaignService({
     await AdsCampaign.findByIdAndUpdate(draftCamp._id, {
       external_id: fbCampaignId,
       external_account_id: ad_account_id,
-      status: "PAUSED", // ✅ CHUYỂN TỪ DRAFT THÀNH PAUSED
+      status: "ACTIVE", // ✅ CHUYỂN TỪ DRAFT THÀNH PAUSED
       synced_at: now,
       updated_at: now,
     });
@@ -1748,7 +1748,7 @@ export async function publishAdsetService({
       const adsetPayload = {
         name: adset.name,
         campaign_id: campaignId,
-        status: "PAUSED",
+        status: "ACTIVE",
         optimization_goal: adset.optimization_goal,
         billing_event: adset.billing_event,
         bid_strategy: adset.bid_strategy || "LOWEST_COST_WITHOUT_CAP",
@@ -1786,7 +1786,7 @@ export async function publishAdsetService({
     await AdsSet.findByIdAndUpdate(draftSet._id, {
       external_id: fbAdSetId,
       external_account_id: ad_account_id,
-      status: "PAUSED", // ✅ CHUYỂN TỪ DRAFT THÀNH PAUSED
+      status: "ACTIVE", // ✅ CHUYỂN TỪ DRAFT THÀNH PAUSED
       optimization_goal: adset.optimization_goal,
       conversion_event: adset.conversion_event,
       billing_event: adset.billing_event,
@@ -2026,7 +2026,7 @@ export async function publishAdService({
         name: ad.name,
         adset_id: adsetId,
         creative: { creative_id: fbCreativeId }, // Đã có fbCreativeId
-        status: "PAUSED",
+        status: "ACTIVE",
         ...(ad.destination_url && { destination_url: ad.destination_url }),
       };
 
@@ -2053,7 +2053,7 @@ export async function publishAdService({
       external_id: fbAdId,
       external_account_id: ad_account_id,
       creative_id: draftCreative._id, // ✅ Link với creative
-      status: "PAUSED", // ✅ CHUYỂN TỪ DRAFT THÀNH PAUSED
+      status: "ACTIVE", // ✅ CHUYỂN TỪ DRAFT THÀNH ACTIVE
       synced_at: now,
       updated_at: now,
     });

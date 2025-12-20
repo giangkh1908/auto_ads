@@ -57,8 +57,8 @@ export function calculateNextRunAt(schedule) {
   const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
 
   if (schedule.type === "CONTINUOUS") {
-    // Chạy sau 30 phút
-    return new Date(now.getTime() + 30 * 60 * 1000);
+    // Chạy sau 1 phút
+    return new Date(now.getTime() + 1 * 60 * 1000);
   } else if (schedule.type === "DAILY") {
     // DAILY: 30 phút/lần trong khoảng thời gian từ start_time đến end_time
     if (schedule.daily_time && schedule.daily_time.start_time && schedule.daily_time.end_time) {

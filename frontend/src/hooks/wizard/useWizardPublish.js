@@ -35,7 +35,7 @@ export function useWizardPublish() {
     setSuccess(false);
 
     try {
-      console.log("📝 Using Sequential API for all campaigns");
+      // console.log("Using Sequential API for all campaigns");
 
       let totalSuccessCount = 0;
       let totalAds = 0;
@@ -98,7 +98,7 @@ export function useWizardPublish() {
         onClose?.();
       }, 1200);
     } catch (err) {
-      console.error("Lỗi khi xử lý quảng cáo:", err);
+      //console.error("Lỗi khi xử lý quảng cáo:", err);
       setLoading(false);
 
       const data = err?.response?.data || {};
@@ -122,7 +122,7 @@ export function useWizardPublish() {
 }
 
 /**
- * 🎯 NEW FLEXIBLE PUBLISH LOGIC
+ * NEW FLEXIBLE PUBLISH LOGIC
  * Hỗ trợ tất cả mô hình: 1-1-1, 1-nhiều-nhiều, nhiều-nhiều-nhiều
  */
 export function useFlexibleWizardPublish() {
@@ -139,7 +139,7 @@ export function useFlexibleWizardPublish() {
     campaignsList,
     selectedAccountId,
     onSuccess,
-    onError, // ✅ Callback khi publish thất bại (để refresh data)
+    onError, // Callback khi publish thất bại (để refresh data)
     onClose,
     updateProgress,
   }) => {
@@ -148,7 +148,7 @@ export function useFlexibleWizardPublish() {
     setSuccess(false);
 
     try {
-      console.log("🚀 Using Flexible API for all campaigns");
+      // console.log("Using Flexible API for all campaigns");
 
       // Đếm tổng số entities để tính %
       const totalEntities = campaignsList.reduce((sum, camp) => {
@@ -167,22 +167,22 @@ export function useFlexibleWizardPublish() {
       });
 
       // Log campaign structure BEFORE building payload
-      console.log(
-        "📊 Campaign Structure BEFORE building payload:",
-        campaignsList.map((campaign) => ({
-          name: campaign.name,
-          adsets: campaign.adsets.map((adset) => ({
-            name: adset.name,
-            _id: adset._id,
-            ads_count: adset.ads.length,
-            ads: adset.ads.map((ad) => ({
-              name: ad.name,
-              adset_id: ad.adset_id,
-              match: ad.adset_id === adset._id ? "✅" : "❌",
-            })),
-          })),
-        }))
-      );
+      // console.log(
+      //   "Campaign Structure BEFORE building payload:",
+      //   campaignsList.map((campaign) => ({
+      //     name: campaign.name,
+      //     adsets: campaign.adsets.map((adset) => ({
+      //       name: adset.name,
+      //       _id: adset._id,
+      //       ads_count: adset.ads.length,
+      //       ads: adset.ads.map((ad) => ({
+      //         name: ad.name,
+      //         adset_id: ad.adset_id,
+      //         match: ad.adset_id === adset._id ? "✅" : "❌",
+      //       })),
+      //     })),
+      //   }))
+      // );
 
       // Chuẩn bị dữ liệu cho API
       const payload = {
@@ -190,19 +190,19 @@ export function useFlexibleWizardPublish() {
         campaignsList: campaignsList.map((campaign) => ({
           ...buildCampaignPayload(campaign, selectedAccountId),
           adsets: campaign.adsets.map((adset) => {
-            console.log(
-              `🔍 Processing adset: ${adset.name}, _id: ${adset._id}`
-            );
+            // console.log(
+            //   `🔍 Processing adset: ${adset.name}, _id: ${adset._id}`
+            // );
 
             const filteredAds = adset.ads.filter((ad) => {
               const match = ad.adset_id === adset._id;
-              console.log(
-                `  Ad: ${ad.name}, adset_id: ${ad.adset_id}, match: ${match}`
-              );
+              // console.log(
+              //   `  Ad: ${ad.name}, adset_id: ${ad.adset_id}, match: ${match}`
+              // );
               return match;
             });
 
-            console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
+            // console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
 
             return {
               ...buildAdsetPayload(adset, campaign),
@@ -253,90 +253,89 @@ export function useFlexibleWizardPublish() {
         const resultData = response.data.data || response.data;
         const { totalSuccess, totalErrors, errors } = resultData;
 
-        console.log("🔍 API Response:", { 
-          success: response.data.success, 
-          totalSuccess, 
-          totalErrors,
-          errorsCount: errors?.length,
-          firstError: errors?.[0]
-        });
+        // console.log("🔍 API Response:", {
+        //   success: response.data.success,
+        //   totalSuccess,
+        //   totalErrors,
+        //   errorsCount: errors?.length,
+        //   firstError: errors?.[0]
+        // });
 
         // Cập nhật trạng thái cuối cùng dựa vào kết quả
         if (totalErrors === 0) {
-            updateProgress?.({
-              status: 'success',
-              current: totalEntities,
-              percentage: 100,
-              message: 'Hoàn thành!',
-              successCount: totalSuccess,
-              errorCount: 0,
-            });
-            
-            toast.success(
-              `Tạo thành công ${totalSuccess} quảng cáo trong ${campaignsList.length} chiến dịch!`
-            );
-          } else if (totalSuccess > 0) {
-            updateProgress?.({
-              status: 'partial',
-              current: totalEntities,
-              percentage: 100,
-              message: `Hoàn thành với ${totalErrors} lỗi`,
-              successCount: totalSuccess,
-              errorCount: totalErrors,
-              errors: errors,
-            });
-            
-            toast.warning(
-              `Tạo thành công ${totalSuccess}/${
-                totalSuccess + totalErrors
-              } quảng cáo. Có ${totalErrors} lỗi.`
-            );
-            console.warn("Một số quảng cáo tạo thất bại:", errors);
-          } else {
-            // Tất cả đều thất bại - hiển thị error_user_msg từ Facebook
-            const firstError = errors?.[0];
-            const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Tạo quảng cáo thất bại';
-            
-            console.log("🔍 All ads failed!");
-            console.log("🔍 Errors array:", errors);
-            console.log("🔍 First error:", firstError);
-            console.log("🔍 FB Error Message:", fbErrorMsg);
-            
-            updateProgress?.({
-              status: 'error',
-              percentage: 100,
-              message: fbErrorMsg,
-              errorCount: totalErrors,
-              errors: errors,
-            });
-            
-            toast.error("Tạo quảng cáo thất bại", {
-              description: fbErrorMsg,
-            });
-            
-            // ✅ Refresh data để hiển thị items FAILED
-            onError?.();
-            
-            // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
-            setTimeout(() => {
-              setLoading(false);
-              onClose?.();
-            }, 1500);
-            return; // Dừng execution
-          }
+          updateProgress?.({
+            status: 'success',
+            current: totalEntities,
+            percentage: 100,
+            message: 'Hoàn thành!',
+            successCount: totalSuccess,
+            errorCount: 0,
+          });
 
-          setSuccess(true);
+          toast.success(
+            `Tạo thành công ${totalSuccess} quảng cáo trong ${campaignsList.length} chiến dịch!`
+          );
+        } else if (totalSuccess > 0) {
+          updateProgress?.({
+            status: 'partial',
+            current: totalEntities,
+            percentage: 100,
+            message: `Hoàn thành với ${totalErrors} lỗi`,
+            successCount: totalSuccess,
+            errorCount: totalErrors,
+            errors: errors,
+          });
+
+          toast.warning(
+            `Tạo thành công ${totalSuccess}/${totalSuccess + totalErrors
+            } quảng cáo. Có ${totalErrors} lỗi.`
+          );
+          //console.warn("Một số quảng cáo tạo thất bại:", errors);
+        } else {
+          // Tất cả đều thất bại - hiển thị error_user_msg từ Facebook
+          const firstError = errors?.[0];
+          const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Tạo quảng cáo thất bại';
+
+          // console.log("🔍 All ads failed!");
+          // console.log("🔍 Errors array:", errors);
+          // console.log("🔍 First error:", firstError);
+          // console.log("🔍 FB Error Message:", fbErrorMsg);
+
+          updateProgress?.({
+            status: 'error',
+            percentage: 100,
+            message: fbErrorMsg,
+            errorCount: totalErrors,
+            errors: errors,
+          });
+
+          toast.error("Tạo quảng cáo thất bại", {
+            description: fbErrorMsg,
+          });
+
+          // ✅ Refresh data để hiển thị items FAILED
+          onError?.();
+
+          // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
           setTimeout(() => {
             setLoading(false);
-            onSuccess?.(resultData);
             onClose?.();
-          }, 1200);
+          }, 1500);
+          return; // Dừng execution
+        }
+
+        setSuccess(true);
+        setTimeout(() => {
+          setLoading(false);
+          onSuccess?.(resultData);
+          onClose?.();
+        }, 1200);
       } catch (apiError) {
         clearInterval(progressInterval);
         throw apiError;
       }
     } catch (err) {
-      console.error("❌ Lỗi khi xử lý quảng cáo:", err);
+      //console.error("❌ Lỗi khi xử lý quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -386,7 +385,7 @@ export function useFlexibleWizardPublish() {
     setSuccess(false);
 
     try {
-      console.log("🎯 Using Step-by-Step API for all campaigns");
+      // console.log("🎯 Using Step-by-Step API for all campaigns");
 
       let totalSuccessCount = 0;
       const results = {
@@ -420,7 +419,7 @@ export function useFlexibleWizardPublish() {
       ) {
         const campaign = campaignsList[campaignIndex];
 
-        // ✅ Bước 1: Tạo Campaign
+        // Bước 1: Tạo Campaign
         const campaignPayload = {
           ad_account_id: selectedAccountId,
           campaign: buildCampaignPayload(campaign, selectedAccountId),
@@ -442,10 +441,10 @@ export function useFlexibleWizardPublish() {
 
         updateProgress?.({
           current: currentStep,
-          message: `✅ Đã tạo campaign: ${campaign.name}`,
+          message: `Đã tạo campaign: ${campaign.name}`,
         });
 
-        // ✅ Bước 2: Tạo AdSets cho Campaign này
+        // Bước 2: Tạo AdSets cho Campaign này
         for (
           let adsetIndex = 0;
           adsetIndex < campaign.adsets.length;
@@ -475,10 +474,10 @@ export function useFlexibleWizardPublish() {
 
           updateProgress?.({
             current: currentStep,
-            message: `✅ Đã tạo adset: ${adset.name}`,
+            message: `Đã tạo adset: ${adset.name}`,
           });
 
-          // ✅ Bước 3: Tạo Ads cho AdSet này
+          // Bước 3: Tạo Ads cho AdSet này
           for (let adIndex = 0; adIndex < adset.ads.length; adIndex++) {
             const ad = adset.ads[adIndex];
 
@@ -506,7 +505,7 @@ export function useFlexibleWizardPublish() {
 
             updateProgress?.({
               current: currentStep,
-              message: `✅ Đã tạo ad: ${ad.name}`,
+              message: `Đã tạo ad: ${ad.name}`,
             });
           }
         }
@@ -531,7 +530,7 @@ export function useFlexibleWizardPublish() {
         onClose?.();
       }, 1200);
     } catch (err) {
-      console.error("❌ Lỗi khi xử lý quảng cáo:", err);
+      //console.error("❌ Lỗi khi xử lý quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -564,14 +563,14 @@ export function useFlexibleWizardPublish() {
   };
 
   /**
-   * 🔄 Update toàn bộ cấu trúc linh hoạt (cascade update)
+   * Update toàn bộ cấu trúc linh hoạt (cascade update)
    * Hỗ trợ update matching entities, tạo mới nếu chưa có
    */
   const handleFlexibleUpdate = async ({
     campaignsList,
     selectedAccountId,
     onSuccess,
-    onError, // ✅ Callback khi update thất bại (để refresh data)
+    onError, // Callback khi update thất bại (để refresh data)
     onClose,
     updateProgress,
   }) => {
@@ -580,7 +579,7 @@ export function useFlexibleWizardPublish() {
     setSuccess(false);
 
     try {
-      console.log("🔄 Using Flexible Update API for all campaigns");
+      // console.log("Using Flexible Update API for all campaigns");
 
       // Đếm tổng số entities để tính %
       const totalEntities = campaignsList.reduce((sum, camp) => {
@@ -599,61 +598,61 @@ export function useFlexibleWizardPublish() {
       });
 
       // Log campaign structure BEFORE building payload
-      console.log(
-        "📊 Campaign Structure BEFORE update:",
-        campaignsList.map((campaign) => ({
-          name: campaign.name,
-          _id: campaign._id,
-          external_id: campaign.external_id,
-          adsets: campaign.adsets?.map((adset) => ({
-            name: adset.name,
-            _id: adset._id,
-            external_id: adset.external_id,
-            ads_count: adset.ads?.length || 0,
-            ads: adset.ads?.map((ad) => ({
-              name: ad.name,
-              _id: ad._id,
-              external_id: ad.external_id,
-              adset_id: ad.adset_id,
-              match: ad.adset_id === adset._id ? "✅" : "❌",
-            })),
-          })),
-        }))
-      );
+      // console.log(
+      //   "📊 Campaign Structure BEFORE update:",
+      //   campaignsList.map((campaign) => ({
+      //     name: campaign.name,
+      //     _id: campaign._id,
+      //     external_id: campaign.external_id,
+      //     adsets: campaign.adsets?.map((adset) => ({
+      //       name: adset.name,
+      //       _id: adset._id,
+      //       external_id: adset.external_id,
+      //       ads_count: adset.ads?.length || 0,
+      //       ads: adset.ads?.map((ad) => ({
+      //         name: ad.name,
+      //         _id: ad._id,
+      //         external_id: ad.external_id,
+      //         adset_id: ad.adset_id,
+      //         match: ad.adset_id === adset._id ? "✅" : "❌",
+      //       })),
+      //     })),
+      //   }))
+      // );
 
       // Chuẩn bị dữ liệu cho API
       const payload = {
         ad_account_id: selectedAccountId,
         campaignsList: campaignsList.map((campaign) => ({
-          // ✅ CHỈ GỬI _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
+          // CHỈ GỬI _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
           ...(campaign._id && !isTempId(campaign._id) && isValidMongoId(campaign._id) && { _id: campaign._id }),
           ...(campaign.external_id && { external_id: campaign.external_id }),
-          // ✅ buildCampaignPayload đã filter draftId (temp ID)
+          // buildCampaignPayload đã filter draftId (temp ID)
           ...buildCampaignPayload(campaign, selectedAccountId),
           adsets: (campaign.adsets || []).map((adset) => {
-            console.log(
-              `🔍 Processing adset for update: ${adset.name}, _id: ${adset._id}, external_id: ${adset.external_id}`
-            );
+            // console.log(
+            //   `🔍 Processing adset for update: ${adset.name}, _id: ${adset._id}, external_id: ${adset.external_id}`
+            // );
 
             const filteredAds = (adset.ads || []).filter((ad) => {
               const match = ad.adset_id === adset._id;
-              console.log(
-                `  Ad: ${ad.name}, adset_id: ${ad.adset_id}, match: ${match}`
-              );
+              // console.log(
+              //   `  Ad: ${ad.name}, adset_id: ${ad.adset_id}, match: ${match}`
+              // );
               return match;
             });
 
-            console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
+            // console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
 
             return {
-              // ✅ CHỈ GỬI external_id NẾU CÓ (buildAdsetPayload đã handle _id và draftId)
+              // CHỈ GỬI external_id NẾU CÓ (buildAdsetPayload đã handle _id và draftId)
               ...(adset.external_id && { external_id: adset.external_id }),
-              // ✅ buildAdsetPayload đã filter _id và draftId (temp ID)
+              // buildAdsetPayload đã filter _id và draftId (temp ID)
               ...buildAdsetPayload(adset, campaign),
               ads: filteredAds.map((ad) => ({
-                // ✅ CHỈ GỬI external_id NẾU CÓ (buildAdPayload đã handle _id và draftId)
+                // CHỈ GỬI external_id NẾU CÓ (buildAdPayload đã handle _id và draftId)
                 ...(ad.external_id && { external_id: ad.external_id }),
-                // ✅ buildAdPayload đã filter _id và draftId (temp ID)
+                // buildAdPayload đã filter _id và draftId (temp ID)
                 ...buildAdPayload(ad),
                 creative: buildCreativePayload(ad, campaign, adset),
               })),
@@ -699,83 +698,83 @@ export function useFlexibleWizardPublish() {
         const resultData = response.data.data || response.data;
         const { totalUpdated, totalCreated, totalErrors, errors, details } = resultData;
 
-        console.log("🔍 API Update Response:", { 
-          success: response.data.success, 
-          totalUpdated, 
-          totalCreated,
-          totalErrors,
-          errorsCount: errors?.length,
-          firstError: errors?.[0]
-        });
+        // console.log("🔍 API Update Response:", {
+        //   success: response.data.success,
+        //   totalUpdated,
+        //   totalCreated,
+        //   totalErrors,
+        //   errorsCount: errors?.length,
+        //   firstError: errors?.[0]
+        // });
 
         // Cập nhật trạng thái cuối cùng dựa vào kết quả
         if (totalErrors === 0) {
-            updateProgress?.({
-              status: 'success',
-              current: totalEntities,
-              percentage: 100,
-              message: 'Cập nhật hoàn tất!',
-              successCount: totalUpdated + totalCreated,
-              errorCount: 0,
-            });
+          updateProgress?.({
+            status: 'success',
+            current: totalEntities,
+            percentage: 100,
+            message: 'Cập nhật hoàn tất!',
+            successCount: totalUpdated + totalCreated,
+            errorCount: 0,
+          });
 
           toast.success(
             `Cập nhật thành công ${details.updated.campaigns.length + details.updated.adsets.length + details.updated.ads.length} entities, tạo mới ${details.created.campaigns.length + details.created.adsets.length + details.created.ads.length} entities!`
           );
-          } else if ((totalUpdated + totalCreated) > 0) {
-            updateProgress?.({
-              status: 'partial',
-              current: totalEntities,
-              percentage: 100,
-              message: `Hoàn thành với ${totalErrors} lỗi`,
-              successCount: totalUpdated + totalCreated,
-              errorCount: totalErrors,
-              errors: errors,
-            });
+        } else if ((totalUpdated + totalCreated) > 0) {
+          updateProgress?.({
+            status: 'partial',
+            current: totalEntities,
+            percentage: 100,
+            message: `Hoàn thành với ${totalErrors} lỗi`,
+            successCount: totalUpdated + totalCreated,
+            errorCount: totalErrors,
+            errors: errors,
+          });
 
-            toast.warning(
-              `Cập nhật ${totalUpdated} entities, tạo mới ${totalCreated} entities. Có ${totalErrors} lỗi.`
-            );
-            console.warn("Một số cập nhật thất bại:", errors);
-          } else {
-            // Tất cả đều thất bại - hiển thị error_user_msg từ Facebook
-            const firstError = errors?.[0];
-            const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Cập nhật thất bại';
-            
-            console.log("🔍 All updates failed. First error:", fbErrorMsg);
-            
-            updateProgress?.({
-              status: 'error',
-              percentage: 100,
-              message: fbErrorMsg,
-              errorCount: totalErrors,
-              errors: errors,
-            });
-            
-            toast.error("Cập nhật thất bại", {
-              description: fbErrorMsg,
-            });
-            
-            // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
-            setTimeout(() => {
-              setLoading(false);
-              onClose?.();
-            }, 1500);
-            return; // Dừng execution
-          }
+          toast.warning(
+            `Cập nhật ${totalUpdated} entities, tạo mới ${totalCreated} entities. Có ${totalErrors} lỗi.`
+          );
+          //console.warn("Một số cập nhật thất bại:", errors);
+        } else {
+          // Tất cả đều thất bại - hiển thị error_user_msg từ Facebook
+          const firstError = errors?.[0];
+          const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Cập nhật thất bại';
 
-          setSuccess(true);
+          // console.log("🔍 All updates failed. First error:", fbErrorMsg);
+
+          updateProgress?.({
+            status: 'error',
+            percentage: 100,
+            message: fbErrorMsg,
+            errorCount: totalErrors,
+            errors: errors,
+          });
+
+          toast.error("Cập nhật thất bại", {
+            description: fbErrorMsg,
+          });
+
+          // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
           setTimeout(() => {
             setLoading(false);
-            onSuccess?.(resultData);
             onClose?.();
-          }, 1200);
+          }, 1500);
+          return; // Dừng execution
+        }
+
+        setSuccess(true);
+        setTimeout(() => {
+          setLoading(false);
+          onSuccess?.(resultData);
+          onClose?.();
+        }, 1200);
       } catch (apiError) {
         clearInterval(progressInterval);
         throw apiError;
       }
     } catch (err) {
-      console.error("❌ Lỗi khi cập nhật quảng cáo:", err);
+      //console.error("❌ Lỗi khi cập nhật quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -799,7 +798,7 @@ export function useFlexibleWizardPublish() {
         });
       }
 
-      // ✅ Refresh data để hiển thị items FAILED
+      // Refresh data để hiển thị items FAILED
       onError?.();
 
       // Đóng wizard sau khi hiển thị lỗi
@@ -841,25 +840,25 @@ function isValidMongoId(id) {
 }
 
 // Helper function để lấy draftId hợp lệ
-// ✅ CHỈ SET draftId KHI:
+// CHỈ SET draftId KHI:
 // 1. Đã có external_id (đã publish) → có thể update draft
 // 2. HOẶC _id là MongoDB ObjectId hợp lệ (đã lưu trong DB)
 function getValidDraftId(entity) {
   if (!entity) return null;
-  
-  // ✅ Item đã publish → có thể có draftId để update
+
+  // Item đã publish → có thể có draftId để update
   const hasExternalId = entity.external_id != null && entity.external_id !== '';
-  
-  // ✅ Item đã lưu trong DB (có MongoDB ObjectId hợp lệ)
+
+  // Item đã lưu trong DB (có MongoDB ObjectId hợp lệ)
   const validId = entity._id && !isTempId(entity._id) && isValidMongoId(entity._id);
   const validIdAlt = entity.id && !isTempId(entity.id) && isValidMongoId(entity.id);
-  
-  // ✅ CHỈ SET draftId NẾU item đã publish HOẶC đã lưu trong DB
+
+  // CHỈ SET draftId NẾU item đã publish HOẶC đã lưu trong DB
   if (hasExternalId || validId || validIdAlt) {
     return entity._id || entity.id || null;
   }
-  
-  // ❌ Item mới (temp ID) → không set draftId → backend sẽ tạo mới
+
+  // Item mới (temp ID) → không set draftId → backend sẽ tạo mới
   return null;
 }
 
@@ -871,12 +870,12 @@ function buildCampaignPayload(campaign) {
     FB_OBJECTIVE_MAP[campaign.objective] || "OUTCOME_ENGAGEMENT";
 
   return {
-    draftId: getValidDraftId(campaign), // ✅ FILTER TEMP ID
+    draftId: getValidDraftId(campaign), // FILTER TEMP ID
     name: campaign.name,
     objective: fbObjective,
     status: campaign.status,
     special_ad_categories: ["NONE"],
-    // ✅ XÓA page_id và page_name từ campaign (đã di chuyển sang adset)
+    // XÓA page_id và page_name từ campaign (đã di chuyển sang adset)
     // page_id: campaign.facebookPageId,
     // page_name: campaign.facebookPage,
     daily_budget: campaign.daily_budget,
@@ -899,50 +898,50 @@ function buildAdsetPayload(adset, campaign) {
     bid_amount: 1000,
   };
 
-  // ✅ Tách riêng optimization_goal và billing_event để không override giá trị từ adset
+  // Tách riêng optimization_goal và billing_event để không override giá trị từ adset
   // eslint-disable-next-line no-unused-vars
   const { optimization_goal, billing_event, ...restDefaults } = adsetDefaults;
 
   return {
-    // ✅ CHỈ SET _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
+    // CHỈ SET _id NẾU LÀ MongoDB ObjectId HỢP LỆ (không phải temp ID)
     ...(adset._id && !isTempId(adset._id) && isValidMongoId(adset._id) && { _id: adset._id }),
-    draftId: getValidDraftId(adset), // ✅ FILTER TEMP ID
+    draftId: getValidDraftId(adset), // FILTER TEMP ID
     name: adset.name,
     daily_budget: adset.budgetAmount,
     status: "PAUSED",
-    ...restDefaults, // ✅ Chỉ spread các field khác, không bao gồm optimization_goal và billing_event
+    ...restDefaults, // Chỉ spread các field khác, không bao gồm optimization_goal và billing_event
     targeting: {
       age_min: adset.targeting.ageMin || 18,
       age_max: adset.targeting.ageMax || 65,
 
       // NEW: Check if locations is object structure (new) or array (old)
       ...(adset.targeting?.locations &&
-      typeof adset.targeting.locations === "object" &&
-      !Array.isArray(adset.targeting.locations)
+        typeof adset.targeting.locations === "object" &&
+        !Array.isArray(adset.targeting.locations)
         ? {
-            // New structure: Pass locations object to backend for transformation
-            // DON'T set geo_locations here - let backend decide based on selected locations
-            locations: adset.targeting.locations,
-          }
+          // New structure: Pass locations object to backend for transformation
+          // DON'T set geo_locations here - let backend decide based on selected locations
+          locations: adset.targeting.locations,
+        }
         : {
-            // Backward compatibility: old array format
-            geo_locations: {
-              countries: convertCountryNamesToCodes(
-                Array.isArray(adset.targeting?.locations)
-                  ? adset.targeting.locations
-                  : ["Viet Nam"]
-              ),
-            },
-          }),
+          // Backward compatibility: old array format
+          geo_locations: {
+            countries: convertCountryNamesToCodes(
+              Array.isArray(adset.targeting?.locations)
+                ? adset.targeting.locations
+                : ["Viet Nam"]
+            ),
+          },
+        }),
 
-      // ✅ THÊM: Gender và language
+      // THÊM: Gender và language
       ...(adset.targeting?.gender && adset.targeting.gender !== "all" && {
         genders:
           adset.targeting.gender === "male"
             ? [1]
             : adset.targeting.gender === "female"
-            ? [2]
-            : [],
+              ? [2]
+              : [],
       }),
       ...(adset.targeting?.language &&
         adset.targeting.language !== "all" &&
@@ -953,11 +952,11 @@ function buildAdsetPayload(adset, campaign) {
           return localeId ? { locales: [localeId] } : {};
         })()),
 
-      // ✅ THÊM: Detailed targeting (interests, behaviors, demographics)
+      // THÊM: Detailed targeting (interests, behaviors, demographics)
       ...(Array.isArray(adset.targeting?.detailed_targeting) &&
         adset.targeting.detailed_targeting.length > 0 && {
-          detailed_targeting: adset.targeting.detailed_targeting,
-        }),
+        detailed_targeting: adset.targeting.detailed_targeting,
+      }),
 
       targeting_automation: {
         advantage_audience: 0,
@@ -996,17 +995,17 @@ function buildCreativePayload(ad, campaign, adset) {
   // 1. adset.facebookPageId (từ ENGAGEMENT/LEADS/AWARENESS/SALES page selector)
   // 2. adset.promoted_object.page_id (từ TRAFFIC MESSAGING hoặc SALES)
   // 3. campaign.facebookPageId (fallback từ campaign, nếu có)
-  let pageId = adset?.facebookPageId || 
-               adset?.promoted_object?.page_id || 
-               campaign?.facebookPageId;
-  
+  let pageId = adset?.facebookPageId ||
+    adset?.promoted_object?.page_id ||
+    campaign?.facebookPageId;
+
   if (!pageId) {
     console.warn(
-      "⚠️ WARNING: Creative payload thiếu page_id! " +
-      "Đảm bảo rằng user đã chọn Facebook Page (AdsetStep) hoặc điền Messaging Page ID."
+      "Kiểm tra lại, có vẻ bạn chưa chọn Page nào! " +
+      "Đảm bảo rằng bạn đã chọn Facebook Page (ở nhóm quảng cáo)."
     );
   }
-  
+
   return {
     name: ad.name,
     object_story_spec: {

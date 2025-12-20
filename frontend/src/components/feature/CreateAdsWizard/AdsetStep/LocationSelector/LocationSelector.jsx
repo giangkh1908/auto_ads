@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MapPin, Search, X } from 'lucide-react';
 import { useLocationSearch } from '../../../../../hooks/useLocationSearch';
 import { useOnClickOutside } from '../../../../../utils/useOnClickOutside';
 import './LocationSelector.css';
 
 const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
+  const { t } = useTranslation('wizard');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef(null);
-  
+
   const { results, loading, search, error } = useLocationSearch(adAccountId);
 
   // Close suggestions when clicking outside
@@ -26,7 +28,7 @@ const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    
+
     if (query.trim()) {
       search(query, ['city', 'region', 'district']);
       setShowSuggestions(true);
@@ -97,10 +99,10 @@ const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
     const parsedRadius = parseInt(radius) || 20;
     // UI-level clamping (backend will also clamp for safety)
     const clampedRadius = Math.max(17, Math.min(80, parsedRadius));
-    
+
     const newValue = {
       ...currentValue,
-      cities: currentValue.cities?.map(c => 
+      cities: currentValue.cities?.map(c =>
         c.key === cityKey ? { ...c, radius: clampedRadius } : c
       ) || []
     };
@@ -136,7 +138,7 @@ const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
             {results.length > 0 ? (
               <>
                 {results.map((location) => {
-                  const isSelected = 
+                  const isSelected =
                     currentValue.regions?.includes(location.key) ||
                     currentValue.cities?.some(c => c.key === location.key);
 
@@ -149,9 +151,9 @@ const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
                       <MapPin size={14} />
                       <span className="location-name">{location.name}</span>
                       <span className="location-type">
-                        {location.type === 'city' ? 'Thành phố' : 
-                         location.type === 'district' ? 'Quận/Huyện' : 
-                         'Tỉnh/Vùng'}
+                        {location.type === 'city' ? 'Thành phố' :
+                          location.type === 'district' ? 'Quận/Huyện' :
+                            'Tỉnh/Vùng'}
                       </span>
                       {isSelected && <span className="selected-badge">✓</span>}
                     </div>
@@ -250,7 +252,7 @@ const LocationSelector = ({ value, onChange, placeholder, adAccountId }) => {
           <p>Chưa có vị trí nào được chọn</p>
           <p className="empty-hint">Sử dụng ô tìm kiếm phía trên để thêm vị trí</p>
           {!adAccountId && (
-            <p className="empty-hint error-text">⚠️ Vui lòng chọn Ads Account trước</p>
+            <p className="empty-hint error-text">{t('location_selector.select_account_first')}</p>
           )}
         </div>
       )}

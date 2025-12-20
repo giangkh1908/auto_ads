@@ -62,14 +62,14 @@ export function useTargetingSearch(options = {}) {
           ? { q: query.trim(), types: types.join(',') }
           : { types: types.join(',') };
 
-        console.log('🔍 Targeting request:', endpoint, params);
+        // console.log('🔍 Targeting request:', endpoint, params);
         
         const response = await axiosInstance.get(endpoint, {
           params,
           signal: abortControllerRef.current.signal,
         });
 
-        console.log('✅ Targeting response:', response.data);
+        // console.log('✅ Targeting response:', response.data);
 
         if (response.data.success) {
           setResults(response.data.data || []);
@@ -83,7 +83,7 @@ export function useTargetingSearch(options = {}) {
           return;
         }
         
-        console.error('❌ Targeting error:', err);
+        //console.error('❌ Targeting error:', err);
         setError(err.response?.data?.message || err.message || 'Failed to search targeting');
         setResults([]);
       } finally {

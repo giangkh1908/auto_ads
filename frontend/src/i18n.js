@@ -17,6 +17,8 @@ import automationRuleEN from './locales/en/automationRule.json';
 import automationRuleVI from './locales/vi/automationRule.json';
 import analyticsEN from './locales/en/analytics.json';
 import analyticsVI from './locales/vi/analytics.json';
+import wizardEN from './locales/en/wizard.json';
+import wizardVI from './locales/vi/wizard.json';
 
 const resources = {
   en: {
@@ -26,7 +28,8 @@ const resources = {
     admin: adminEN,
     guide: guideEN,
     automationRule: automationRuleEN,
-    analytics: analyticsEN
+    analytics: analyticsEN,
+    wizard: wizardEN
   },
   vi: {
     translation: translationVI,
@@ -35,7 +38,8 @@ const resources = {
     admin: adminVI,
     guide: guideVI,
     automationRule: automationRuleVI,
-    analytics: analyticsVI
+    analytics: analyticsVI,
+    wizard: wizardVI
   }
 };
 

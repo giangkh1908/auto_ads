@@ -84,7 +84,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
               setServicePackage("Chưa nâng cấp");
             }
           } catch (packageErr) {
-            console.log("No package found or error fetching package:", packageErr);
+            // console.log("No package found or error fetching package:", packageErr);
             setServicePackage("Chưa nâng cấp");
           }
 
@@ -102,7 +102,7 @@ export default function CustomerUpdate({ isOpen, onClose, userId, onUpdateSucces
             }
           } catch (noteErr) {
             // Note không bắt buộc, chỉ log error
-            console.log("No note found or error fetching note:", noteErr);
+            // console.log("No note found or error fetching note:", noteErr);
             setNote("");
             setNoteId(null);
           }

@@ -72,7 +72,7 @@ export const useMyPackage = () => {
         }
 
         setUserPkg(data.data);
-        console.log("Gói người dùng (gốc):", data.data);
+        // console.log("Gói người dùng (gốc):", data.data);
       } catch (err) {
         console.error("Lỗi fetch user package:", err);
         setUserPkg(null);
@@ -107,7 +107,7 @@ export const useMyPackage = () => {
           const shopPackageData = convertShopPackageToUserPackageFormat(cachedShop.package, userPkg);
           setPkg(shopPackageData);
           setLoading(false);
-          console.log("Gói shop (từ cache - tạm thời):", shopPackageData);
+          // console.log("Gói shop (từ cache - tạm thời):", shopPackageData);
           // Vẫn fetch từ API để đảm bảo dữ liệu mới nhất
           // (không return, tiếp tục fetch từ API)
         }
@@ -132,7 +132,7 @@ export const useMyPackage = () => {
             shopPackageData.limits = data.data.limits;
           }
           setPkg(shopPackageData);
-          console.log("Gói shop (từ API):", shopPackageData);
+          // console.log("Gói shop (từ API):", shopPackageData);
         } else {
           // Fallback về user package nếu shop không có package
           setPkg(userPkg);
@@ -176,7 +176,7 @@ export const useMyPackage = () => {
       if (newShop?.package) {
         const shopPackageData = convertShopPackageToUserPackageFormat(newShop.package, userPkg);
         setPkg(shopPackageData);
-        console.log("Gói shop (từ cache - tạm thời):", shopPackageData);
+        // console.log("Gói shop (từ cache - tạm thời):", shopPackageData);
       }
 
       // Sau đó fetch từ API để đảm bảo dữ liệu mới nhất
@@ -207,7 +207,7 @@ export const useMyPackage = () => {
             shopPackageData.limits = data.data.limits;
           }
           setPkg(shopPackageData);
-          console.log("Gói shop (từ API - sau khi đổi shop):", shopPackageData);
+          // console.log("Gói shop (từ API - sau khi đổi shop):", shopPackageData);
         } else {
           // Nếu shop không có package, fallback về user package
           setPkg(userPkg);

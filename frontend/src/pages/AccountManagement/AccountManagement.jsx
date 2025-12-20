@@ -60,7 +60,7 @@ function AccountManagement() {
 
         const res = await axiosInstance.get("/api/ads-accounts", { params });
         // API trả: { items, total, page, limit, pages }
-        console.log("📦 Dữ liệu API trả về:", res.data);
+        // console.log("📦 Dữ liệu API trả về:", res.data);
         setItems(res.data?.items || []);
         setTotal(res.data?.total || 0);
       } catch (err) {
@@ -383,7 +383,7 @@ function AccountManagement() {
               const selectedAdAccount = localStorage.getItem('selectedAdAccount');
               if (selectedAdAccount === deletedExternalId || selectedAdAccount === accountId) {
                 localStorage.removeItem('selectedAdAccount');
-                console.log('✅ Đã xóa selectedAdAccount:', selectedAdAccount);
+                // console.log('✅ Đã xóa selectedAdAccount:', selectedAdAccount);
               }
 
               // 3. Xóa tất cả cache keys liên quan đến account trong localStorage
@@ -412,10 +412,10 @@ function AccountManagement() {
 
               cacheKeysToRemove.forEach(key => {
                 localStorage.removeItem(key);
-                console.log(' Đã xóa cache key:', key);
+                // console.log(' Đã xóa cache key:', key);
               });
 
-              console.log(' Đã xóa tất cả cache của tài khoản quảng cáo:', deletedExternalId);
+              // console.log(' Đã xóa tất cả cache của tài khoản quảng cáo:', deletedExternalId);
             } catch (error) {
               console.error(' Lỗi khi xóa cache tài khoản quảng cáo:', error);
             }

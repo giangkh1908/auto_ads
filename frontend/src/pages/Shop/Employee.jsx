@@ -43,14 +43,12 @@ function Employee() {
 
   // State cho popup xác nhận chuyển giao
   const [isRelinquishOpen, setIsRelinquishOpen] = useState(false);
-  const [selectedEmployeeForRelinquish, setSelectedEmployeeForRelinquish] =
-    useState(null);
+  const [selectedEmployeeForRelinquish, setSelectedEmployeeForRelinquish] = useState(null);
   const [isLoadingRelinquish, setIsLoadingRelinquish] = useState(false);
 
   // State cho popup xác nhận xóa employee
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
-  const [selectedEmployeeForRemove, setSelectedEmployeeForRemove] =
-    useState(null);
+  const [selectedEmployeeForRemove, setSelectedEmployeeForRemove] = useState(null);
   const [isLoadingRemove, setIsLoadingRemove] = useState(false);
 
   // Lấy current shop, kiểm tra quyền truy cập và user role (gộp để tránh gọi API trùng lặp)
@@ -133,7 +131,7 @@ function Employee() {
           }
         }
       } catch (error) {
-        console.error("Error getting shops:", error);
+        //console.error("Error getting shops:", error);
         toast.error("Lỗi khi lấy thông tin shop");
       }
     };
@@ -173,7 +171,7 @@ function Employee() {
           toast.error(data.message || "Không thể tải danh sách nhân viên");
         }
       } catch (e) {
-        console.error("Load employees error:", e);
+        //console.error("Load employees error:", e);
         toast.error(
           e.response?.data?.message || "Lỗi khi tải danh sách nhân viên"
         );
@@ -237,8 +235,7 @@ function Employee() {
         toast.success(data.message || "Cập nhật vai trò thành công!");
       } else {
         // Xử lý lỗi từ API - reset về role cũ
-        const errorMessage =
-          data.error?.message || data.message || "Không thể cập nhật vai trò";
+        const errorMessage = data.error?.message || data.message || "Không thể cập nhật vai trò";
         toast.error(errorMessage);
 
         // Reset dropdown về role cũ
@@ -249,7 +246,7 @@ function Employee() {
         );
       }
     } catch (err) {
-      console.error("Update role error:", err);
+      //console.error("Update role error:", err);
       const errorMessage =
         err.response?.data?.error?.message ||
         err.response?.data?.message ||
@@ -277,7 +274,7 @@ function Employee() {
         toast.error("Không thể tải danh sách Page");
       }
     } catch (error) {
-      console.error("Error loading pages:", error);
+      //console.error("Error loading pages:", error);
       toast.error(
         error.response?.data?.message || "Lỗi khi tải danh sách Page"
       );
@@ -307,7 +304,7 @@ function Employee() {
         toast.error(data.message || "Không thể phân quyền Page");
       }
     } catch (error) {
-      console.error("Assign pages error:", error);
+      //console.error("Assign pages error:", error);
       toast.error(error.response?.data?.message || "Lỗi khi phân quyền Page");
     }
   };
@@ -387,7 +384,7 @@ function Employee() {
         toast.error(data.message || "Không thể cập nhật trạng thái");
       }
     } catch (error) {
-      console.error("Update status error:", error);
+      //console.error("Update status error:", error);
       toast.error(
         error.response?.data?.message || "Lỗi khi cập nhật trạng thái"
       );
@@ -424,7 +421,7 @@ function Employee() {
         toast.error(data.message || "Không thể gửi lời mời");
       }
     } catch (error) {
-      console.error("Invite employee error:", error);
+      //console.error("Invite employee error:", error);
       toast.error(error.response?.data?.message || "Lỗi khi gửi lời mời");
     } finally {
       setIsInviting(false);
@@ -492,17 +489,13 @@ function Employee() {
         }, 500);
       } else {
         // Xử lý lỗi từ API
-        const errorMessage =
-          data.error?.message || data.message || "Không thể chuyển quyền";
+        const errorMessage = data.error?.message || data.message || "Không thể chuyển quyền";
         toast.error(errorMessage);
         setIsLoadingRelinquish(false);
       }
     } catch (error) {
-      console.error("Relinquish error:", error);
-      const errorMessage =
-        error.response?.data?.error?.message ||
-        error.response?.data?.message ||
-        "Lỗi khi chuyển giao quyền";
+      //console.error("Relinquish error:", error);
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || "Lỗi khi chuyển giao quyền";
       toast.error(errorMessage);
       setIsLoadingRelinquish(false);
     }
@@ -565,7 +558,7 @@ function Employee() {
         setIsLoadingRemove(false);
       }
     } catch (error) {
-      console.error("Remove employee error:", error);
+      //console.error("Remove employee error:", error);
       const errorMessage =
         error.response?.data?.error?.message ||
         error.response?.data?.message ||

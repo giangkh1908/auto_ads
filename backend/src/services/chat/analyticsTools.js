@@ -13,6 +13,27 @@ import AnalyticsSnapshot from "../../models/analytics/analyticsSnapshot.model.js
 // HELPER FUNCTIONS
 // ============================================
 
+// Retry helper for MongoDB queries
+async function retryQuery(queryFn, maxRetries = 2, delayMs = 1000) {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      const isNetworkError = error.name === 'MongoNetworkError' || 
+                            error.code === 'ECONNRESET' ||
+                            error.errorLabels?.includes('RetryableWriteError');
+      
+      if (!isNetworkError || i === maxRetries) {
+        // Not a network error or final retry - throw
+        throw error;
+      }
+      
+      console.warn(`[analyticsTools] MongoDB error (attempt ${i + 1}/${maxRetries + 1}): ${error.message}. Retrying...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function getAccountObjectId(account_id) {
   // Check if it's already a valid MongoDB ObjectId
   if (account_id.match(/^[0-9a-fA-F]{24}$/)) {
@@ -70,6 +91,84 @@ function formatMetric(metric, value) {
   }
 }
 
+// Helper: Query AnalyticsSnapshot for entities within campaign date range
+async function queryAnalyticsSnapshotByEntityType(accountObjId, entityType, dateFrom, dateTo, metric, limit) {
+  const Model = entityType === "campaign" ? AdsCampaign : entityType === "adset" ? AdsSet : Ads;
+  const snapshotIdField = entityType === "campaign" ? "campaign_id" : entityType === "adset" ? "adset_id" : "ad_id";
+  const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
+  
+  // Get campaigns in date range
+  const campaigns = await AdsCampaign.find({
+    account_id: accountObjId,
+    status: { $ne: "DELETED" },
+    start_time: { $gte: dateFrom, $lte: dateTo },
+  }).select("_id").lean();
+  
+  const campaignObjIds = campaigns.map(c => c._id);
+  
+  // Get target entities based on type
+  let entities, entityObjIds, entityMap;
+  
+  if (entityType === "campaign") {
+    entities = campaigns;
+    entityObjIds = campaignObjIds;
+    const fullCampaigns = await AdsCampaign.find({ _id: { $in: campaignObjIds } })
+      .select("_id external_id name").lean();
+    entityMap = new Map(fullCampaigns.map(c => [c._id.toString(), c]));
+  } else if (entityType === "adset") {
+    const adsets = await AdsSet.find({
+      account_id: accountObjId,
+      status: { $ne: "DELETED" },
+      campaign_id: { $in: campaignObjIds },
+    }).select("_id external_id name").lean();
+    entityObjIds = adsets.map(a => a._id);
+    entityMap = new Map(adsets.map(a => [a._id.toString(), a]));
+  } else { // ad
+    const adsets = await AdsSet.find({
+      account_id: accountObjId,
+      status: { $ne: "DELETED" },
+      campaign_id: { $in: campaignObjIds },
+    }).select("_id").lean();
+    
+    const adsetObjIds = adsets.map(a => a._id);
+    const ads = await Ads.find({
+      account_id: accountObjId,
+      status: { $ne: "DELETED" },
+      set_id: { $in: adsetObjIds },
+    }).select("_id external_id name").lean();
+    entityObjIds = ads.map(a => a._id);
+    entityMap = new Map(ads.map(a => [a._id.toString(), a]));
+  }
+  
+  if (entityObjIds.length === 0) return [];
+  
+  const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
+    { $match: { account_id: accountObjId, [snapshotIdField]: { $in: entityObjIds } } },
+    {
+      $group: {
+        _id: `$${snapshotIdField}`,
+        entity_name: { $first: entityType === "campaign" ? "$campaign_name" : entityType === "adset" ? "$adset_name" : "$ad_name" },
+        total_spend: { $sum: "$spend" },
+        avg_ctr: { $avg: "$ctr" },
+        avg_cpc: { $avg: "$cpc" },
+        total_clicks: { $sum: "$clicks" },
+      },
+    },
+    { $sort: { [sortField]: -1 } },
+    { $limit: limit || 5 },
+  ]);
+  
+  // Map back to external_id
+  return resultsFromSnapshot.map(r => {
+    const entity = entityMap.get(r._id.toString());
+    return {
+      ...r,
+      _id: entity?.external_id || r._id.toString(),
+      entity_name: entity?.name || r.entity_name,
+    };
+  });
+}
+
 // ============================================
 // NEW: UNIVERSAL QUERY DATA TOOL
 // Replaces: get_overview, get_total_metrics, compare_entities, list_entities, get_ranking
@@ -85,43 +184,111 @@ export const queryDataTool = tool(
 
       // QUERY TYPE 1: OVERVIEW (account or entity summary)
       if (query_type === "overview") {
+        const dateFrom = new Date(date_from);
+        const dateTo = new Date(date_to);
+        const baseDate = new Date(dateFrom);
+        baseDate.setDate(baseDate.getDate() - 1);
+        
         const matchStage = {
           account_id: accountObjId,
-          date: {
-            $gte: new Date(date_from),
-            $lte: new Date(date_to),
-          },
+          date: { $lte: dateTo },
         };
 
-        // If entity_ids provided, filter by them
+        // If entity_ids provided, resolve names to IDs first
         if (entity_ids && entity_ids.length > 0) {
-          const fieldMap = {
-            campaign: "external_campaign_id",
-            adset: "external_adset_id",
-            ad: "external_ad_id",
-          };
-          matchStage[fieldMap[entity_type || "campaign"]] = { $in: entity_ids };
+          const entityType = entity_type || "campaign";
+          const Model = entityType === "campaign" ? AdsCampaign : 
+                        entityType === "adset" ? AdsSet : Ads;
+          
+          // Check if entity_ids are names (not numeric IDs)
+          const areNames = entity_ids.some(id => isNaN(id) || id.includes(' ') || id.includes('-'));
+          
+          if (areNames) {
+            // Resolve names to external_ids
+            const entities = await Model.find({
+              name: { $in: entity_ids },
+              external_account_id: account_id.replace('act_', '')
+            }).select('external_id').lean();
+            
+            if (entities.length === 0) {
+              writer?.(`⚠️ Không tìm thấy ${entityType} với tên: ${entity_ids.join(', ')}`);
+              return JSON.stringify({
+                error: "Không tìm thấy",
+                message: `Không tìm thấy ${entityType} với tên: ${entity_ids.join(', ')}`
+              });
+            }
+            
+            const resolvedIds = entities.map(e => e.external_id);
+            const fieldMap = {
+              campaign: "external_campaign_id",
+              adset: "external_adset_id",
+              ad: "external_ad_id",
+            };
+            matchStage[fieldMap[entityType]] = { $in: resolvedIds };
+          } else {
+            // Already IDs, use directly
+            const fieldMap = {
+              campaign: "external_campaign_id",
+              adset: "external_adset_id",
+              ad: "external_ad_id",
+            };
+            matchStage[fieldMap[entityType]] = { $in: entity_ids };
+          }
         }
 
-        const result = await AdPerformance.aggregate([
-          { $match: matchStage },
-          {
-            $group: {
-              _id: null,
-              total_spend: { $sum: "$spend" },
-              total_impressions: { $sum: "$impressions" },
-              total_clicks: { $sum: "$clicks" },
-              total_results: { $sum: "$results" },
-              avg_ctr: { $avg: "$ctr" },
-              avg_cpc: { $avg: "$cpc" },
-              avg_cpm: { $avg: "$cpm" },
-              days: { $addToSet: "$date" },
-            },
-          },
-        ]);
-
-        const data = result[0] || {};
-        writer?.(`✅ Tìm thấy dữ liệu từ ${data.days?.length || 0} ngày`);
+        // Get snapshots and calculate delta (end - base)
+        // AdPerformance stores CUMULATIVE data, not daily deltas
+        const snapshots = await retryQuery(async () => {
+          return await AdPerformance.find(matchStage)
+            .sort({ ads_id: 1, date: -1 })
+            .lean();
+        });
+        
+        // Group by ads_id to get end and base snapshots
+        const snapshotsByAd = {};
+        for (const snap of snapshots) {
+          const adId = snap.ads_id.toString();
+          if (!snapshotsByAd[adId]) {
+            snapshotsByAd[adId] = { endSnap: null, baseSnap: null };
+          }
+          if (!snapshotsByAd[adId].endSnap && snap.date <= dateTo) {
+            snapshotsByAd[adId].endSnap = snap;
+          }
+          if (!snapshotsByAd[adId].baseSnap && snap.date <= baseDate) {
+            snapshotsByAd[adId].baseSnap = snap;
+          }
+        }
+        
+        // Calculate totals from deltas
+        let total_spend = 0, total_impressions = 0, total_clicks = 0, total_results = 0;
+        let ctr_sum = 0, cpc_sum = 0, cpm_sum = 0, count = 0;
+        
+        for (const [adId, snaps] of Object.entries(snapshotsByAd)) {
+          if (!snaps.endSnap) continue;
+          
+          const baseSnap = snaps.baseSnap || {
+            spend: 0, impressions: 0, clicks: 0, results: 0,
+            ctr: 0, cpc: 0, cpm: 0
+          };
+          
+          total_spend += Math.max(0, snaps.endSnap.spend - (baseSnap.spend || 0));
+          total_impressions += Math.max(0, snaps.endSnap.impressions - (baseSnap.impressions || 0));
+          total_clicks += Math.max(0, snaps.endSnap.clicks - (baseSnap.clicks || 0));
+          total_results += Math.max(0, (snaps.endSnap.results || 0) - (baseSnap.results || 0));
+          
+          // For rates, use end snapshot values
+          ctr_sum += snaps.endSnap.ctr || 0;
+          cpc_sum += snaps.endSnap.cpc || 0;
+          cpm_sum += snaps.endSnap.cpm || 0;
+          count++;
+        }
+        
+        // Calculate averages for rates
+        const avg_ctr = count > 0 ? ctr_sum / count : 0;
+        const avg_cpc = count > 0 ? cpc_sum / count : 0;
+        const avg_cpm = count > 0 ? cpm_sum / count : 0;
+        
+        writer?.(`✅ Tìm thấy dữ liệu từ ${count} ads`);
 
         return JSON.stringify({
           query_type: "overview",
@@ -129,13 +296,13 @@ export const queryDataTool = tool(
           entity_type: entity_type || "account",
           entity_ids: entity_ids || [],
           metrics: {
-            spend: { value: data.total_spend || 0, formatted: formatCurrency(data.total_spend) },
-            impressions: { value: data.total_impressions || 0, formatted: formatNumber(data.total_impressions) },
-            clicks: { value: data.total_clicks || 0, formatted: formatNumber(data.total_clicks) },
-            results: { value: data.total_results || 0, formatted: formatNumber(data.total_results) },
-            ctr: { value: data.avg_ctr || 0, formatted: formatPercent(data.avg_ctr) },
-            cpc: { value: data.avg_cpc || 0, formatted: formatCurrency(data.avg_cpc) },
-            cpm: { value: data.avg_cpm || 0, formatted: formatCurrency(data.avg_cpm) },
+            spend: { value: total_spend, formatted: formatCurrency(total_spend) },
+            impressions: { value: total_impressions, formatted: formatNumber(total_impressions) },
+            clicks: { value: total_clicks, formatted: formatNumber(total_clicks) },
+            results: { value: total_results, formatted: formatNumber(total_results) },
+            ctr: { value: avg_ctr, formatted: formatPercent(avg_ctr) },
+            cpc: { value: avg_cpc, formatted: formatCurrency(avg_cpc) },
+            cpm: { value: avg_cpm, formatted: formatCurrency(avg_cpm) },
           },
         });
       }
@@ -266,176 +433,14 @@ export const queryDataTool = tool(
         // Fallback to AnalyticsSnapshot if no data or range > 90 days
         if (results.length === 0 || daysDiff > 90) {
           writer?.(`📊 Query từ AnalyticsSnapshot (lifetime data, filter theo campaign start_time)...`);
-          
-          // For campaigns: filter by start_time, then aggregate from AnalyticsSnapshot
-          if (entity_type === "campaign" || !entity_type) {
-            const campaigns = await AdsCampaign.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              start_time: { $gte: dateFrom, $lte: dateTo },
-            })
-              .select("_id external_id name")
-              .lean();
-            
-            const campaignObjIds = campaigns.map(c => c._id);
-            const campaignMap = new Map(campaigns.map(c => [c._id.toString(), c]));
-            
-            if (campaignObjIds.length > 0) {
-              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
-              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
-                {
-                  $match: {
-                    account_id: accountObjId,
-                    campaign_id: { $in: campaignObjIds },
-                  },
-                },
-                {
-                  $group: {
-                    _id: "$campaign_id",
-                    entity_name: { $first: "$campaign_name" },
-                    total_spend: { $sum: "$spend" },
-                    avg_ctr: { $avg: "$ctr" },
-                    avg_cpc: { $avg: "$cpc" },
-                    total_clicks: { $sum: "$clicks" },
-                  },
-                },
-                { $sort: { [sortField]: -1 } },
-                { $limit: limit || 5 },
-              ]);
-              
-              // Map campaign_id back to external_id
-              results = resultsFromSnapshot.map(r => {
-                const campaign = campaignMap.get(r._id.toString());
-                return {
-                  ...r,
-                  _id: campaign?.external_id || r._id.toString(),
-                  entity_name: campaign?.name || r.entity_name,
-                };
-              });
-            }
-          } else if (entity_type === "adset") {
-            // For adsets: get adsets with campaigns in date range
-            const campaigns = await AdsCampaign.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              start_time: { $gte: dateFrom, $lte: dateTo },
-            })
-              .select("_id")
-              .lean();
-            
-            const campaignObjIds = campaigns.map(c => c._id);
-            
-            const adsets = await AdsSet.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              campaign_id: { $in: campaignObjIds },
-            })
-              .select("_id external_id name")
-              .lean();
-            
-            const adsetObjIds = adsets.map(a => a._id);
-            const adsetMap = new Map(adsets.map(a => [a._id.toString(), a]));
-            
-            if (adsetObjIds.length > 0) {
-              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
-              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
-                {
-                  $match: {
-                    account_id: accountObjId,
-                    adset_id: { $in: adsetObjIds },
-                  },
-                },
-                {
-                  $group: {
-                    _id: "$adset_id",
-                    entity_name: { $first: "$adset_name" },
-                    total_spend: { $sum: "$spend" },
-                    avg_ctr: { $avg: "$ctr" },
-                    avg_cpc: { $avg: "$cpc" },
-                    total_clicks: { $sum: "$clicks" },
-                  },
-                },
-                { $sort: { [sortField]: -1 } },
-                { $limit: limit || 5 },
-              ]);
-              
-              // Map adset_id back to external_id
-              results = resultsFromSnapshot.map(r => {
-                const adset = adsetMap.get(r._id.toString());
-                return {
-                  ...r,
-                  _id: adset?.external_id || r._id.toString(),
-                  entity_name: adset?.name || r.entity_name,
-                };
-              });
-            }
-          } else if (entity_type === "ad") {
-            // For ads: get ads with campaigns in date range
-            const campaigns = await AdsCampaign.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              start_time: { $gte: dateFrom, $lte: dateTo },
-            })
-              .select("_id")
-              .lean();
-            
-            const campaignObjIds = campaigns.map(c => c._id);
-            
-            const adsets = await AdsSet.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              campaign_id: { $in: campaignObjIds },
-            })
-              .select("_id")
-              .lean();
-            
-            const adsetObjIds = adsets.map(a => a._id);
-            
-            const ads = await Ads.find({
-              account_id: accountObjId,
-              status: { $ne: "DELETED" },
-              set_id: { $in: adsetObjIds },
-            })
-              .select("_id external_id name")
-              .lean();
-            
-            const adObjIds = ads.map(a => a._id);
-            const adMap = new Map(ads.map(a => [a._id.toString(), a]));
-            
-            if (adObjIds.length > 0) {
-              const sortField = metric === "spend" ? "total_spend" : `avg_${metric}`;
-              const resultsFromSnapshot = await AnalyticsSnapshot.aggregate([
-                {
-                  $match: {
-                    account_id: accountObjId,
-                    ad_id: { $in: adObjIds },
-                  },
-                },
-                {
-                  $group: {
-                    _id: "$ad_id",
-                    entity_name: { $first: "$ad_name" },
-                    total_spend: { $sum: "$spend" },
-                    avg_ctr: { $avg: "$ctr" },
-                    avg_cpc: { $avg: "$cpc" },
-                    total_clicks: { $sum: "$clicks" },
-                  },
-                },
-                { $sort: { [sortField]: -1 } },
-                { $limit: limit || 5 },
-              ]);
-              
-              // Map ad_id back to external_id
-              results = resultsFromSnapshot.map(r => {
-                const ad = adMap.get(r._id.toString());
-                return {
-                  ...r,
-                  _id: ad?.external_id || r._id.toString(),
-                  entity_name: ad?.name || r.entity_name,
-                };
-              });
-            }
-          }
+          results = await queryAnalyticsSnapshotByEntityType(
+            accountObjId, 
+            entity_type || "campaign", 
+            dateFrom, 
+            dateTo, 
+            metric, 
+            limit
+          );
         }
 
         writer?.(`✅ Tìm thấy ${results.length} ${entity_type || "campaign"}`);
@@ -513,25 +518,64 @@ export const getTrendTool = tool(
       };
 
       if (campaign_id) {
-        const campaign = await AdsCampaign.findOne({
-          external_id: campaign_id,
-        });
+        // Check if campaign_id is a name (contains space or dash)
+        const isName = isNaN(campaign_id) || campaign_id.includes(' ') || campaign_id.includes('-');
+        const campaign = isName
+          ? await AdsCampaign.findOne({
+              name: campaign_id,
+              external_account_id: account_id.replace('act_', '')
+            })
+          : await AdsCampaign.findOne({
+              external_id: campaign_id,
+            });
         if (campaign) {
           matchStage.campaign_id = campaign._id;
+        } else {
+          writer?.(`⚠️ Không tìm thấy chiến dịch: ${campaign_id}`);
+          return JSON.stringify({
+            error: "Không tìm thấy chiến dịch",
+            message: `Không tìm thấy chiến dịch với ${isName ? 'tên' : 'ID'}: ${campaign_id}`
+          });
         }
-      } else if (adset_id) { // Added adset_id logic
-        const adset = await AdsSet.findOne({
-            external_id: adset_id,
-        });
+      } else if (adset_id) {
+        // Check if adset_id is a name
+        const isName = isNaN(adset_id) || adset_id.includes(' ') || adset_id.includes('-');
+        const adset = isName
+          ? await AdsSet.findOne({
+              name: adset_id,
+              external_account_id: account_id.replace('act_', '')
+            })
+          : await AdsSet.findOne({
+              external_id: adset_id,
+            });
         if (adset) {
-            matchStage.set_id = adset._id;
+          matchStage.set_id = adset._id;
+        } else {
+          writer?.(`⚠️ Không tìm thấy nhóm quảng cáo: ${adset_id}`);
+          return JSON.stringify({
+            error: "Không tìm thấy nhóm quảng cáo",
+            message: `Không tìm thấy nhóm quảng cáo với ${isName ? 'tên' : 'ID'}: ${adset_id}`
+          });
         }
-      } else if (ad_id) { // Added ad_id logic
-        const ad = await Ads.findOne({
-            external_id: ad_id,
-        });
+      } else if (ad_id) {
+        // Check if ad_id is a name
+        const isName = isNaN(ad_id) || ad_id.includes(' ') || ad_id.includes('-');
+        const ad = isName
+          ? await Ads.findOne({
+              name: ad_id,
+              external_account_id: account_id.replace('act_', '')
+            })
+          : await Ads.findOne({
+              external_id: ad_id,
+            });
         if (ad) {
-            matchStage.ads_id = ad._id;
+          matchStage.ads_id = ad._id;
+        } else {
+          writer?.(`⚠️ Không tìm thấy quảng cáo: ${ad_id}`);
+          return JSON.stringify({
+            error: "Không tìm thấy quảng cáo",
+            message: `Không tìm thấy quảng cáo với ${isName ? 'tên' : 'ID'}: ${ad_id}`
+          });
         }
       } else {
         matchStage.campaign_id = null; // Default to account-level if no specific entity
@@ -665,19 +709,6 @@ function normalizeObjective(objectiveRaw) {
   return mapping[upper] || null;
 }
 
-function getMinThresholds(objective) {
-  const thresholds = {
-    OUTCOME_SALES: { minSpend: 100000, minResults: 3 },
-    OUTCOME_LEADS: { minSpend: 100000, minResults: 5 },
-    OUTCOME_TRAFFIC: { minSpend: 50000, minResults: 100 },
-    OUTCOME_AWARENESS: { minSpend: 50000, minResults: 1000 },
-    OUTCOME_ENGAGEMENT: { minSpend: 50000, minResults: 50 },
-    OUTCOME_APP_PROMOTION: { minSpend: 100000, minResults: 3 },
-  };
-  
-  return thresholds[objective] || { minSpend: 50000, minResults: 1 };
-}
-
 function getResultsField(objective) {
   const fields = {
     OUTCOME_SALES: "purchases_total",
@@ -723,98 +754,214 @@ function calculateKPIs(totals) {
   return kpis;
 }
 
-function normalizeMetric(value, min, max, lowerIsBetter = false) {
-  if (min === max || max === 0) return 0.5;
-  
-  const norm = (value - min) / (max - min);
-  return lowerIsBetter ? 1 - norm : norm;
-}
-
-function calculateScore(entity, objective, allEntities) {
-  const primaryKPIs = {
-    OUTCOME_SALES: { field: "cpa", lowerIsBetter: true, weight: 0.5 },
-    OUTCOME_LEADS: { field: "cpl", lowerIsBetter: true, weight: 0.5 },
-    OUTCOME_TRAFFIC: { field: "link_ctr", lowerIsBetter: false, weight: 0.5 },
-    OUTCOME_AWARENESS: { field: "cpm", lowerIsBetter: true, weight: 0.5 },
-    OUTCOME_ENGAGEMENT: { field: "cpe", lowerIsBetter: true, weight: 0.5 },
-    OUTCOME_APP_PROMOTION: { field: "cpa", lowerIsBetter: true, weight: 0.5 },
-  };
-  
-  const primaryKPI = primaryKPIs[objective];
-  if (!primaryKPI) return 0;
-  
-  const values = allEntities
-    .map(e => e.kpis?.[primaryKPI.field])
-    .filter(v => v != null && v > 0);
-  
-  if (values.length === 0) {
-    const efficiencyValues = allEntities
-      .map(e => e.efficiency_per_100k)
-      .filter(v => v != null);
-    if (efficiencyValues.length === 0) return 0;
-    const efficiencyMin = Math.min(...efficiencyValues);
-    const efficiencyMax = Math.max(...efficiencyValues);
-    const efficiencyNorm = normalizeMetric(entity.efficiency_per_100k || 0, efficiencyMin, efficiencyMax, false);
-    return efficiencyNorm * 0.85;
+/**
+ * Get primary metric and sort order for each objective
+ * Returns: { metric: 'metric_name', lowerIsBetter: boolean, label: 'Display Label', field: 'totals' | 'kpis' }
+ */
+function getPrimaryMetric(objective) {
+  switch (objective) {
+    case "OUTCOME_SALES":
+      return { metric: 'purchases_total', lowerIsBetter: false, label: 'Số lượng mua hàng', field: 'totals' };
+    
+    case "OUTCOME_LEADS":
+      return { metric: 'leads_total', lowerIsBetter: false, label: 'Số lượng leads', field: 'totals' };
+    
+    case "OUTCOME_TRAFFIC":
+      return { metric: 'link_clicks_total', lowerIsBetter: false, label: 'Lượt nhấp link', field: 'totals' };
+    
+    case "OUTCOME_AWARENESS":
+      return { metric: 'impressions_total', lowerIsBetter: false, label: 'Lượt hiển thị', field: 'totals' };
+    
+    case "OUTCOME_ENGAGEMENT":
+      return { metric: 'link_clicks_total', lowerIsBetter: false, label: 'Lượt tương tác', field: 'totals' };
+    
+    case "OUTCOME_APP_PROMOTION":
+      return { metric: 'purchases_total', lowerIsBetter: false, label: 'Lượt cài đặt app', field: 'totals' };
+    
+    default:
+      // Fallback: sort by spend
+      return { metric: 'spend_total', lowerIsBetter: false, label: 'Chi phí', field: 'totals' };
   }
-  
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const primaryValue = entity.kpis?.[primaryKPI.field] || 0;
-  const primaryNorm = normalizeMetric(primaryValue, min, max, primaryKPI.lowerIsBetter);
-  
-  const efficiencyValues = allEntities
-    .map(e => e.efficiency_per_100k)
-    .filter(v => v != null);
-  const efficiencyMin = Math.min(...efficiencyValues);
-  const efficiencyMax = Math.max(...efficiencyValues);
-  const efficiencyNorm = normalizeMetric(entity.efficiency_per_100k || 0, efficiencyMin, efficiencyMax, false);
-  
-  const maxSpend = Math.max(...allEntities.map(e => e.totals.spend_total));
-  const volumeBonus = Math.min(Math.sqrt(entity.totals.spend_total / maxSpend), 1) * 0.05;
-  
-  const score = (primaryNorm * primaryKPI.weight) + (efficiencyNorm * 0.35) + (volumeBonus);
-  
-  return Math.max(0, Math.min(1, score));
 }
 
 function generateWhy(entity, objective) {
-  const why = [];
-  const kpis = entity.kpis || {};
+  const primaryMetric = getPrimaryMetric(objective);
+  const value = primaryMetric.field === 'totals' 
+    ? entity.totals[primaryMetric.metric] 
+    : entity.kpis[primaryMetric.metric];
   
-  switch (objective) {
-    case "OUTCOME_SALES":
-      if (kpis.cpa && kpis.cpa < 20000) why.push(`CPA thấp (${formatCurrency(kpis.cpa)})`);
-      if (entity.efficiency_per_100k > 5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} purchases/100k₫`);
-      break;
-    case "OUTCOME_LEADS":
-      if (kpis.cpl < 50000) why.push(`CPL thấp (${formatCurrency(kpis.cpl)})`);
-      if (entity.efficiency_per_100k > 2) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} leads/100k₫`);
-      break;
-    case "OUTCOME_TRAFFIC":
-      if (kpis.link_ctr > 2) why.push(`Link CTR cao (${kpis.link_ctr.toFixed(2)}%)`);
-      if (kpis.link_cpc < 5000) why.push(`Link CPC thấp (${formatCurrency(kpis.link_cpc)})`);
-      if (entity.efficiency_per_100k > 10) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} link clicks/100k₫`);
-      break;
-    case "OUTCOME_AWARENESS":
-      if (kpis.cpm < 5000) why.push(`CPM thấp (${formatCurrency(kpis.cpm)})`);
-      if (entity.efficiency_per_100k > 1000) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(0)} impressions/100k₫`);
-      break;
-    case "OUTCOME_ENGAGEMENT":
-      if (kpis.cpe < 10000) why.push(`CPE thấp (${formatCurrency(kpis.cpe)})`);
-      if (entity.efficiency_per_100k > 5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} engagements/100k₫`);
-      break;
-    case "OUTCOME_APP_PROMOTION":
-      if (kpis.cpa < 50000) why.push(`CPA thấp (${formatCurrency(kpis.cpa)})`);
-      if (entity.efficiency_per_100k > 0.5) why.push(`Hiệu quả cao: ${entity.efficiency_per_100k.toFixed(2)} installs/100k₫`);
-      break;
+  return [`${primaryMetric.label}: ${formatNumber(value || 0)}`];
+}
+
+// Helper: Calculate deltas from snapshots
+function calculateDeltasByAd(snapshotsByAd, baseDate, toEffective, dataCoverageNotes) {
+  const deltasByAd = {};
+  let countNoBaseline = 0;
+  
+  for (const [adId, snaps] of Object.entries(snapshotsByAd)) {
+    if (!snaps.endSnap) continue;
+    
+    const baseSnap = snaps.baseSnap || {
+      spend: 0,
+      website_purchases: 0,
+      leads: 0,
+      link_clicks: 0,
+      impressions: 0,
+      clicks: 0,
+      post_engagement: 0,
+      reach: 0,
+      mobile_app_install: 0,
+    };
+    
+    if (!snaps.baseSnap) countNoBaseline++;
+    
+    deltasByAd[adId] = {
+      spend_range: Math.max(0, snaps.endSnap.spend - (baseSnap.spend || 0)),
+      purchases_range: Math.max(0, (snaps.endSnap.website_purchases || 0) - (baseSnap.website_purchases || 0)),
+      leads_range: Math.max(0, (snaps.endSnap.leads || 0) - (baseSnap.leads || 0)),
+      link_clicks_range: Math.max(0, (snaps.endSnap.link_clicks || 0) - (baseSnap.link_clicks || 0)),
+      impressions_range: Math.max(0, snaps.endSnap.impressions - (baseSnap.impressions || 0)),
+      clicks_range: Math.max(0, snaps.endSnap.clicks - (baseSnap.clicks || 0)),
+      post_engagement_range: Math.max(0, (snaps.endSnap.post_engagement || 0) - (baseSnap.post_engagement || 0)),
+      reach_range: Math.max(0, snaps.endSnap.reach - (baseSnap.reach || 0)),
+      mobile_app_install_range: Math.max(0, (snaps.endSnap.mobile_app_install || 0) - (baseSnap.mobile_app_install || 0)),
+      campaign_id: snaps.endSnap.campaign_id,
+      set_id: snaps.endSnap.set_id,
+    };
   }
   
-  if (why.length === 0) {
-    why.push("Performance tốt trong khoảng thời gian này");
+  if (countNoBaseline > 0) {
+    const totalAds = Object.keys(deltasByAd).length;
+    dataCoverageNotes.push(
+      `Có ${countNoBaseline}/${totalAds} ads không có snapshot trước ngày bắt đầu tính (baseline=0), thường do ads mới tạo hoặc hệ thống bắt đầu tracking sau đó.`
+    );
   }
   
-  return why;
+  return deltasByAd;
+}
+
+// Helper: Group deltas by level
+function groupDeltasByLevel(deltasByAd, level) {
+  const groups = {};
+  
+  if (level === "ad") {
+    for (const [adId, delta] of Object.entries(deltasByAd)) {
+      if (!adId) continue;
+      groups[adId] = {
+        spend_total: delta.spend_range,
+        purchases_total: delta.purchases_range,
+        leads_total: delta.leads_range,
+        link_clicks_total: delta.link_clicks_range,
+        impressions_total: delta.impressions_range,
+        clicks_total: delta.clicks_range,
+        post_engagement_total: delta.post_engagement_range,
+        reach_total: delta.reach_range,
+        mobile_app_install_total: delta.mobile_app_install_range,
+      };
+    }
+  } else {
+    const groupField = level === "campaign" ? "campaign_id" : "set_id";
+    for (const [adId, delta] of Object.entries(deltasByAd)) {
+      const groupId = delta[groupField];
+      if (!groupId) continue;
+      
+      const groupIdStr = groupId.toString();
+      if (!groups[groupIdStr]) {
+        groups[groupIdStr] = {
+          spend_total: 0,
+          purchases_total: 0,
+          leads_total: 0,
+          link_clicks_total: 0,
+          impressions_total: 0,
+          clicks_total: 0,
+          post_engagement_total: 0,
+          reach_total: 0,
+          mobile_app_install_total: 0,
+        };
+      }
+      
+      groups[groupIdStr].spend_total += delta.spend_range;
+      groups[groupIdStr].purchases_total += delta.purchases_range;
+      groups[groupIdStr].leads_total += delta.leads_range;
+      groups[groupIdStr].link_clicks_total += delta.link_clicks_range;
+      groups[groupIdStr].impressions_total += delta.impressions_range;
+      groups[groupIdStr].clicks_total += delta.clicks_range;
+      groups[groupIdStr].post_engagement_total += delta.post_engagement_range;
+      groups[groupIdStr].reach_total += delta.reach_range;
+      groups[groupIdStr].mobile_app_install_total += delta.mobile_app_install_range;
+    }
+  }
+  
+  return groups;
+}
+
+// Helper: Join metadata for groups
+async function joinMetadataForLevel(groups, level, toEffective) {
+  const metaMap = {};
+  
+  if (level === "ad") {
+    const adIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
+    const adsWithParents = await Ads.find({
+      _id: { $in: adIds },
+      status: { $ne: "DELETED" }
+    })
+      .select("_id name status set_id")
+      .populate({
+        path: "set_id",
+        select: "_id name campaign_id",
+        populate: {
+          path: "campaign_id",
+          select: "_id name"
+        }
+      })
+      .lean();
+    
+    for (const ad of adsWithParents) {
+      const adIdStr = ad._id.toString();
+      metaMap[adIdStr] = {
+        name: ad.name,
+        objective: null,
+        status: ad.status,
+        start_time: null,
+        adset_id: ad.set_id?._id?.toString() || null,
+        adset_name: ad.set_id?.name || null,
+        campaign_id: ad.set_id?.campaign_id?._id?.toString() || null,
+        campaign_name: ad.set_id?.campaign_id?.name || null,
+      };
+    }
+  } else {
+    const Model = level === "campaign" ? AdsCampaign : AdsSet;
+    const groupIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
+    
+    let metaEntities;
+    if (level === "campaign") {
+      metaEntities = await Model.find({
+        _id: { $in: groupIds },
+        status: { $ne: "DELETED" },
+        start_time: { $lte: toEffective }
+      })
+        .select("_id name objective status start_time")
+        .lean();
+    } else {
+      metaEntities = await Model.find({
+        _id: { $in: groupIds },
+        status: { $ne: "DELETED" },
+        start_time: { $lte: toEffective }
+      })
+        .populate('campaign_id', 'objective')
+        .select("_id name status start_time campaign_id")
+        .lean();
+    }
+    
+    for (const meta of metaEntities) {
+      if (level === "adset" && meta.campaign_id) {
+        meta.objective = meta.campaign_id.objective;
+      }
+      metaMap[meta._id.toString()] = meta;
+    }
+  }
+  
+  return metaMap;
 }
 
 export const rankCampaignsTool = tool(
@@ -831,6 +978,8 @@ export const rankCampaignsTool = tool(
       
       writer?.("📅 Đang xác định tracking_start_date...");
       
+      console.log(`[rankCampaignsTool] Checking tracking data for account: ${accountObjId}`);
+      
       const trackingStartResult = await AdPerformance.aggregate([
         {
           $match: { account_id: accountObjId }
@@ -843,7 +992,10 @@ export const rankCampaignsTool = tool(
         }
       ]);
       
+      console.log(`[rankCampaignsTool] Tracking start result:`, trackingStartResult);
+      
       if (!trackingStartResult.length || !trackingStartResult[0].min_date) {
+        console.log(`[rankCampaignsTool] ❌ No tracking data found for account ${accountObjId}`);
         return JSON.stringify({
           error: "Không có dữ liệu",
           message: "Hệ thống chưa có dữ liệu tracking cho account này."
@@ -885,6 +1037,8 @@ export const rankCampaignsTool = tool(
         }
       ]);
       
+      console.log(`[rankCampaignsTool] Total snapshots found: ${allSnapshots.length}`);
+      
       const snapshotsByAd = {};
       let countNoBaseline = 0;
       
@@ -906,154 +1060,23 @@ export const rankCampaignsTool = tool(
       
       writer?.("🧮 Đang tính delta...");
       
-      const deltasByAd = {};
+      console.log(`[rankCampaignsTool] Ads with snapshots: ${Object.keys(snapshotsByAd).length}`);
       
-      for (const [adId, snaps] of Object.entries(snapshotsByAd)) {
-        if (!snaps.endSnap) continue;
-        
-        const baseSnap = snaps.baseSnap || {
-          spend: 0,
-          website_purchases: 0,
-          leads: 0,
-          link_clicks: 0,
-          impressions: 0,
-          clicks: 0,
-          post_engagement: 0,
-          reach: 0,
-          mobile_app_install: 0,
-        };
-        
-        if (!snaps.baseSnap) {
-          countNoBaseline++;
-        }
-        
-        deltasByAd[adId] = {
-          spend_range: Math.max(0, snaps.endSnap.spend - (baseSnap.spend || 0)),
-          purchases_range: Math.max(0, (snaps.endSnap.website_purchases || 0) - (baseSnap.website_purchases || 0)),
-          leads_range: Math.max(0, (snaps.endSnap.leads || 0) - (baseSnap.leads || 0)),
-          link_clicks_range: Math.max(0, (snaps.endSnap.link_clicks || 0) - (baseSnap.link_clicks || 0)),
-          impressions_range: Math.max(0, snaps.endSnap.impressions - (baseSnap.impressions || 0)),
-          clicks_range: Math.max(0, snaps.endSnap.clicks - (baseSnap.clicks || 0)),
-          post_engagement_range: Math.max(0, (snaps.endSnap.post_engagement || 0) - (baseSnap.post_engagement || 0)),
-          reach_range: Math.max(0, snaps.endSnap.reach - (baseSnap.reach || 0)),
-          mobile_app_install_range: Math.max(0, (snaps.endSnap.mobile_app_install || 0) - (baseSnap.mobile_app_install || 0)),
-          campaign_id: snaps.endSnap.campaign_id,
-          set_id: snaps.endSnap.set_id,
-        };
-      }
-      
-      if (countNoBaseline > 0) {
-        const totalAds = Object.keys(deltasByAd).length;
-        dataCoverageNotes.push(
-          `Có ${countNoBaseline}/${totalAds} ads không có snapshot trước ngày bắt đầu tính (baseline=0), thường do ads mới tạo hoặc hệ thống bắt đầu tracking sau đó.`
-        );
-      }
+      const deltasByAd = calculateDeltasByAd(snapshotsByAd, baseDate, toEffective, dataCoverageNotes);
       
       writer?.("📦 Đang group theo level...");
       
-      let groups = {};
-      let metaMap = {};
+      console.log(`[rankCampaignsTool] Deltas calculated for ${Object.keys(deltasByAd).length} ads`);
       
-      if (level === "ad") {
-        for (const [adId, delta] of Object.entries(deltasByAd)) {
-          if (!adId) continue;
-          
-          groups[adId] = {
-            spend_total: delta.spend_range,
-            purchases_total: delta.purchases_range,
-            leads_total: delta.leads_range,
-            link_clicks_total: delta.link_clicks_range,
-            impressions_total: delta.impressions_range,
-            clicks_total: delta.clicks_range,
-            post_engagement_total: delta.post_engagement_range,
-            reach_total: delta.reach_range,
-            mobile_app_install_total: delta.mobile_app_install_range,
-          };
-        }
-        
-        writer?.("🔗 Đang join meta cho ads với parent info...");
-        
-        const adIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
-        const adsWithParents = await Ads.find({
-          _id: { $in: adIds },
-          status: { $ne: "DELETED" }
-        })
-          .select("_id name status set_id")
-          .populate({
-            path: "set_id",
-            select: "_id name campaign_id",
-            populate: {
-              path: "campaign_id",
-              select: "_id name"
-            }
-          })
-          .lean();
-        
-        for (const ad of adsWithParents) {
-          const adIdStr = ad._id.toString();
-          metaMap[adIdStr] = {
-            name: ad.name,
-            objective: null,
-            status: ad.status,
-            start_time: null,
-            adset_id: ad.set_id?._id?.toString() || null,
-            adset_name: ad.set_id?.name || null,
-            campaign_id: ad.set_id?.campaign_id?._id?.toString() || null,
-            campaign_name: ad.set_id?.campaign_id?.name || null,
-          };
-        }
-      } else {
-        const groupField = level === "campaign" ? "campaign_id" : "set_id";
-        
-        for (const [adId, delta] of Object.entries(deltasByAd)) {
-          const groupId = delta[groupField];
-          if (!groupId) continue;
-          
-          const groupIdStr = groupId.toString();
-          if (!groups[groupIdStr]) {
-            groups[groupIdStr] = {
-              spend_total: 0,
-              purchases_total: 0,
-              leads_total: 0,
-              link_clicks_total: 0,
-              impressions_total: 0,
-              clicks_total: 0,
-              post_engagement_total: 0,
-              reach_total: 0,
-              mobile_app_install_total: 0,
-            };
-          }
-          
-          groups[groupIdStr].spend_total += delta.spend_range;
-          groups[groupIdStr].purchases_total += delta.purchases_range;
-          groups[groupIdStr].leads_total += delta.leads_range;
-          groups[groupIdStr].link_clicks_total += delta.link_clicks_range;
-          groups[groupIdStr].impressions_total += delta.impressions_range;
-          groups[groupIdStr].clicks_total += delta.clicks_range;
-          groups[groupIdStr].post_engagement_total += delta.post_engagement_range;
-          groups[groupIdStr].reach_total += delta.reach_range;
-          groups[groupIdStr].mobile_app_install_total += delta.mobile_app_install_range;
-        }
-        
-        writer?.("🔗 Đang join meta...");
-        
-        const Model = level === "campaign" ? AdsCampaign : AdsSet;
-        const groupIds = Object.keys(groups).map(id => new mongoose.Types.ObjectId(id));
-        
-        const metaEntities = await Model.find({
-          _id: { $in: groupIds },
-          status: { $ne: "DELETED" },
-          start_time: { $lte: toEffective }
-        })
-          .select("_id name objective status start_time")
-          .lean();
-        
-        for (const meta of metaEntities) {
-          metaMap[meta._id.toString()] = meta;
-        }
-      }
+      const groups = groupDeltasByLevel(deltasByAd, level);
+      
+      writer?.("🔗 Đang join meta...");
+      
+      const metaMap = await joinMetadataForLevel(groups, level, toEffective);
       
       writer?.("✅ Đang tính KPI và ranking...");
+      
+      console.log(`[rankCampaignsTool] Groups created: ${Object.keys(groups).length}, MetaMap size: ${Object.keys(metaMap).length}`);
       
       const entities = [];
       const othersNotes = [];
@@ -1069,6 +1092,12 @@ export const rankCampaignsTool = tool(
           if (adSnap && adSnap.objective) {
             objectiveNormalized = normalizeObjective(adSnap.objective);
           }
+        }
+        
+        // Skip entities without valid objective
+        if (!objectiveNormalized) {
+          console.log(`[rankCampaignsTool] Skipping entity ${meta.name} - no valid objective (raw: ${meta.objective})`);
+          continue;
         }
         
         if (objective && objectiveNormalized !== objective) continue;
@@ -1091,13 +1120,16 @@ export const rankCampaignsTool = tool(
         });
       }
       
+      console.log(`[rankCampaignsTool] Total entities built: ${entities.length}`);
+      
       if (objective) {
+        console.log(`[rankCampaignsTool] Filtering by objective: ${objective}`);
         const filtered = entities.filter(e => e.objective === objective);
-        const allFiltered = filtered.map(e => ({
-          ...e,
-          score: calculateScore(e, objective, filtered),
-        }));
         
+        // Get primary metric for this objective
+        const primaryMetric = getPrimaryMetric(objective);
+        
+        // Sort by custom metric if specified, otherwise by primary metric
         if (sort_by_metric) {
           const metricMap = {
             ctr: (e) => e.kpis?.ctr || 0,
@@ -1111,19 +1143,34 @@ export const rankCampaignsTool = tool(
           const getValue = metricMap[sort_by_metric.toLowerCase()];
           if (getValue) {
             const isLowerBetter = ['cpc', 'cpm', 'cpa', 'cpl'].includes(sort_by_metric.toLowerCase());
-            allFiltered.sort((a, b) => {
+            filtered.sort((a, b) => {
               const valA = getValue(a);
               const valB = getValue(b);
               return isLowerBetter ? valA - valB : valB - valA;
             });
           } else {
-            allFiltered.sort((a, b) => b.score - a.score);
+            // Fallback to primary metric
+            filtered.sort((a, b) => {
+              const valA = primaryMetric.field === 'totals' ? a.totals[primaryMetric.metric] : a.kpis[primaryMetric.metric];
+              const valB = primaryMetric.field === 'totals' ? b.totals[primaryMetric.metric] : b.kpis[primaryMetric.metric];
+              return primaryMetric.lowerIsBetter ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
+            });
           }
         } else {
-          allFiltered.sort((a, b) => b.score - a.score);
+          // Sort by primary metric
+          filtered.sort((a, b) => {
+            const valA = primaryMetric.field === 'totals' ? a.totals[primaryMetric.metric] : a.kpis[primaryMetric.metric];
+            const valB = primaryMetric.field === 'totals' ? b.totals[primaryMetric.metric] : b.kpis[primaryMetric.metric];
+            return primaryMetric.lowerIsBetter ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
+          });
         }
         
-        const top = allFiltered.slice(0, top_n || 5).map(e => {
+        console.log(`[rankCampaignsTool] Total entities for objective ${objective}: ${filtered.length}`);
+        
+        const top = filtered.slice(0, top_n || 5).map(e => {
+          const primaryMetric = getPrimaryMetric(objective);
+          const primaryValue = primaryMetric.field === 'totals' ? e.totals[primaryMetric.metric] : e.kpis[primaryMetric.metric];
+          
           const base = {
             entity_id: e.entity_id,
             name: e.name,
@@ -1135,7 +1182,7 @@ export const rankCampaignsTool = tool(
             cpa: e.kpis.cpa ? { value: e.kpis.cpa, formatted: formatCurrency(e.kpis.cpa) } : null,
             cpl: e.kpis.cpl ? { value: e.kpis.cpl, formatted: formatCurrency(e.kpis.cpl) } : null,
             efficiency_per_100k: { value: e.efficiency_per_100k, formatted: e.efficiency_per_100k.toFixed(2) },
-            score: { value: e.score, formatted: `${(e.score * 100).toFixed(1)}%` },
+            primary_metric: { label: primaryMetric.label, value: primaryValue || 0, formatted: formatNumber(primaryValue || 0) },
             why: generateWhy(e, objective),
           };
           
@@ -1149,6 +1196,8 @@ export const rankCampaignsTool = tool(
           
           return base;
         });
+        
+        console.log(`[rankCampaignsTool] Returning top ${top.length} items for objective: ${objective}`);
         
         return JSON.stringify({
           date_range_user: {
@@ -1169,19 +1218,21 @@ export const rankCampaignsTool = tool(
           others_notes: othersNotes,
         });
       } else {
+        console.log(`[rankCampaignsTool] Grouping by objectives (objective=null)`);
         const grouped = {};
         for (const e of entities) {
+          // Skip entities without valid objective
+          if (!e.objective || e.objective === 'null') continue;
           if (!grouped[e.objective]) grouped[e.objective] = [];
           grouped[e.objective].push(e);
         }
         
         const resultGroups = {};
         for (const [obj, ents] of Object.entries(grouped)) {
-          const withScores = ents.map(e => ({
-            ...e,
-            score: calculateScore(e, obj, ents),
-          }));
+          // Get primary metric for this objective
+          const primaryMetric = getPrimaryMetric(obj);
           
+          // Sort by custom metric if specified, otherwise by primary metric
           if (sort_by_metric) {
             const metricMap = {
               ctr: (e) => e.kpis?.ctr || 0,
@@ -1195,33 +1246,52 @@ export const rankCampaignsTool = tool(
             const getValue = metricMap[sort_by_metric.toLowerCase()];
             if (getValue) {
               const isLowerBetter = ['cpc', 'cpm', 'cpa', 'cpl'].includes(sort_by_metric.toLowerCase());
-              withScores.sort((a, b) => {
+              ents.sort((a, b) => {
                 const valA = getValue(a);
                 const valB = getValue(b);
                 return isLowerBetter ? valA - valB : valB - valA;
               });
             } else {
-              withScores.sort((a, b) => b.score - a.score);
+              // Fallback to primary metric
+              ents.sort((a, b) => {
+                const valA = primaryMetric.field === 'totals' ? a.totals[primaryMetric.metric] : a.kpis[primaryMetric.metric];
+                const valB = primaryMetric.field === 'totals' ? b.totals[primaryMetric.metric] : b.kpis[primaryMetric.metric];
+                return primaryMetric.lowerIsBetter ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
+              });
             }
           } else {
-            withScores.sort((a, b) => b.score - a.score);
+            // Sort by primary metric
+            ents.sort((a, b) => {
+              const valA = primaryMetric.field === 'totals' ? a.totals[primaryMetric.metric] : a.kpis[primaryMetric.metric];
+              const valB = primaryMetric.field === 'totals' ? b.totals[primaryMetric.metric] : b.kpis[primaryMetric.metric];
+              return primaryMetric.lowerIsBetter ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
+            });
           }
           
-          resultGroups[obj] = withScores.slice(0, top_n || 5).map(e => ({
-            entity_id: e.entity_id,
-            name: e.name,
-            spend: { value: e.totals.spend_total, formatted: formatCurrency(e.totals.spend_total) },
-            purchases: { value: e.totals.purchases_total, formatted: formatNumber(e.totals.purchases_total) },
-            leads: { value: e.totals.leads_total, formatted: formatNumber(e.totals.leads_total) },
-            link_clicks: { value: e.totals.link_clicks_total, formatted: formatNumber(e.totals.link_clicks_total) },
-            impressions: { value: e.totals.impressions_total, formatted: formatNumber(e.totals.impressions_total) },
-            cpa: e.kpis.cpa ? { value: e.kpis.cpa, formatted: formatCurrency(e.kpis.cpa) } : null,
-            cpl: e.kpis.cpl ? { value: e.kpis.cpl, formatted: formatCurrency(e.kpis.cpl) } : null,
-            efficiency_per_100k: { value: e.efficiency_per_100k, formatted: e.efficiency_per_100k.toFixed(2) },
-            score: { value: e.score, formatted: `${(e.score * 100).toFixed(1)}%` },
-            why: generateWhy(e, obj),
-          }));
+          resultGroups[obj] = ents.slice(0, top_n || 5).map(e => {
+            const primaryValue = primaryMetric.field === 'totals' ? e.totals[primaryMetric.metric] : e.kpis[primaryMetric.metric];
+            
+            return {
+              entity_id: e.entity_id,
+              name: e.name,
+              spend: { value: e.totals.spend_total, formatted: formatCurrency(e.totals.spend_total) },
+              purchases: { value: e.totals.purchases_total, formatted: formatNumber(e.totals.purchases_total) },
+              leads: { value: e.totals.leads_total, formatted: formatNumber(e.totals.leads_total) },
+              link_clicks: { value: e.totals.link_clicks_total, formatted: formatNumber(e.totals.link_clicks_total) },
+              impressions: { value: e.totals.impressions_total, formatted: formatNumber(e.totals.impressions_total) },
+              cpa: e.kpis.cpa ? { value: e.kpis.cpa, formatted: formatCurrency(e.kpis.cpa) } : null,
+              cpl: e.kpis.cpl ? { value: e.kpis.cpl, formatted: formatCurrency(e.kpis.cpl) } : null,
+              efficiency_per_100k: { value: e.efficiency_per_100k, formatted: e.efficiency_per_100k.toFixed(2) },
+              primary_metric: { label: primaryMetric.label, value: primaryValue || 0, formatted: formatNumber(primaryValue || 0) },
+              why: generateWhy(e, obj),
+            };
+          });
         }
+        
+        console.log(`[rankCampaignsTool] Returning groups with ${Object.keys(resultGroups).length} objectives`);
+        Object.entries(resultGroups).forEach(([obj, items]) => {
+          console.log(`[rankCampaignsTool]   ${obj}: ${items.length} items`);
+        });
         
         return JSON.stringify({
           date_range_user: {
@@ -1275,10 +1345,10 @@ export const getEntityMetadataTool = tool(
       
       if (entity_type === "ad") {
         const ads = await Ads.find({
-          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          external_id: { $in: entity_ids },
           account_id: accountObjId
         })
-          .select("_id name set_id")
+          .select("_id name external_id set_id")
           .populate({
             path: "set_id",
             select: "_id name campaign_id",
@@ -1292,22 +1362,20 @@ export const getEntityMetadataTool = tool(
         return JSON.stringify({
           entity_type: "ad",
           entities: ads.map(ad => ({
-            ad_id: ad._id.toString(),
-            ad_name: ad.name,
-            adset_id: ad.set_id?._id?.toString() || null,
+            name: ad.name,
             adset_name: ad.set_id?.name || null,
-            campaign_id: ad.set_id?.campaign_id?._id?.toString() || null,
             campaign_name: ad.set_id?.campaign_id?.name || null,
+            // ❌ DO NOT return IDs to end users (security)
           }))
         });
       }
       
       if (entity_type === "adset") {
         const adsets = await AdsSet.find({
-          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          external_id: { $in: entity_ids },
           account_id: accountObjId
         })
-          .select("_id name campaign_id")
+          .select("_id name external_id campaign_id")
           .populate({
             path: "campaign_id",
             select: "_id name"
@@ -1317,27 +1385,28 @@ export const getEntityMetadataTool = tool(
         return JSON.stringify({
           entity_type: "adset",
           entities: adsets.map(adset => ({
-            adset_id: adset._id.toString(),
-            adset_name: adset.name,
-            campaign_id: adset.campaign_id?._id?.toString() || null,
+            name: adset.name,
             campaign_name: adset.campaign_id?.name || null,
+            // ❌ DO NOT return IDs to end users (security)
           }))
         });
       }
       
       if (entity_type === "campaign") {
         const campaigns = await AdsCampaign.find({
-          _id: { $in: entity_ids.map(id => new mongoose.Types.ObjectId(id)) },
+          external_id: { $in: entity_ids },
           account_id: accountObjId
         })
-          .select("_id name")
+          .select("_id name external_id status objective")
           .lean();
         
         return JSON.stringify({
           entity_type: "campaign",
           entities: campaigns.map(campaign => ({
-            campaign_id: campaign._id.toString(),
-            campaign_name: campaign.name,
+            name: campaign.name,
+            status: campaign.status, // ACTIVE, PAUSED, ARCHIVED
+            objective: campaign.objective
+            // ❌ DO NOT return IDs to end users (security)
           }))
         });
       }

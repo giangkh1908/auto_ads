@@ -239,7 +239,7 @@ export const startConversationSession = async (req, res) => {
 // Chat analyze
 export const chatAnalyze = async (req, res) => {
   try {
-    const { message, conversation_id, account_id } = req.body;
+    const { message, conversation_id, account_id, context, conversationHistory: frontendHistory } = req.body;
     const user_id = req.user._id;
 
     if (!message || !account_id) {
@@ -280,16 +280,18 @@ export const chatAnalyze = async (req, res) => {
     });
 
     // Step 3: Process with Agent Executor
-    // We pass the last few messages as history (include data field for assistant messages)
-    const history = conversation.messages.slice(-10).map(m => ({
-      role: m.role,
-      content: m.content,
-      data: m.data || null
-    }));
+    // Frontend sends conversationHistory - use it directly
+    const history = frontendHistory || [];
     
     let result;
     try {
-      result = await agentExecutor.processMessage(user_id, account_id, message, history);
+      result = await agentExecutor.processMessage(
+        user_id, 
+        account_id, 
+        message, 
+        history,
+        context // Pass context from frontend
+      );
     } catch (agentError) {
       console.error("[chatController] AgentExecutor error:", agentError);
       
@@ -322,7 +324,20 @@ export const chatAnalyze = async (req, res) => {
       conversation.messages = conversation.messages.slice(-50);
     }
 
-    await conversation.save();
+    // Save with timeout protection
+    try {
+      await Promise.race([
+        conversation.save(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('MongoDB save timeout')), 5000)
+        )
+      ]);
+    } catch (saveError) {
+      console.error("[chatController] Failed to save conversation:", saveError);
+      // Continue anyway - don't block response
+    }
+
+    console.log("[chatController] Returning entities:", result.entities);
 
     return res.json({
       success: true,
@@ -330,7 +345,8 @@ export const chatAnalyze = async (req, res) => {
       response: result.response,
       intent: result.intent,
       data: result.data,
-      suggestions: result.suggestions
+      suggestions: result.suggestions,
+      entities: result.entities || [] // Return entities for frontend context tracking
     });
 
   } catch (error) {

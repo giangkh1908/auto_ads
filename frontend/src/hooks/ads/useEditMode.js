@@ -27,13 +27,13 @@ export function useEditMode({
   useEffect(() => {
     const loadUpdateData = async () => {
       if (mode !== "edit" || !editingItem || !selectedAccountId) {
-        console.log("🔍 Early return:", { mode });
+        // console.log("🔍 Early return:", { mode });
         return;
       }
 
       // Chỉ load MỘT LẦN
       if (hasLoadedRef.current) {
-        console.log("⏭️ [SKIP] Already loaded full hierarchy");
+        // console.log("⏭️ [SKIP] Already loaded full hierarchy");
         return;
       }
 
@@ -76,30 +76,30 @@ export function useEditMode({
             params: { adset_id: itemId },
           });
           const adsetJson = adsetRes.data;
-          console.log("Adset response:", adsetJson);
+          // console.log("Adset response:", adsetJson);
           adsetData = adsetJson.data;
           campaignId = adsetData?.campaign_id;
         } else if (editingItem.type === "ad") {
-          console.log("Fetching ad data for ID:", itemId);
+          // console.log("Fetching ad data for ID:", itemId);
           const adRes = await axiosInstance.get("/api/ads/database", {
             params: { ad_id: itemId },
           });
           const adJson = adRes.data;
-          console.log("Ad response:", adJson);
+          // console.log("Ad response:", adJson);
           adData = adJson.data;
 
           // Ad không có campaign_id trực tiếp, cần tìm qua set_id
           if (adData && adData.set_id) {
-            console.log("Ad không có campaign_id, tìm qua set_id:", adData.set_id);
+            // console.log("Ad không có campaign_id, tìm qua set_id:", adData.set_id);
             const adsetRes = await axiosInstance.get("/api/adsets/database", {
               params: { adset_id: adData.set_id },
             });
             const adsetJson = adsetRes.data;
-            console.log("Adset response for campaign lookup:", adsetJson);
+            // console.log("Adset response for campaign lookup:", adsetJson);
 
             if (adsetJson.success && adsetJson.data) {
               campaignId = adsetJson.data.campaign_id;
-              console.log("Found campaign_id through adset:", campaignId);
+              // console.log("Found campaign_id through adset:", campaignId);
             }
           } else {
             campaignId = adData?.campaign_id;
@@ -120,8 +120,8 @@ export function useEditMode({
           params: { campaign_id: campaignId },
         });
         campaignData = campaignRes.data.data;
-        console.log('[DEBUG objective-outcome]', campaignData.objective);
-        console.log("Campaign loaded:", campaignData?.name);
+        // console.log('[DEBUG objective-outcome]', campaignData.objective);
+        // console.log("Campaign loaded:", campaignData?.name);
 
         // Step 2: Fetch ALL adsets của campaign
         updateProgress?.({ current: 2, message: `Đang tải adsets của "${campaignData?.name}"...` });
@@ -129,7 +129,7 @@ export function useEditMode({
           params: { campaign_id: campaignId },
         });
         const allAdsetsData = adsetsRes.data.data || [];
-        console.log(`Loaded ${allAdsetsData.length} adsets`);
+        // console.log(`Loaded ${allAdsetsData.length} adsets`);
 
         // Step 3: Fetch ALL ads của campaign
         updateProgress?.({ current: 3, message: `Đang tải ads (${allAdsetsData.length} adsets)...` });
@@ -137,7 +137,7 @@ export function useEditMode({
           params: { campaign_id: campaignId },
         });
         const allAdsData = adsRes.data.data || [];
-        console.log(`Loaded ${allAdsData.length} ads`);
+        // console.log(`Loaded ${allAdsData.length} ads`);
 
         // Step 4: Fetch ALL creatives (parallel with error handling)
         const creativeIds = [...new Set(allAdsData.map(ad => ad.creative_id).filter(Boolean))];
@@ -161,7 +161,7 @@ export function useEditMode({
               creativesMap[creative._id] = creative;
             }
           });
-          console.log(`Loaded ${Object.keys(creativesMap).length} creatives`);
+          // console.log(`Loaded ${Object.keys(creativesMap).length} creatives`);
         }
 
         // Step 5: Build FULL HIERARCHY structure
@@ -271,7 +271,7 @@ export function useEditMode({
         };
 
         const adsetsWithAds = allAdsetsData.map(buildAdsetWithAds);
-        console.log(`Built hierarchy: ${adsetsWithAds.length} adsets with ${allAdsData.length} total ads`);
+        // console.log(`Built hierarchy: ${adsetsWithAds.length} adsets with ${allAdsData.length} total ads`);
 
         // Step 5: Update progress - Building hierarchy
         updateProgress?.({ current: 4, message: 'Đang xây dựng cấu trúc dữ liệu...' });
@@ -318,7 +318,7 @@ export function useEditMode({
         }
 
       } catch (e) {
-        console.log("Failed to load update data from database:", e);
+        // console.log("Failed to load update data from database:", e);
         
         // Update progress: Error
         updateProgress?.({

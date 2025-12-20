@@ -141,7 +141,7 @@ export const fetchLatestNotesBatch = async (items) => {
     }
     return new Map();
   } catch (error) {
-    console.error("Error fetching notes batch:", error);
+    //console.error("Error fetching notes batch:", error);
     return new Map();
   }
 };
@@ -163,7 +163,7 @@ export const fetchLatestNote = async (targetType, targetId) => {
     }
     return null;
   } catch (error) {
-    console.error("Error fetching latest note:", error);
+    //console.error("Error fetching latest note:", error);
     return null;
   }
 };
@@ -200,7 +200,7 @@ export const saveNote = async (
       return response.data.success ? response.data.data : null;
     }
   } catch (error) {
-    console.error("Error saving note:", error);
+    //console.error("Error saving note:", error);
     throw error;
   }
 };

@@ -462,14 +462,14 @@ const AiPopup = ({
                   <span style={{ animation: 'spin 1s linear infinite' }}>⟳</span> Đang tạo...
                 </>
               ) : (
-                '🪄 Tạo từ khóa cùng nghĩa'
+                'Tạo từ khóa cùng nghĩa'
               )}
             </button>
           </div>
 
           {/* Từ khóa cùng nghĩa */}
           <div className="ai-config-field">
-            <label className="ai-config-label">Từ khóa cùng nghĩa</label>
+            <label className="ai-config-label">Từ khóa cùng nghĩa (click chọn từ khóa để thêm vào)</label>
             <div className="keywords-container" style={{
               display: 'flex',
               flexWrap: 'wrap',
@@ -555,7 +555,7 @@ const AiPopup = ({
                   fontSize: '14px'
                 }}
               >
-                💾 {showSaveConfig ? 'Ẩn' : 'Lưu config này'}
+                {showSaveConfig ? 'Ẩn' : 'Lưu config này'}
               </button>
               {showSaveConfig && (
                 <div style={{ marginTop: '8px' }}>

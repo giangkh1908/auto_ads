@@ -227,7 +227,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
         
         // ✅ Auto refresh data sau khi xóa thành công
         if (onRefresh) {
-          console.log('🔄 Auto refreshing data after delete...');
+          // console.log('🔄 Auto refreshing data after delete...');
           setTimeout(() => {
             onRefresh();
           }, 2000); // Delay 2s để user thấy success message
@@ -259,7 +259,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
         
         // ✅ Auto refresh data sau khi xóa một phần thành công
         if (onRefresh && successCount > 0) {
-          console.log('🔄 Auto refreshing data after partial delete...');
+          // console.log('🔄 Auto refreshing data after partial delete...');
           setTimeout(() => {
             onRefresh();
           }, 2000); // Delay 2s để user thấy warning message
@@ -318,7 +318,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
 
     try {
       // TODO: Implement archive API calls
-      console.log(`Lưu trữ ${idsToArchive.length} items:`, idsToArchive);
+      // console.log(`Lưu trữ ${idsToArchive.length} items:`, idsToArchive);
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast.success(`Đã lưu trữ ${idsToArchive.length} ${activeTab} thành công!`);

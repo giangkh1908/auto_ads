@@ -5,7 +5,7 @@ class ChatService {
   /**
    * Send message to AI chat analytics
    */
-  async sendMessage({ message, account_id, conversation_id = null }) {
+  async sendMessage({ message, account_id, conversation_id = null, conversationHistory = null, context = null }) {
     try {
       const response = await axiosInstance.post(
         `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/ai/chat/analyze`,
@@ -13,6 +13,8 @@ class ChatService {
           message,
           account_id,
           conversation_id,
+          conversationHistory,
+          context,
         }
       );
       return response.data;

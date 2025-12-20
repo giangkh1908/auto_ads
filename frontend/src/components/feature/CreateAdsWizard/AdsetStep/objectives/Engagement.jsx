@@ -2,6 +2,7 @@ import {
   ADSET_CONFIG_BY_OBJECTIVE,
   getCompatibleBillingEvents,
 } from "../../../../../constants/wizardConstants";
+import i18n from "../../../../../i18n.js";
 
 const BILLING_EVENT_LABELS = {
   IMPRESSIONS: "Hiển thị (lượt xem quảng cáo)",
@@ -16,7 +17,7 @@ const EngagementSchema = {
   sections: [
     {
       id: "name",
-      title: "Tên nhóm quảng cáo",
+      title: i18n.t('wizard:objective_schema.name_title'),
       icon: "Circle",
       fields: [
         {
@@ -34,14 +35,14 @@ const EngagementSchema = {
     },
     {
       id: "performance-goal",
-      title: "Mục tiêu hiệu quả",
+      title: i18n.t('wizard:objective_schema.performance_goal_title'),
       icon: "Target",
       description: "Chọn loại tương tác bạn muốn tối ưu hóa",
       fields: [
         {
           type: "select",
           name: "optimization_goal",
-          label: "Loại tương tác",
+          label: "* Loại tương tác",
           options: (objective) => {
             const config = ADSET_CONFIG_BY_OBJECTIVE[objective];
             const goals = config?.optimization_goals || [];
@@ -62,13 +63,13 @@ const EngagementSchema = {
     },
     {
       id: "billing",
-      title: "Thanh toán",
+      title: i18n.t('wizard:objective_schema.billing_title'),
       icon: "Target",
       fields: [
         {
           type: "select",
           name: "billing_event",
-          label: "Sự kiện tính phí",
+          label: i18n.t('wizard:objective_schema.billing_event_label'),
           options: (objective, adset) => {
             const events = getCompatibleBillingEvents(
               objective,
@@ -94,9 +95,9 @@ const EngagementSchema = {
     },
     {
       id: "engagement-destination",
-      title: "Vị trí chuyển đổi",
+      title: i18n.t('wizard:objective_schema.conversion_destination_title'),
       icon: "Target",
-      // ✅ Ẩn section này nếu chưa chọn optimization_goal
+      // Ẩn section này nếu chưa chọn optimization_goal
       visibleIf: (adset) => {
         return adset?.optimization_goal && adset.optimization_goal !== "";
       },
@@ -105,7 +106,7 @@ const EngagementSchema = {
           type: "radio-group",
           name: "engagement_destination",
           // label: "Chọn nơi bạn muốn người dùng tương tác",
-          // ✅ Filter options dựa trên optimization_goal
+          // Filter options dựa trên optimization_goal
           options: (objective, adset) => {
             const allOptions = [
               {
@@ -231,7 +232,7 @@ const EngagementSchema = {
     },
     {
       id: "promoted-object",
-      title: "Đối tượng được quảng cáo",
+      title: i18n.t('wizard:objective_schema.promoted_object_title'),
       icon: "Target",
       visibleIf: (adset) =>
         adset.optimization_goal === "PAGE_LIKES" ||
@@ -274,13 +275,13 @@ const EngagementSchema = {
     },
     {
       id: "budget",
-      title: "Ngân sách",
+      title: i18n.t('wizard:objective_schema.budget_title'),
       icon: "DollarSign",
       fields: [
         {
           type: "select",
           name: "budgetType",
-          label: "Loại ngân sách",
+          label: i18n.t('wizard:objective_schema.budget_type_label'),
           options: [
             { value: "daily", label: "Ngân sách hàng ngày" },
             { value: "lifetime", label: "Ngân sách tổng" },
@@ -291,7 +292,7 @@ const EngagementSchema = {
         {
           type: "money",
           name: "budgetAmount",
-          label: "Số tiền",
+          label: i18n.t('wizard:objective_schema.amount_label'),
           currency: "VND",
           validate: (value) => {
             if (!value || value <= 0) return "Ngân sách phải > 0";
@@ -302,33 +303,33 @@ const EngagementSchema = {
     },
     {
       id: "schedule",
-      title: "Thời gian",
+      title: i18n.t('wizard:objective_schema.schedule_title'),
       icon: "Calendar",
       layout: "horizontal",
       fields: [
         {
           type: "datetime",
           name: "start_time",
-          label: "Ngày bắt đầu",
+          label: i18n.t('wizard:objective_schema.start_time_label'),
           disabled: (adset, mode) => mode === "edit" && adset?.external_id,
         },
         {
           type: "datetime",
           name: "end_time",
-          label: "Ngày kết thúc",
+          label: i18n.t('wizard:objective_schema.end_time_label'),
         },
       ],
     },
     {
       id: "targeting",
-      title: "Đối tượng tùy chỉnh",
+      title: i18n.t('wizard:objective_schema.targeting_title'),
       icon: "Users",
       fields: [
         {
           type: "age-range",
           nameMin: "targeting.ageMin",
           nameMax: "targeting.ageMax",
-          label: "Tuổi",
+          label: i18n.t('wizard:objective_schema.age_label'),
           min: 13,
           max: 65,
           defaultMin: 18,
@@ -337,7 +338,7 @@ const EngagementSchema = {
         {
           type: "select",
           name: "targeting.gender",
-          label: "Giới tính",
+          label: i18n.t('wizard:objective_schema.gender_label'),
           options: [
             { value: "all", label: "Tất cả" },
             { value: "male", label: "Nam" },
@@ -348,7 +349,7 @@ const EngagementSchema = {
         {
           type: "select",
           name: "targeting.language",
-          label: "Ngôn ngữ",
+          label: i18n.t('wizard:objective_schema.language_label'),
           options: () => {
             const languages = [
               { code: "all", name: "Tất cả ngôn ngữ" },
@@ -377,7 +378,7 @@ const EngagementSchema = {
     },
     {
       id: "location",
-      title: "Vị trí địa lý",
+      title: i18n.t('wizard:objective_schema.location_title'),
       icon: "MapPin",
       fields: [
         {
@@ -411,13 +412,13 @@ const EngagementSchema = {
     },
     {
       id: "detailed-targeting",
-      title: "Nhắm mục tiêu chi tiết",
+      title: i18n.t('wizard:objective_schema.detailed_targeting_title'),
       icon: "Search",
       fields: [
         {
           type: "detailed_targeting",
           name: "targeting.detailed_targeting",
-          label: "Sở thích, hành vi, nhân khẩu học",
+          label: i18n.t('wizard:objective_schema.detailed_targeting_label'),
           placeholder: "Tìm kiếm sở thích, hành vi, nhân khẩu học...",
           default: [],
         },
@@ -425,13 +426,13 @@ const EngagementSchema = {
     },
     {
       id: "bid-strategy",
-      title: "Chiến lược giá thầu",
+      title: i18n.t('wizard:objective_schema.bid_strategy_title'),
       icon: "Target",
       fields: [
         {
           type: "select",
           name: "bid_strategy",
-          label: "Chiến lược",
+          label: i18n.t('wizard:objective_schema.strategy_label'),
           options: [
             { value: "LOWEST_COST_WITHOUT_CAP", label: "Giá thầu tối thiểu" },
             {
@@ -444,7 +445,7 @@ const EngagementSchema = {
         {
           type: "number",
           name: "bid_amount",
-          label: "Giới hạn giá thầu",
+          label: i18n.t('wizard:objective_schema.bid_cap_label'),
           suffix: "VNĐ",
           min: 1000,
           placeholder: "1000",

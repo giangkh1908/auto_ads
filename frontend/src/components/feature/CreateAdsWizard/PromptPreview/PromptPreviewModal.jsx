@@ -29,14 +29,14 @@ const PromptPreviewModal = ({ isOpen, onClose, configId, config = null }) => {
         return;
       }
 
-      console.log('Loading preview for configId:', configIdToUse, 'target:', target);
+      // console.log('Loading preview for configId:', configIdToUse, 'target:', target);
       const response = await aiConfigService.previewPrompt(
         configIdToUse,
         target,
         maxLen
       );
 
-      console.log('Preview API response:', response);
+      // console.log('Preview API response:', response);
       if (response.success) {
         setPreviewData(response);
       } else {

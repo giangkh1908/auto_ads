@@ -169,7 +169,7 @@ function ConnectAdAccount() {
       setFbAdAccounts(fbAccounts)
       toast.success(t('connect_ad_account.refresh_success'))
     } catch (error) {
-      console.log('Refresh ad accounts error:', error)
+      // console.log('Refresh ad accounts error:', error)
       toast.error(t('connect_ad_account.refresh_error', { error: error.message || 'Unknown error' }))
     } finally {
       setSyncing(false)
