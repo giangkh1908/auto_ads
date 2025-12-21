@@ -43,7 +43,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
    * Toggle entity status (ON/OFF)
    */
   const toggleRow = useCallback(async (id, activeTab) => {
-    const key = activeTab === 'campaigns' ? 'campaigns' 
+    const key = activeTab === 'campaigns' ? 'campaigns'
       : activeTab === 'adsets' ? 'adsets' : 'ads';
     const entityType = activeTab.slice(0, -1);
     const row = datasets[key].find(r => r.id === id);
@@ -108,12 +108,12 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
    * Handle delete action
    */
   const handleDelete = useCallback((id, activeTab) => {
-    const key = activeTab === 'campaigns' ? 'campaigns' 
+    const key = activeTab === 'campaigns' ? 'campaigns'
       : activeTab === 'adsets' ? 'adsets' : 'ads';
-    const entityName = key === 'campaigns' ? 'chiến dịch' 
+    const entityName = key === 'campaigns' ? 'chiến dịch'
       : key === 'adsets' ? 'nhóm quảng cáo' : 'quảng cáo';
 
-    const idsToDelete = id 
+    const idsToDelete = id
       ? [id]
       : datasets[key].filter(item => item.isChecked).map(item => item.id);
 
@@ -170,12 +170,12 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
       // 3️⃣ Xóa từng item và update progress
       for (let i = 0; i < idsToDelete.length; i++) {
         const delId = idsToDelete[i];
-        
+
         try {
           if (key === 'campaigns') await deleteCampaign(delId, fbToken);
           else if (key === 'adsets') await deleteAdSet(delId, fbToken);
           else await deleteAd(delId, fbToken);
-          
+
           successCount++;
         } catch (error) {
           errorCount++;
@@ -188,7 +188,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
         // Update progress
         const current = i + 1;
         const percentage = Math.round((current / idsToDelete.length) * 100);
-        
+
         setProgressPopup(prev => ({
           ...prev,
           progress: {
@@ -203,10 +203,10 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
       }
 
       // 4️⃣ Update datasets (chỉ xóa items thành công)
-      const successIds = idsToDelete.filter((id) => 
+      const successIds = idsToDelete.filter((id) =>
         !errors.find(e => e.id === id)
       );
-      
+
       setDatasets(prev => ({
         ...prev,
         [key]: prev[key].filter(item => !successIds.includes(item.id))
@@ -224,7 +224,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
           }
         }));
         toast.success(`Đã xóa ${successCount} ${entityName} thành công!`);
-        
+
         // ✅ Auto refresh data sau khi xóa thành công
         if (onRefresh) {
           // console.log('🔄 Auto refreshing data after delete...');
@@ -256,7 +256,7 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
           }
         }));
         toast.warning(`Xóa thành công ${successCount}/${idsToDelete.length}. Có ${errorCount} lỗi.`);
-        
+
         // ✅ Auto refresh data sau khi xóa một phần thành công
         if (onRefresh && successCount > 0) {
           // console.log('🔄 Auto refreshing data after partial delete...');
@@ -285,9 +285,9 @@ export function useAdsActions(datasets, setDatasets, onRefresh) {
    * Handle archive action
    */
   const handleArchive = useCallback((id, activeTab) => {
-    const key = activeTab === 'campaigns' ? 'campaigns' 
+    const key = activeTab === 'campaigns' ? 'campaigns'
       : activeTab === 'adsets' ? 'adsets' : 'ads';
-    const entityName = key === 'campaigns' ? 'chiến dịch' 
+    const entityName = key === 'campaigns' ? 'chiến dịch'
       : key === 'adsets' ? 'nhóm quảng cáo' : 'quảng cáo';
 
     const idsToArchive = id
