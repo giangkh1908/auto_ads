@@ -201,7 +201,7 @@ export async function listAdsCtrl(req, res) {
           .populate('created_by', 'full_name email')
           .populate({
             path: 'set_id',
-            select: 'name campaign_id',
+            select: 'name campaign_id daily_budget lifetime_budget',
             populate: {
               path: 'campaign_id',
               select: 'name objective'
@@ -226,7 +226,7 @@ export async function listAdsCtrl(req, res) {
           .populate('created_by', 'full_name email')
           .populate({
             path: 'set_id',
-            select: 'name campaign_id',
+            select: 'name campaign_id daily_budget lifetime_budget',
             populate: {
               path: 'campaign_id',
               select: 'name objective'
