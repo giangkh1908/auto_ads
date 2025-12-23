@@ -68,6 +68,7 @@ function CheckOut() {
           {
             orderData: {
               name: orderData.packageType,
+              shops: orderData.shops,
               pages: orderData.pages,
               employees: orderData.employees,
               packagePricing: orderData.totalPrice,
@@ -174,7 +175,6 @@ function CheckOut() {
         }
         return;
       }
-
       toast.error(t("checkout.messages.methodInDevelopment"));
     } catch (error) {
       console.error("Payment error:", error);
