@@ -112,16 +112,16 @@ function Control({
   // Add new campaign
   // Fix hàm addCampaign
   const addCampaign = () => {
-    // ✅ Generate ID cho adset đầu tiên
+    // Generate ID cho adset đầu tiên
     const firstAdsetId = `temp_adset_${Date.now()}`;
 
-    // ✅ Lấy campaign hiện tại làm template
+    // Lấy campaign hiện tại làm template
     const currentCampaign =
       campaignsList[selectedCampaignIndex] || INITIAL_DATA.campaign;
 
     const newCampaign = {
       ...INITIAL_DATA.campaign,
-      // ✅ Copy các thông tin quan trọng từ campaign hiện tại
+      // Copy các thông tin quan trọng từ campaign hiện tại
       facebookPageId: currentCampaign.facebookPageId,
       facebookPage: currentCampaign.facebookPage,
       facebookPageAvatar: currentCampaign.facebookPageAvatar,
@@ -134,12 +134,12 @@ function Control({
         {
           ...INITIAL_DATA.adset,
           id: Date.now() + 1,
-          _id: firstAdsetId, // ✅ Set _id cho adset
+          _id: firstAdsetId, // Set _id cho adset
           name: t('main.default_adset_name'),
-          // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+          // Mỗi adset có targeting.locations riêng (không dùng chung)
           targeting: {
             ...INITIAL_DATA.adset.targeting,
-            // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+            // Khởi tạo locations với structure mới, mỗi adset có riêng
             locations: {
               regions: [],
               cities: [],
@@ -152,7 +152,7 @@ function Control({
               ...INITIAL_DATA.ad,
               id: Date.now() + 2,
               name: t('main.default_ad_name'),
-              adset_id: firstAdsetId, // ✅ Set adset_id cho ad
+              adset_id: firstAdsetId, // Set adset_id cho ad
             },
           ],
         },
@@ -178,22 +178,22 @@ function Control({
   // Add new adset
   const addAdset = (campaignIndex) => {
     setCampaignsList((prev) => {
-      // ✅ Deep clone để tránh mutation và shared references
+      // Deep clone để tránh mutation và shared references
       const next = JSON.parse(JSON.stringify(prev));
 
       // Lấy campaign hiện tại
       const currentCampaign = next[campaignIndex];
       if (!currentCampaign) return next;
 
-      // ✅ Generate ID cho adset mới
+      // Generate ID cho adset mới
       const newAdsetId = `temp_adset_${Date.now()}`;
 
-      // ✅ Tìm adset đầu tiên có Facebook Page để copy
+      // Tìm adset đầu tiên có Facebook Page để copy
       const firstAdsetWithPage = (currentCampaign.adsets || []).find(
         (adset) => adset.facebookPageId || adset.promoted_object?.page_id
       );
 
-      // ✅ Copy Facebook Page từ adset đầu tiên hoặc từ campaign
+      // Copy Facebook Page từ adset đầu tiên hoặc từ campaign
       const sourceFacebookPageId =
         firstAdsetWithPage?.facebookPageId ||
         firstAdsetWithPage?.promoted_object?.page_id ||
@@ -204,16 +204,16 @@ function Control({
         firstAdsetWithPage?.facebookPageAvatar ||
         currentCampaign.facebookPageAvatar;
 
-      // ✅ Tạo adset mới với _id và ad có adset_id
+      // Tạo adset mới với _id và ad có adset_id
       const newAdset = {
         ...INITIAL_DATA.adset,
         id: Date.now(),
         _id: newAdsetId,
         name: `${t('ads:labels.adset')} ${(currentCampaign.adsets || []).length + 1}`,
-        // ✅ Mỗi adset có targeting.locations riêng (không dùng chung)
+        // Mỗi adset có targeting.locations riêng (không dùng chung)
         targeting: {
           ...INITIAL_DATA.adset.targeting,
-          // ✅ Khởi tạo locations với structure mới, mỗi adset có riêng
+          // Khởi tạo locations với structure mới, mỗi adset có riêng
           locations: {
             regions: [],
             cities: [],
@@ -221,7 +221,7 @@ function Control({
             excluded_ids: []
           },
         },
-        // ✅ Copy Facebook Page từ adset đầu tiên hoặc campaign
+        // Copy Facebook Page từ adset đầu tiên hoặc campaign
         ...(sourceFacebookPageId && {
           facebookPageId: sourceFacebookPageId,
           facebookPage: sourceFacebookPage,
@@ -236,12 +236,12 @@ function Control({
             ...INITIAL_DATA.ad,
             id: Date.now() + 1,
             name: t('main.default_ad_name'),
-            adset_id: newAdsetId, // ✅ Link ad với adset
+            adset_id: newAdsetId, // Link ad với adset
           },
         ],
       };
 
-      // ✅ Thêm adset vào campaign
+      // Thêm adset vào campaign
       currentCampaign.adsets = [...(currentCampaign.adsets || []), newAdset];
 
       return next;
@@ -258,7 +258,7 @@ function Control({
     const hasExternalId = !!adsetToDelete.external_id;
     const isEditMode = mode === "edit" || mode === "update";
 
-    // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
+    // Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
     if (isEditMode && adsetId) {
       try {
         toast.info(t('control.deleting_adset'));
@@ -273,7 +273,7 @@ function Control({
       }
     }
 
-    // ✅ Xóa khỏi campaignsList
+    // Xóa khỏi campaignsList
     setCampaignsList((prev) => {
       const next = [...prev];
       const currentCampaign = next[campaignIndex];
@@ -306,15 +306,15 @@ function Control({
       const currentAdset = currentCampaign.adsets[adsetIndex];
       if (!currentAdset) return next;
 
-      // ✅ Tạo ad mới với adset_id
+      // Tạo ad mới với adset_id
       const newAd = {
         ...INITIAL_DATA.ad,
         id: Date.now(),
         name: `${t('ads:labels.ad')} ${(currentAdset.ads || []).length + 1}`,
-        adset_id: currentAdset._id, // ✅ Set adset_id
+        adset_id: currentAdset._id, // Set adset_id
       };
 
-      // ✅ Thêm trực tiếp ad vào adset
+      // Thêm trực tiếp ad vào adset
       currentAdset.ads = [...(currentAdset.ads || []), newAd];
 
       return next;
@@ -332,7 +332,7 @@ function Control({
     const hasExternalId = !!adToDelete.external_id;
     const isEditMode = mode === "edit" || mode === "update";
 
-    // ✅ Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
+    // Nếu đang ở mode edit/update và có external_id hoặc _id, gọi API xóa
     if (isEditMode && adId) {
       try {
         toast.info(t('control.deleting'));
@@ -347,7 +347,7 @@ function Control({
       }
     }
 
-    // ✅ Xóa khỏi campaignsList
+    // Xóa khỏi campaignsList
     setCampaignsList((prev) => {
       const next = [...prev];
       const currentCampaign = next[campaignIndex];
@@ -463,7 +463,7 @@ function Control({
                   (campaign.adsets || [])
                     .filter((adset) => adset.status !== "DELETED")
                     .map((adset, adsetIndex) => {
-                      // ✅ Tính lại index sau khi filter để đảm bảo đúng với campaignsList
+                      // Tính lại index sau khi filter để đảm bảo đúng với campaignsList
                       const originalAdsetIndex = campaign.adsets.findIndex(
                         (a) => (a._id || a.id) === (adset._id || adset.id)
                       );
@@ -572,7 +572,7 @@ function Control({
                             (adset.ads || [])
                               .filter((ad) => ad.status !== "DELETED")
                               .map((ad) => {
-                                // ✅ Tính lại index sau khi filter để đảm bảo đúng với adset.ads
+                                // Tính lại index sau khi filter để đảm bảo đúng với adset.ads
                                 const originalAdIndex = adset.ads.findIndex(
                                   (a) => (a._id || a.id) === (ad._id || ad.id)
                                 );

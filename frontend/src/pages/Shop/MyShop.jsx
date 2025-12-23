@@ -14,7 +14,7 @@ import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverla
 function MyShop() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { pkg } = useMyPackage();
+  const { pkg, userPkg } = useMyPackage();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab] = useState("info");
@@ -76,7 +76,7 @@ function MyShop() {
       const res = await axiosInstance.get("/api/shops/owner");
       const data = res.data;
 
-      // console.log("🔹 API response:", data);
+      // console.log("API response:", data);
 
       if (data.success && Array.isArray(data.data)) {
         const formatted = data.data.map((shop) => {
@@ -88,6 +88,10 @@ function MyShop() {
           const canViewEmployee = permissions.some(
             (perm) =>
               perm.module === "employee" && perm.actions.includes("view")
+          );
+          const canUpgrade = permissions.some(
+            (perm) =>
+              perm.module === "shop_owner" && perm.actions.includes("upgrade_shop")
           );
 
           // Backend đã trả về limits, chỉ cần format lại
@@ -129,6 +133,7 @@ function MyShop() {
             status: shop.status || "Active",
             canUpdate,
             canViewEmployee,
+            canUpgrade,
           };
         });
 
@@ -138,7 +143,7 @@ function MyShop() {
         toast.error(data.message || "Không thể tải danh sách shop");
         setShops([]); // fallback an toàn
       }
-    } catch (e) {
+    } catch (error) {
       //console.error("Load shops error:", e);
       toast.error("Lỗi khi tải danh sách shop");
       setShops([]); // tránh lỗi map nếu lỗi API
@@ -203,11 +208,11 @@ function MyShop() {
         {/* Tạo page mới */}
         <div className="btn-add-shop">
           <div className="shop-usage-info">
-            {/* {currentShop && (
+            {userPkg?.package && (
               <span className="shop-usage-text">
-                Shop Usage: <strong>{currentShop.shopCount || 0}/{currentShop.shopLimit || 0}</strong>
+                Shop đã tạo: <strong>{userPkg?.usage?.shops || 0}/{userPkg?.limits?.shops || 1}</strong>
               </span>
-            )} */}
+            )}
           </div>
           <button
             className={`btn-add-new-page ${!pkg?.package ? 'premium-feature' : ''}`}
@@ -379,13 +384,15 @@ function MyShop() {
                             > */}
                           {/* <Pause size={14} />
                             </button> */}
-                          <button
-                            className="shop-action-btn shop-upgrade-btn"
-                            onClick={() => handleAction(shop.id, "upgrade")}
-                            title={t('shop.upgrade')}
-                          >
-                            <Star size={14} />
-                          </button>
+                          {shop.canUpgrade && (
+                            <button
+                              className="shop-action-btn shop-upgrade-btn"
+                              onClick={() => handleAction(shop.id, "upgrade")}
+                              title={t('shop.upgrade')}
+                            >
+                              <Star size={14} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -492,7 +499,7 @@ function MyShop() {
                     if (data.success) {
                       toast.success("Tạo shop thành công!");
                       setIsAddOpen(false);
-                      // 👉 Gọi lại API để refresh danh sách
+                      // Gọi lại API để refresh danh sách
                       await loadShops();
                     } else {
                       toast.error(data.message || "Không thể tạo shop");

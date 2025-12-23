@@ -290,5 +290,5 @@ export const useMyPackage = () => {
     }
   };
 
-  return { pkg, loading, error, hasFeature, canAdd, refetch };
+  return { pkg, userPkg, loading, error, hasFeature, canAdd, refetch };
 };

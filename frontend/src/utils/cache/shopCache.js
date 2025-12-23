@@ -16,19 +16,19 @@ export const clearAdsCache = () => {
   try {
     // 1. Xóa selected ad account
     localStorage.removeItem('selectedAdAccount');
-    
+
     // 2. Xóa selected account (dùng trong Analytics)
     localStorage.removeItem('selected_account_id');
     localStorage.removeItem('selected_account_name');
-    
+
     // 3. Xóa tất cả cache keys liên quan đến campaigns, adsets, ads
     const entityTypes = ['campaigns', 'adsets', 'ads'];
     const cacheKeysToRemove = [];
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      
+
       // Kiểm tra các pattern cache keys của campaigns, adsets, ads
       const matchesPattern = entityTypes.some(type => {
         // Pattern: `${type}_all_${accountId}` hoặc `${type}_${contextId}_${accountId}`
@@ -37,20 +37,20 @@ export const clearAdsCache = () => {
         const pattern2 = new RegExp(`^\\w+_${type}$`);
         return pattern1.test(key) || pattern2.test(key);
       });
-      
+
       if (matchesPattern) {
         cacheKeysToRemove.push(key);
       }
     }
-    
+
     cacheKeysToRemove.forEach(key => {
       localStorage.removeItem(key);
-      // console.log('✅ Đã xóa cache key:', key);
+      // console.log('Đã xóa cache key:', key);
     });
-    
-    // console.log('✅ Đã xóa tất cả cache của ads accounts và ads khi chuyển shop');
+
+    // console.log('Đã xóa tất cả cache của ads accounts và ads khi chuyển shop');
   } catch (error) {
-    //console.error('❌ Lỗi khi xóa cache ads:', error);
+    //console.error('Lỗi khi xóa cache ads:', error);
   }
 };
 
@@ -65,19 +65,19 @@ export const saveShopCache = (shop, previousShop = null) => {
       clearShopCache();
       return;
     }
-    
+
     // Kiểm tra xem shop có thay đổi không
     const shopChanged = !previousShop || previousShop.id !== shop.id;
-    
+
     // Nếu shop thay đổi, xóa cache ads
     if (shopChanged) {
       clearAdsCache();
     }
-    
+
     // Lưu cache trước khi dispatch event để đảm bảo data có sẵn
     localStorage.setItem(CACHE_KEY, JSON.stringify(shop));
     localStorage.setItem(SHOP_ID_KEY, shop.id);
-    
+
     // Dispatch event ngay sau khi lưu cache
     // Sử dụng setTimeout với delay 0 để đảm bảo localStorage đã được ghi
     setTimeout(() => {

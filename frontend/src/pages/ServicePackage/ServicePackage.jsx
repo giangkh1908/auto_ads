@@ -8,6 +8,7 @@ import axiosInstance from '../../utils/api/axios';
 import { toast } from 'sonner';
 import { getFeatureLabel } from '../../constants/app.constants';
 import { useShopPackage } from '../../hooks/shop/useShopPackage';
+import ConfirmationPopup from '../../components/common/ConfirmationPopup/ConfirmationPopup';
 
 function ServicePackage() {
   const { t } = useTranslation();
@@ -16,6 +17,11 @@ function ServicePackage() {
   const { shopPkg } = useShopPackage();
   const [activeTab, setActiveTab] = useState('3months');
   const [packages, setPackages] = useState([]);
+  const [confirmationPopup, setConfirmationPopup] = useState({
+    isOpen: false,
+    plan: null,
+    orderData: null,
+  });
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -67,6 +73,20 @@ function ServicePackage() {
     return currentPackageName === planName && normalizedCurrent === normalizedPlan;
   };
 
+  // Kiểm tra xem có phải downgrade từ Chatbot AI về Chatbot không
+  const isDowngradeFromAIToBasic = (plan) => {
+    if (!shopPkg || !shopPkg.package) return false;
+
+    const currentPackageName = shopPkg.package.name?.toLowerCase() || '';
+    const planName = plan.name?.toLowerCase() || '';
+
+    // Kiểm tra xem có phải từ Chatbot AI về Chatbot không
+    const isCurrentChatbotAI = currentPackageName.includes('chatbot ai');
+    const isPlanChatbot = planName.includes('chatbot') && !planName.includes('chatbot ai');
+
+    return isCurrentChatbotAI && isPlanChatbot;
+  };
+
   // Handle buy button click
   const handleBuyClick = (plan) => {
     if (!isAuthenticated) {
@@ -85,17 +105,53 @@ function ServicePackage() {
       name: plan.name,
       pages: plan.pages === '∞' ? 999 : parseInt(plan.pages),
       employees: plan.employees,
-      customers: parseInt(plan.conversations.replace(/,/g, '')),
+      customers: plan.conversations ? parseInt(plan.conversations.toString().replace(/,/g, '')) : 0,
       packagePricing: plan.price,
       duration: plan.planType
     };
+
+    // Kiểm tra xem có phải downgrade từ Chatbot AI về Chatbot không
+    if (isDowngradeFromAIToBasic(plan)) {
+      // Hiển thị confirmation popup
+      setConfirmationPopup({
+        isOpen: true,
+        plan: plan,
+        orderData: orderData,
+      });
+      return;
+    }
 
     // Navigate to order page with selected package data
     navigate('/order', { state: { selectedPackage: orderData } });
   };
 
+  // Handle confirm downgrade
+  const handleConfirmDowngrade = () => {
+    if (confirmationPopup.orderData) {
+      setConfirmationPopup({ isOpen: false, plan: null, orderData: null });
+      navigate('/order', { state: { selectedPackage: confirmationPopup.orderData } });
+    }
+  };
+
+  // Handle cancel downgrade
+  const handleCancelDowngrade = () => {
+    setConfirmationPopup({ isOpen: false, plan: null, orderData: null });
+  };
+
   return (
-    <div className="sp-page-wrapper">
+    <>
+      <ConfirmationPopup
+        isOpen={confirmationPopup.isOpen}
+        onClose={handleCancelDowngrade}
+        onConfirm={handleConfirmDowngrade}
+        type="warning"
+        title="Xác nhận chuyển gói"
+        message="Bạn đang chuyển từ gói Chatbot AI về gói Chatbot. Gói Chatbot có ít tính năng hơn so với gói Chatbot AI. Chuyển gói sẽ khiến tất cả các shop và nhân viên của bạn bị xóa. Bạn có chắc chắn muốn tiếp tục?"
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+      />
+      
+      <div className="sp-page-wrapper">
       {/* Hero Section */}
       <section className="sp-hero">
         <div className="sp-hero-content">
@@ -221,6 +277,7 @@ function ServicePackage() {
         </div>
       </section>
     </div>
+    </>
   );
 }
 

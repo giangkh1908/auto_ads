@@ -345,3 +345,25 @@
   border-top: 1px solid #e5e7eb;
 }
 
+
+.disabled-premium {
+  opacity: 0.7;
+  filter: grayscale(0.5);
+  background: #f9fafb !important;
+  border-style: dashed !important;
+}
+
+.premium-upgrade-hint {
+  position: absolute;
+  top: -24px;
+  right: 0;
+  font-size: 11px;
+  color: #d97706;
+  font-weight: 600;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #fcd34d;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  white-space: nowrap;
+}

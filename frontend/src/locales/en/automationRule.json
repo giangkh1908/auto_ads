@@ -210,7 +210,7 @@
         "noSchedule": "No schedule set"
     },
     "frequencyDisplay": {
-        "continuous": "Checked at least every 30 minutes.",
+        "continuous": "Every 30 minutes",
         "daily": "Daily from {{start}} to {{end}}",
         "custom": "Custom schedule",
         "notSet": "Not set"

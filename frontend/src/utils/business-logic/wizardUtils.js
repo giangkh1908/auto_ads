@@ -138,13 +138,13 @@ export function buildPayload({
       targeting: {
         age_min: adset.targeting.ageMin || 18,
         age_max: adset.targeting.ageMax || 65,
-        // ✅ Lấy location từ adset.targeting.locations và convert sang country codes
+        // Lấy location từ adset.targeting.locations và convert sang country codes
         geo_locations: {
           countries: convertCountryNamesToCodes(
             adset.targeting?.locations || ["Viet Nam"]
           ),
         },
-        // ✅ THÊM: Gender và language
+        // THÊM: Gender và language
         ...(adset.targeting?.gender && adset.targeting.gender !== "all" && {
           genders: adset.targeting.gender === "male" ? [1] : adset.targeting.gender === "female" ? [2] : [],
         }),
@@ -169,13 +169,13 @@ export function buildPayload({
       bid_amount: adset.bid_amount,
       ...(fbObjective === "OUTCOME_SALES" && adset.pixel_id
         ? {
-            promoted_object: {
-              pixel_id: adset.pixel_id,
-              ...(adset.conversion_event
-                ? { custom_event_type: adset.conversion_event }
-                : {}),
-            },
-          }
+          promoted_object: {
+            pixel_id: adset.pixel_id,
+            ...(adset.conversion_event
+              ? { custom_event_type: adset.conversion_event }
+              : {}),
+          },
+        }
         : {}),
       // Vị trí chuyển đổi/lưu lượng (prefill & update BE/FB)
       ...(adset.traffic_destination && {

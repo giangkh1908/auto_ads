@@ -17,13 +17,13 @@ export function useFacebookPages() {
         setLoading(true);
         // Lấy thông tin shop hiện tại và các page đã kết nối
         const me = await profileService.getCurrentProfile();
-        
-        // ✅ Ưu tiên lấy từ Shop (nguồn chính)
+
+        // Ưu tiên lấy từ Shop (nguồn chính)
         // Shop model có facebook_pages với page_info.name
         const shop = me?.data?.shop || me?.shop;
         const shopUser = me?.data?.shopUser || me?.shopUser;
 
-        // ✅ Lấy danh sách page mà user hiện tại có quyền (giống Dashboard)
+        // Lấy danh sách page mà user hiện tại có quyền (giống Dashboard)
         const shopUserPages = Array.isArray(shopUser?.facebook_pages)
           ? shopUser.facebook_pages
           : [];
@@ -37,17 +37,17 @@ export function useFacebookPages() {
             .map((p) => p.page_id)
         );
         const userHasRestriction = userAccessiblePageIds.size > 0;
-        
+
         // Lấy pages từ Shop trước (nguồn chính)
         let pagesSource = Array.isArray(shop?.facebook_pages)
           ? shop.facebook_pages
           : [];
-        
+
         // Nếu shop không có pages, fallback về shopUser
         if (!pagesSource.length && shopUserPages.length) {
           pagesSource = shopUserPages;
         }
-        
+
         // Lọc và map pages
         const connectedPages = pagesSource
           .filter((p) => {
@@ -63,14 +63,14 @@ export function useFacebookPages() {
           })
           .map((p) => ({
             id: p.page_id,
-            // ✅ Ưu tiên page_name từ ShopUser, fallback về page_info.name từ Shop
+            // Ưu tiên page_name từ ShopUser, fallback về page_info.name từ Shop
             name: p.page_name || p.page_info?.name || "Facebook Page",
             avatar:
               p.picture_url ||
               p.page_info?.picture_url ||
               `https://graph.facebook.com/${p.page_id}/picture?type=square`,
           }));
-        
+
         setFacebookPages(connectedPages);
       } catch (e) {
         // silent fail; selection sẽ rỗng

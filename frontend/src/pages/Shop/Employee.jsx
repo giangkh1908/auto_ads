@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { STORAGE_KEYS } from '../../constants/app.constants';
 import { useParams } from "react-router-dom";
 import axiosInstance from "../../utils/api/axios.js";
-import { getShopCache, saveShopCache } from "../../utils/cache/shopCache";
+import { getShopCache, saveShopCache, clearShopCache } from "../../utils/cache/shopCache";
 import ConfirmationPopup from "../../components/common/ConfirmationPopup/ConfirmationPopup.jsx";
 import noAvatar from "../../assets/no-avatar.jpg";
 import { useMyPackage } from "../../hooks/shop/useMyPackage";
@@ -265,14 +265,40 @@ function Employee() {
   const handleOpenPageAssignModal = async (employee) => {
     try {
       setSelectedEmployee(employee);
+
+      // Lấy danh sách tất cả Pages từ Facebook
       const res = await axiosInstance.get("/api/shops/facebook/pages");
       const data = res.data;
-      if (data.success) {
-        setPages(data.data.pages || []);
-        setShowModal(true);
-      } else {
+      if (!data.success) {
         toast.error("Không thể tải danh sách Page");
+        return;
       }
+
+      const allPages = data.data.pages || [];
+      setPages(allPages);
+
+      // Lấy danh sách Pages đã được phân quyền cho employee này
+      try {
+        const assignedRes = await axiosInstance.get(
+          `/api/shop-users/${actualShopId}/employee/${employee.id}/pages`
+        );
+
+        if (assignedRes.data.success) {
+          const assignedPageIds = assignedRes.data.data || [];
+
+          // Pre-select các pages đã được phân quyền
+          const preSelected = allPages.filter(p =>
+            assignedPageIds.includes(p.id)
+          );
+          setSelectedPages(preSelected);
+        }
+      } catch (assignedError) {
+        // Nếu không lấy được pages đã phân quyền, bắt đầu với danh sách rỗng
+        console.error("Error fetching assigned pages:", assignedError);
+        setSelectedPages([]);
+      }
+
+      setShowModal(true);
     } catch (error) {
       //console.error("Error loading pages:", error);
       toast.error(
@@ -528,25 +554,68 @@ function Employee() {
         setIsLoadingRemove(false);
         setSelectedEmployeeForRemove(null);
 
-        // Hiển thị toast success
-        toast.success(data.message || "Đã xóa nhân viên thành công!");
+        // Kiểm tra nếu là tự xóa và có shop để switch
+        if (data.data?.isSelfRemoval && data.data?.switchedShop) {
+          const switchedShop = data.data.switchedShop;
+          
+          // Lấy shop cũ trước khi xóa cache
+          const previousShop = getShopCache();
+          // Xóa cache cũ
+          clearShopCache();
+          
+          // Cập nhật localStorage với shop mới
+          localStorage.setItem("selectedShopId", switchedShop.id);
 
-        // Reload lại danh sách employees để đảm bảo đồng bộ với backend
-        // (Backend đã xóa hoàn toàn ShopUser và UserRole)
-        const reloadRes = await axiosInstance.get(`/api/shop-users/${actualShopId}`);
-        const reloadData = reloadRes.data;
+          // Tạo object shop để lưu vào cache
+          const packageName = switchedShop.package?.name || switchedShop.package || null;
+          const finalPackageName = typeof packageName === 'string'
+            ? (packageName !== "Basic" ? packageName : null)
+            : (packageName?.name && packageName.name !== "Basic" ? packageName.name : null);
+          
+          const shopForCache = {
+            id: switchedShop.id,
+            shop_name: switchedShop.shop_name,
+            package: finalPackageName,
+            role: "Shop Owner", // User đã switch về shop mà họ là owner
+            is_current: true,
+          };
 
-        if (reloadData.success) {
-          const safeEmployees = reloadData.data.map((emp) => ({
-            id: emp.user_id,
-            name: emp.full_name || "Unknown",
-            email: emp.email || "No email",
-            avatar: emp.avatar || null,
-            role: emp.role_name || "N/A",
-            status: emp.status || "Inactive",
-            page: emp.page || 0,
-          }));
-          setEmployees(safeEmployees);
+          // Lưu shop mới vào cache
+          saveShopCache(shopForCache, previousShop);
+
+          // Dispatch event để Header cập nhật
+          window.dispatchEvent(new CustomEvent("shopChanged", { detail: shopForCache }));
+
+          // Hiển thị toast success với thông báo đã switch shop
+          toast.success(
+            data.message || `Đã tự xóa mình khỏi shop. Đã chuyển về shop: ${switchedShop.shop_name}`
+          );
+
+          // Reload trang để cập nhật toàn bộ dữ liệu với shop mới
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        } else {
+          // Không phải tự xóa hoặc không có shop để switch - xử lý bình thường
+          toast.success(data.message || "Đã xóa nhân viên thành công!");
+
+          // Reload lại danh sách employees để đảm bảo đồng bộ với backend
+          // (Backend đã xóa hoàn toàn ShopUser và UserRole)
+          const reloadRes = await axiosInstance.get(`/api/shop-users/${actualShopId}`);
+          const reloadData = reloadRes.data;
+
+          if (reloadData.success) {
+            const safeEmployees = reloadData.data.map((emp) => ({
+              id: emp.user_id,
+              name: emp.full_name || "Unknown",
+              email: emp.email || "No email",
+              avatar: emp.avatar || null,
+              role: emp.role_name || "N/A",
+              status: emp.status || "Inactive",
+              page: emp.page || 0,
+            }));
+            setEmployees(safeEmployees);
+          }
         }
       } else {
         // Xử lý lỗi từ API
@@ -720,7 +789,7 @@ function Employee() {
                   <div className="table-cell"></div>
                   <div className="table-cell-name">{t("shop.employee")}</div>
                   <div className="table-cell">{t("shop.email")}</div>
-                  <div className="table-cell">{t("shop.page_count")}</div>
+                  {/* <div className="table-cell">{t("shop.page_count")}</div> */}
                   <div className="table-cell">{t("shop.role")}</div>
                   {/* <div className="table-cell">{t("shop.status")}</div> */}
                   <div className="table-cell">{t("shop.action")}</div>
@@ -761,7 +830,7 @@ function Employee() {
                     <div className="table-cell" data-label={t('shop.email')}>
                       <span>{employee.email}</span>
                     </div>
-                    <div
+                    {/* <div
                       className="table-cell"
                     // data-label={t("shop.page_count")}
                     >
@@ -772,7 +841,7 @@ function Employee() {
                       >
                         <Flag size={18} />
                       </button>
-                    </div>
+                    </div> */}
                     <div className="table-cell" data-label={t('shop.role')}>
                       {employee.role === "Shop Owner" ? (
                         <span className="role-badge">{employee.role}</span>

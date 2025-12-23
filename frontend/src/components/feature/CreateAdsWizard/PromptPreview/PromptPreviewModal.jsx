@@ -94,7 +94,7 @@ const PromptPreviewModal = ({ isOpen, onClose, configId, config = null }) => {
                   <div className="custom-prompt-badge"> Custom Prompt (from Character/Skills)</div>
                 )}
                 {!previewData.has_custom_prompt && (
-                  <div className="default-prompt-badge">📝 Default Prompt</div>
+                  <div className="default-prompt-badge">Default Prompt</div>
                 )}
               </div>
 

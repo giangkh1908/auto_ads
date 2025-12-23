@@ -10,12 +10,12 @@ export const translateStatus = (status) => {
   // Try to get translation from i18n
   const translationKey = `ads:status.${status}`;
   const translated = i18n.t(translationKey);
-  
+
   // If translation exists and is not the same as the key, return it
   if (translated && translated !== translationKey) {
     return translated;
   }
-  
+
   // Fallback mappings for backwards compatibility
   const fallbackMap = {
     'ACTIVE': 'Hoạt động',
@@ -69,7 +69,7 @@ export const translateStatus = (status) => {
 export const getStatusClass = (status) => {
   // Check status CODE directly instead of translated text for consistency
   const statusUpper = status.toUpperCase();
-  
+
   // Active statuses
   if (
     statusUpper === 'ACTIVE' ||
@@ -81,7 +81,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-active';
   }
-  
+
   // Paused statuses
   if (
     statusUpper === 'PAUSED' ||
@@ -95,7 +95,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-paused';
   }
-  
+
   // Deleted statuses
   if (
     statusUpper === 'DELETED' ||
@@ -106,7 +106,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-deleted';
   }
-  
+
   // Archived statuses
   if (
     statusUpper === 'ARCHIVED' ||
@@ -116,7 +116,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-archived';
   }
-  
+
   // Pending/Review statuses
   if (
     statusUpper.includes('PENDING') ||
@@ -127,7 +127,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-pending';
   }
-  
+
   // Disapproved statuses
   if (
     statusUpper.includes('DISAPPROVED') ||
@@ -136,7 +136,7 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-disapproved';
   }
-  
+
   // Issues/In Process
   if (
     statusUpper.includes('ISSUES') ||
@@ -148,12 +148,12 @@ export const getStatusClass = (status) => {
   ) {
     return 'status-inactive';
   }
-  
+
   // Failed statuses
   if (statusUpper === 'FAILED' || statusUpper.includes('FAILED')) {
     return 'status-failed';
   }
-  
+
   // Draft statuses
   if (statusUpper === 'DRAFT' || statusUpper.includes('DRAFT')) {
     return 'status-draft';

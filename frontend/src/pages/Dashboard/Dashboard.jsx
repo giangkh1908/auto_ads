@@ -115,20 +115,15 @@ function Dashboard() {
       await shopService.refreshUserPages();
     } catch (error) {
       //console.error("Refresh user pages error:", error);
-      toast.error(
-        error?.message ||
-        error?.detail?.message ||
-        t("dashboard.refresh_error") ||
-        "Không thể đồng bộ quyền trang từ Facebook"
-      );
+      toast.error(error?.message || error?.detail?.message || t("dashboard.refresh_error") || "Không thể đồng bộ quyền trang từ Facebook");
     }
 
-    const success = await loadPages();
-    if (success) {
-      toast.success(t("dashboard.refresh_success") || "Đã làm mới danh sách");
-    } else {
-      toast.error(t("dashboard.refresh_error") || "Không thể làm mới dữ liệu");
-    }
+    // const success = await loadPages();
+    // if (success) {
+    //   toast.success(t("dashboard.refresh_success"));
+    // } else {
+    //   toast.error(t("dashboard.refresh_error"));
+    // }
     setIsRefreshing(false);
   };
 

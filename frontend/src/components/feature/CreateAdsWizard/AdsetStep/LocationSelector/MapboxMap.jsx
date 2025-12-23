@@ -82,15 +82,14 @@ const MapboxMap = ({
   // Debug: Log token status
   useEffect(() => {
     if (!MAPBOX_TOKEN) {
-      console.warn('⚠️ Mapbox access token not found. Please set VITE_MAPBOX_ACCESS_TOKEN in your .env file');
+      console.warn('Mapbox access token not found');
     }
   }, []);
 
   if (!MAPBOX_TOKEN) {
     return (
       <div className="mapbox-map-error">
-        <p>⚠️ Mapbox access token not configured</p>
-        <p>Please set VITE_MAPBOX_ACCESS_TOKEN in your .env file</p>
+        <p>Mapbox access token not configured</p>
         <p style={{ fontSize: '0.75rem', marginTop: '0.5rem', color: '#9ca3af' }}>
           Current token: {MAPBOX_TOKEN ? 'Set' : 'Not set'}
         </p>

@@ -62,7 +62,8 @@
     "PAUSED": "Tạm dừng",
     "DELETED": "Đã xóa",
     "ARCHIVED": "Đã lưu trữ",
-    "DRAFT": "Bản nháp"
+    "DRAFT": "Bản nháp",
+    "FAILED": "Thất bại"
   },
   "labels": {
     "campaign": "Chiến dịch",
@@ -73,6 +74,8 @@
       "PAUSED": "Tạm dừng",
       "DELETED": "Đã xóa",
       "ARCHIVED": "Đã lưu trữ",
+      "DRAFT": "Bản nháp",
+      "FAILED": "Thất bại",
       "CAMPAIGN_PAUSED": "Tạm dừng",
       "CAMPAIGN_ACTIVE": "Hoạt động",
       "ADSET_ACTIVE": "Hoạt động",

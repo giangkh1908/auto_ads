@@ -433,7 +433,11 @@ export class AgentExecutor {
             toolResult = await this._executeTool(plan.intent, toolName, params, tool, plan.rank_position);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
-            toolResult = { error: "Failed to rank campaigns/adsets/ads", message: e.message };
+            toolResult = { 
+              error: "Không thể lấy dữ liệu xếp hạng", 
+              message: "Xin lỗi, hiện tại tôi không thể truy xuất dữ liệu xếp hạng. Vui lòng thử lại sau hoặc kiểm tra kết nối tài khoản quảng cáo.",
+              technical_error: e.message 
+            };
           }
 
           // Fallback: nếu rank không có dữ liệu với cửa sổ hiện tại (thường là 7 ngày),
@@ -523,7 +527,11 @@ export class AgentExecutor {
               toolResult = await this._executeTool(plan.intent, toolName, params, tool);
             } catch (e) {
               console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
-              toolResult = { error: "Failed to get metadata", message: e.message };
+              toolResult = { 
+                error: "Không tìm thấy thông tin", 
+                message: "Xin lỗi, tôi không tìm thấy thông tin của chiến dịch/nhóm quảng cáo này. Vui lòng kiểm tra lại tên hoặc thử tìm kiếm trong danh sách.",
+                technical_error: e.message 
+              };
             }
           }
         }
@@ -569,7 +577,11 @@ export class AgentExecutor {
             toolResult = await this._executeTool(plan.intent, toolName, params, tool);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
-            toolResult = { error: "Failed to fetch data", message: e.message };
+            toolResult = { 
+              error: "Không thể truy xuất dữ liệu", 
+              message: "Xin lỗi, hiện tại tôi không thể truy xuất dữ liệu từ tài khoản quảng cáo của bạn. Vui lòng kiểm tra lại sau hoặc đảm bảo tài khoản đã được kết nối đúng cách.",
+              technical_error: e.message 
+            };
           }
         }
       } 
@@ -602,7 +614,11 @@ export class AgentExecutor {
             toolResult = await this._executeTool(plan.intent, toolName, params, tool);
           } catch (e) {
             console.error(`[AgentExecutor] Tool ${toolName} failed:`, e);
-            toolResult = { error: "Failed to fetch data", message: e.message };
+            toolResult = { 
+              error: "Không thể lấy dữ liệu xu hướng", 
+              message: "Xin lỗi, hiện tại tôi không thể lấy dữ liệu xu hướng. Vui lòng thử lại hoặc kiểm tra khoảng thời gian bạn đã chọn.",
+              technical_error: e.message 
+            };
           }
         }
       }

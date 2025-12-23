@@ -209,8 +209,8 @@
     "connect_new_page": "Kết nối Page mới",
     "search_placeholder": "Tìm kiếm...",
     "resume_page": "Kích hoạt lại",
-    "refresh_success": "Đã làm mới danh sách",
-    "refresh_error": "Không thể làm mới dữ liệu"
+    "refresh_success": "Đã làm mới dữ liệu.",
+    "refresh_error": "Không thể làm mới dữ liệu."
   },
   "account_management": {
     "title": "Tài khoản quảng cáo",

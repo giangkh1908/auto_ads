@@ -210,7 +210,7 @@
         "noSchedule": "Chưa có lịch chạy"
     },
     "frequencyDisplay": {
-        "continuous": "Đã kiểm tra tối thiểu 30 phút một lần.",
+        "continuous": "Mỗi 30 phút",
         "daily": "Hàng ngày từ {{start}} đến {{end}}",
         "custom": "Theo lịch tùy chỉnh",
         "notSet": "Chưa cài đặt"

@@ -17,7 +17,7 @@ class AuthService {
       );
       const data = response.data;
 
-      // 🧩 Lưu token & user vào localStorage
+      // Lưu token & user vào localStorage
       if (data?.data?.tokens?.accessToken) {
         localStorage.setItem("accessToken", data.data.tokens.accessToken);
         localStorage.setItem("refreshToken", data.data.tokens.refreshToken);
@@ -41,7 +41,7 @@ class AuthService {
       );
       const data = response.data;
 
-      // 🧩 Lưu token & user vào localStorage
+      // Lưu token & user vào localStorage
       if (data?.data?.tokens?.accessToken) {
         localStorage.setItem("accessToken", data.data.tokens.accessToken);
         localStorage.setItem("refreshToken", data.data.tokens.refreshToken);
@@ -197,14 +197,14 @@ class AuthService {
     if (error.response?.data) {
       // Với 401, giữ nguyên error để axios interceptor xử lý
       // Với 403 có error code, giữ nguyên error để AuthContext/LoginForm xử lý
-      if (error.response.status === 401 || 
-          error.response.status === 403 && error.response.data?.error?.code) {
+      if (error.response.status === 401 ||
+        error.response.status === 403 && error.response.data?.error?.code) {
         return error;
       }
       // Các lỗi khác, tạo Error mới với message
-      const errorMessage = error.response.data.error?.message || 
-                          error.response.data.message || 
-                          "Đã có lỗi xảy ra";
+      const errorMessage = error.response.data.error?.message ||
+        error.response.data.message ||
+        "Đã có lỗi xảy ra";
       const newError = new Error(errorMessage);
       newError.response = error.response; // Giữ response để có thể truy cập error code
       return newError;

@@ -178,7 +178,7 @@ export function useFlexibleWizardPublish() {
       //       ads: adset.ads.map((ad) => ({
       //         name: ad.name,
       //         adset_id: ad.adset_id,
-      //         match: ad.adset_id === adset._id ? "✅" : "❌",
+      //         match: ad.adset_id === adset._id ? "Y" : "N",
       //       })),
       //     })),
       //   }))
@@ -191,7 +191,7 @@ export function useFlexibleWizardPublish() {
           ...buildCampaignPayload(campaign, selectedAccountId),
           adsets: campaign.adsets.map((adset) => {
             // console.log(
-            //   `🔍 Processing adset: ${adset.name}, _id: ${adset._id}`
+            //   `Processing adset: ${adset.name}, _id: ${adset._id}`
             // );
 
             const filteredAds = adset.ads.filter((ad) => {
@@ -202,7 +202,7 @@ export function useFlexibleWizardPublish() {
               return match;
             });
 
-            // console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
+            // console.log(`Filtered ads count: ${filteredAds.length}`);
 
             return {
               ...buildAdsetPayload(adset, campaign),
@@ -253,7 +253,7 @@ export function useFlexibleWizardPublish() {
         const resultData = response.data.data || response.data;
         const { totalSuccess, totalErrors, errors } = resultData;
 
-        // console.log("🔍 API Response:", {
+        // console.log("API Response:", {
         //   success: response.data.success,
         //   totalSuccess,
         //   totalErrors,
@@ -296,10 +296,10 @@ export function useFlexibleWizardPublish() {
           const firstError = errors?.[0];
           const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Tạo quảng cáo thất bại';
 
-          // console.log("🔍 All ads failed!");
-          // console.log("🔍 Errors array:", errors);
-          // console.log("🔍 First error:", firstError);
-          // console.log("🔍 FB Error Message:", fbErrorMsg);
+          // console.log("All ads failed!");
+          // console.log("Errors array:", errors);
+          // console.log("First error:", firstError);
+          // console.log("FB Error Message:", fbErrorMsg);
 
           updateProgress?.({
             status: 'error',
@@ -313,7 +313,7 @@ export function useFlexibleWizardPublish() {
             description: fbErrorMsg,
           });
 
-          // ✅ Refresh data để hiển thị items FAILED
+          // Refresh data để hiển thị items FAILED
           onError?.();
 
           // Đóng wizard sau khi hiển thị lỗi (KHÔNG gọi onSuccess)
@@ -335,7 +335,7 @@ export function useFlexibleWizardPublish() {
         throw apiError;
       }
     } catch (err) {
-      //console.error("❌ Lỗi khi xử lý quảng cáo:", err);
+      //console.error("Lỗi khi xử lý quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -359,7 +359,7 @@ export function useFlexibleWizardPublish() {
         });
       }
 
-      // ✅ Refresh data để hiển thị items FAILED
+      // Refresh data để hiển thị items FAILED
       onError?.();
 
       // Đóng wizard sau khi hiển thị lỗi
@@ -371,7 +371,7 @@ export function useFlexibleWizardPublish() {
   };
 
   /**
-   * 🎯 Publish từng bước riêng biệt (cho các trường hợp đặc biệt)
+   * Publish từng bước riêng biệt (cho các trường hợp đặc biệt)
    */
   const handleStepByStepPublish = async ({
     campaignsList,
@@ -385,7 +385,7 @@ export function useFlexibleWizardPublish() {
     setSuccess(false);
 
     try {
-      // console.log("🎯 Using Step-by-Step API for all campaigns");
+      // console.log("Using Step-by-Step API for all campaigns");
 
       let totalSuccessCount = 0;
       const results = {
@@ -530,7 +530,7 @@ export function useFlexibleWizardPublish() {
         onClose?.();
       }, 1200);
     } catch (err) {
-      //console.error("❌ Lỗi khi xử lý quảng cáo:", err);
+      //console.error("Lỗi khi xử lý quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -599,7 +599,7 @@ export function useFlexibleWizardPublish() {
 
       // Log campaign structure BEFORE building payload
       // console.log(
-      //   "📊 Campaign Structure BEFORE update:",
+      //   "Campaign Structure BEFORE update:",
       //   campaignsList.map((campaign) => ({
       //     name: campaign.name,
       //     _id: campaign._id,
@@ -614,7 +614,7 @@ export function useFlexibleWizardPublish() {
       //         _id: ad._id,
       //         external_id: ad.external_id,
       //         adset_id: ad.adset_id,
-      //         match: ad.adset_id === adset._id ? "✅" : "❌",
+      //         match: ad.adset_id === adset._id ? "Y" : "N",
       //       })),
       //     })),
       //   }))
@@ -631,7 +631,7 @@ export function useFlexibleWizardPublish() {
           ...buildCampaignPayload(campaign, selectedAccountId),
           adsets: (campaign.adsets || []).map((adset) => {
             // console.log(
-            //   `🔍 Processing adset for update: ${adset.name}, _id: ${adset._id}, external_id: ${adset.external_id}`
+            //   `Processing adset for update: ${adset.name}, _id: ${adset._id}, external_id: ${adset.external_id}`
             // );
 
             const filteredAds = (adset.ads || []).filter((ad) => {
@@ -642,7 +642,7 @@ export function useFlexibleWizardPublish() {
               return match;
             });
 
-            // console.log(`  ✅ Filtered ads count: ${filteredAds.length}`);
+            // console.log(`Filtered ads count: ${filteredAds.length}`);
 
             return {
               // CHỈ GỬI external_id NẾU CÓ (buildAdsetPayload đã handle _id và draftId)
@@ -698,7 +698,7 @@ export function useFlexibleWizardPublish() {
         const resultData = response.data.data || response.data;
         const { totalUpdated, totalCreated, totalErrors, errors, details } = resultData;
 
-        // console.log("🔍 API Update Response:", {
+        // console.log("API Update Response:", {
         //   success: response.data.success,
         //   totalUpdated,
         //   totalCreated,
@@ -741,7 +741,7 @@ export function useFlexibleWizardPublish() {
           const firstError = errors?.[0];
           const fbErrorMsg = firstError?.error_user_msg || firstError?.error || 'Cập nhật thất bại';
 
-          // console.log("🔍 All updates failed. First error:", fbErrorMsg);
+          // console.log("All updates failed. First error:", fbErrorMsg);
 
           updateProgress?.({
             status: 'error',
@@ -774,7 +774,7 @@ export function useFlexibleWizardPublish() {
         throw apiError;
       }
     } catch (err) {
-      //console.error("❌ Lỗi khi cập nhật quảng cáo:", err);
+      //console.error("Lỗi khi cập nhật quảng cáo:", err);
 
       const data = err?.response?.data || {};
       const fbMsg = data.error_user_msg || data.message || null;
@@ -820,7 +820,7 @@ export function useFlexibleWizardPublish() {
 }
 
 // ========================================
-// 🛠️ HELPER FUNCTIONS FOR PAYLOAD BUILDING
+// HELPER FUNCTIONS FOR PAYLOAD BUILDING
 // ========================================
 
 // Helper function để check xem ID có phải temp ID không
@@ -974,14 +974,14 @@ function buildAdsetPayload(adset, campaign) {
     bid_strategy: adset.bid_strategy,
     bid_amount: adset.bid_amount,
     ...(adset.promoted_object && { promoted_object: adset.promoted_object }),
-    // ✅ Extract pixel_id từ promoted_object nếu có (cho LINK_CLICKS - WEBSITE)
+    // Extract pixel_id từ promoted_object nếu có (cho LINK_CLICKS - WEBSITE)
     ...(adset.pixel_id || adset.promoted_object?.pixel_id
       ? { pixel_id: adset.pixel_id || adset.promoted_object.pixel_id }
       : {}),
     ...(adset.traffic_destination && { traffic_destination: adset.traffic_destination }),
     ...(adset.engagement_destination && { engagement_destination: adset.engagement_destination }),
     ...(adset.destination_type && { destination_type: adset.destination_type }),
-    // ✅ THÊM page_id và page_name từ adset (đã di chuyển từ campaign)
+    // THÊM page_id và page_name từ adset (đã di chuyển từ campaign)
     ...(adset.facebookPageId && { page_id: adset.facebookPageId }),
     ...(adset.facebookPage && { page_name: adset.facebookPage }),
   };
@@ -1031,7 +1031,7 @@ function buildCreativePayload(ad, campaign, adset) {
  */
 function buildAdPayload(ad) {
   return {
-    draftId: getValidDraftId(ad), // ✅ FILTER TEMP ID
+    draftId: getValidDraftId(ad), // FILTER TEMP ID
     adset_id: ad.adset_id,
     name: ad.name,
     status: "PAUSED",

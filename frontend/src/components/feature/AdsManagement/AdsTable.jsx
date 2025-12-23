@@ -30,7 +30,7 @@ export default function AdsTable({
 
   const getColSpan = () => {
     if (activeTab === "adsets") return 17;
-    if (activeTab === "campaigns") return 15; // Không có cột budget
+    if (activeTab === "campaigns") return 16;
     return 15;
   };
 
@@ -50,7 +50,7 @@ export default function AdsTable({
               <th>{t('management.toggle_on_off')}</th>
               <th>{t('management.name')}</th>
               <th>{t('management.status')}</th>
-              {activeTab === "adsets" && <th>{t('management.budget')}</th>}
+              <th>{t('management.budget')}</th>
               {activeTab === "adsets" && <th>{t('management.runtime')}</th>}
               {activeTab === "adsets" && <th>{t('management.targeting')}</th>}
               {activeTab === "campaigns" && <th>{t('management.objective')}</th>}
@@ -111,9 +111,7 @@ export default function AdsTable({
                 <td className={getStatusClass(row.status)}>
                   {translateStatus(row.status)}
                 </td>
-                {activeTab === "adsets" && (
-                  <td className="text-center">{row.budget || "0"}</td>
-                )}
+                <td className="text-center">{row.budget || "0"}</td>
                 {activeTab === "adsets" && (
                   <td className="text-center">
                     {row.start_time && row.end_time ? (

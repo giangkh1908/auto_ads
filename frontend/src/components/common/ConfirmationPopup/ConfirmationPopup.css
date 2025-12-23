@@ -64,6 +64,10 @@
   color: #f59e0b;
 }
 
+.confirmation-icon-container:has(.warning-icon) {
+  background: #fef3c7;
+}
+
 .confirmation-icon.activate-icon {
   color: #059669;
 }

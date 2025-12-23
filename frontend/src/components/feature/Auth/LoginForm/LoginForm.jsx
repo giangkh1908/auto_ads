@@ -152,7 +152,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
       }
       // console.log("Facebook Auth Response:", authResponse);
 
-      // 🔹 Gọi trực tiếp backend để BE xử lý tất cả (xác thực + lấy user info + pages)
+      // Gọi trực tiếp backend để BE xử lý tất cả (xác thực + lấy user info + pages)
       // console.log("Calling backend API...");
 
       const loginResponse = await axios.post(
@@ -169,13 +169,13 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
 
       // console.log("Backend Response:", loginResponse.data);
 
-      // 🔹 Xử lý kết quả trả về
+      // Xử lý kết quả trả về
       if (loginResponse.data.success) {
         const { user, tokens, pages } = loginResponse.data.data;
 
         // console.log("Facebook Login Success!");
 
-        // 🔹 Cập nhật AuthContext để đồng bộ UI
+        // Cập nhật AuthContext để đồng bộ UI
         // Await completeExternalLogin vì nó là async function
         const result = await completeExternalLogin({ user, tokens, pages });
         if (result?.success && onSuccess) {
@@ -225,7 +225,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
       } else if (error.response?.status === 500) {
         toast.error(t("errors.server_error"));
       } else {
-        console.error("❌ Error response:", error.response?.data);
+        //console.error("Error response:", error.response?.data);
         toast.error(
           errorResponse?.error?.message ||
           errorResponse?.message ||
@@ -256,7 +256,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <p className="text-classify">{t("auth.classify_customer")}</p>
+      {/* <p className="text-classify">{t("auth.classify_customer")}</p> */}
       <button
         type="button"
         className="btn-fb"
@@ -270,7 +270,7 @@ function LoginForm({ onSuccess, onSwitchRegister, onSwitchReset }) {
       </button>
 
       <div className="form-sep">{t("auth.or")}</div>
-      <p className="text-classify">{t("auth.classify_internal")}</p>
+      {/* <p className="text-classify">{t("auth.classify_internal")}</p> */}
       <div className="input-group-auth">
         <div className="input-icon-auth">
           <Mail size={16} />

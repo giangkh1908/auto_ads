@@ -78,8 +78,8 @@ const AiPopup = ({
         });
       }
     } catch (error) {
-      console.error('Error loading config:', error);
-      toast.error('Không thể tải config');
+      //console.error('Error loading config:', error);
+      //toast.error('Không thể tải config');
     }
   }, [toast, initialPersonalization, initialMainKeywords, initialSynonymousKeywords]);
 
@@ -98,7 +98,7 @@ const AiPopup = ({
         }
       }
     } catch (error) {
-      console.error('Error loading configs:', error);
+      //console.error('Error loading configs:', error);
     } finally {
       setIsLoadingConfigs(false);
     }
@@ -212,7 +212,6 @@ const AiPopup = ({
 
     setIsGeneratingKeywords(true);
     try {
-      // ✅ Sử dụng axiosInstance thay vì fetch
       const response = await axiosInstance.post('/api/ai/keywords/suggest', {
         main_keywords: aiConfig.mainKeywords.split(',').map(k => k.trim()).filter(Boolean),
         language: aiConfig.language === 'Tiếng Việt' ? 'vi' : aiConfig.language === 'English' ? 'en' : 'zh',

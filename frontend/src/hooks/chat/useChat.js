@@ -11,10 +11,10 @@ export function useChat(accountId) {
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [contextEntities, setContextEntities] = useState([]);
-  
+
   // Use ref to track current messages (for conversationHistory)
   const messagesRef = useRef([]);
-  
+
   const toast = useToast();
   const { user, isAuthenticated } = useAuth();
   const userId = user?._id || user?.id || null;
@@ -155,7 +155,7 @@ export function useChat(accountId) {
         messagesRef.current = newMessages;
         return newMessages;
       });
-      
+
       setIsSending(true);
 
       try {
@@ -193,7 +193,7 @@ export function useChat(accountId) {
             messagesRef.current = newMessages;
             return newMessages;
           });
-          
+
           // Update context entities from response
           if (response.entities && response.entities.length > 0) {
             setContextEntities(response.entities);
@@ -207,7 +207,7 @@ export function useChat(accountId) {
         const errorMessage = {
           id: uuidv4(),
           role: "assistant",
-          content: "⚠️ Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
+          content: "Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
           timestamp: new Date().toISOString(),
           isError: true,
         };

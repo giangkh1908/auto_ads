@@ -46,6 +46,8 @@ const ConfirmationPopup = ({
         return <Check size={24} className="confirmation-icon approve-icon" />;
       case 'reject':
         return <X size={24} className="confirmation-icon reject-icon" />;
+      case 'warning':
+        return <AlertTriangle size={24} className="confirmation-icon warning-icon" />;
       default:
         return <AlertTriangle size={24} className="confirmation-icon warning-icon" />;
     }
@@ -67,6 +69,8 @@ const ConfirmationPopup = ({
         return 'btn-confirm-approve';
       case 'reject':
         return 'btn-confirm-reject';
+      case 'warning':
+        return 'btn-confirm-default'; // Sử dụng default style cho warning
       default:
         return 'btn-confirm-default';
     }

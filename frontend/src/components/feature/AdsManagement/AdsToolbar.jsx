@@ -25,28 +25,44 @@ export default function AdsToolbar({
   const navigate = useNavigate();
   const { hasFeature, shopPkg, loading: pkgLoading } = useShopPackage();
   const hasAdsAutoRun = hasFeature("ads_auto_run");
+  const hasActivePackage = shopPkg?.package?.name && shopPkg?.package?.name !== "Basic" && shopPkg?.package?.name !== "None";
 
   return (
     <div className="ads-toolbar">
       <div className="account-select">
-        <select
-          value={selectedAccountId}
-          onChange={(e) => onAccountChange(e.target.value)}
-          disabled={loadingAccounts}
+        <div
+          className="account-select-wrapper"
+          style={{ position: 'relative', display: 'inline-block' }}
+          title={!hasActivePackage && !pkgLoading ? "Hãy nâng cấp gói để sử dụng" : ""}
         >
-          <option value="">{t('management.select_account')}</option>
-          {loadingAccounts ? (
-            <option disabled>{t('management.loading_accounts')}</option>
-          ) : adAccounts.length === 0 ? (
-            <option disabled>{t('management.no_accounts')}</option>
-          ) : (
-            adAccounts.map((account) => (
-              <option key={account._id} value={account.external_id}>
-                {account.name || t('management.account')} ({account.external_id})
-              </option>
-            ))
-          )}
-        </select>
+          <select
+            value={selectedAccountId}
+            onChange={(e) => {
+              if (hasActivePackage || pkgLoading) {
+                onAccountChange(e.target.value);
+              } else {
+                toast.error("Vui lòng nâng cấp gói để sử dụng chức năng");
+              }
+            }}
+            disabled={loadingAccounts}
+            style={{
+              cursor: (!hasActivePackage && !pkgLoading) ? "not-allowed" : "pointer"
+            }}
+          >
+            <option value="">{t('management.select_account')}</option>
+            {loadingAccounts ? (
+              <option disabled>{t('management.loading_accounts')}</option>
+            ) : adAccounts.length === 0 ? (
+              <option disabled>{t('management.no_accounts')}</option>
+            ) : (
+              adAccounts.map((account) => (
+                <option key={account._id} value={account.external_id}>
+                  {account.name || t('management.account')} ({account.external_id})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
 
         <button
           className={`btn-create-ads ${!selectedAccountId ? 'disabled' : ''}`}
@@ -62,7 +78,7 @@ export default function AdsToolbar({
               return;
             }
             if (!hasAdsAutoRun) {
-              toast.error("Tính năng này yêu cầu shop owner có gói ChatBot AI");
+              toast.error("Tính năng này yêu cầu Shop Owner có gói ChatBot AI");
               return;
             }
             navigate(ROUTES.AUTOMATION_RULE);

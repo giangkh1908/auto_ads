@@ -35,6 +35,7 @@ import {
 // import { validateNonEmpty } from "../../../../utils/validation";
 import { getAdsetDefaultsByObjective } from "../../../../constants/wizardConstants";
 import { getCompatibleBillingEvents } from "../../../../constants/wizardConstants";
+import { useMyPackage } from "../../../../hooks/shop/useMyPackage";
 import no_avatar from "../../../../assets/no-avatar.jpg";
 import "./AdsetStep.css";
 
@@ -203,7 +204,7 @@ function FieldRenderer({ field, adset, setAdset, objective, mode }) {
 
               // For optimization_goal: also set destination_type and billing_event if needed
               if (field.name === "optimization_goal") {
-                // ✅ Không xử lý nếu chọn placeholder
+                // ✅Không xử lý nếu chọn placeholder
                 if (!selectedValue || selectedValue === "") {
                   toast.warning(t('adset_step.select_objective'));
                   return;
@@ -757,8 +758,11 @@ const AdsetStepInner = forwardRef(
   ) => {
     const toast = useToast();
     const { t } = useTranslation('wizard');
+    const { pkg } = useMyPackage();
     const schema = SCHEMA_MAP[objective] || SCHEMA_MAP.AWARENESS;
     const [showPageSelect, setShowPageSelect] = useState(false);
+
+    const hasActivePackage = pkg?.package?.name && pkg?.package?.name !== "Basic" && pkg?.package?.name !== "None";
 
     useEffect(() => {
       const defaults = getAdsetDefaultsByObjective(objective);
@@ -799,10 +803,25 @@ const AdsetStepInner = forwardRef(
         objective === "APP_PROMOTION" ||
         objective === "SALES";
 
-      if (needsPage && facebookPages.length > 0 && !adset.facebookPageId) {
+      if (hasActivePackage && needsPage && facebookPages.length > 0 && !adset.facebookPageId) {
         handlePageChange(facebookPages[0]);
       }
-    }, [objective, facebookPages, adset.facebookPageId, handlePageChange]);
+    }, [objective, facebookPages, adset.facebookPageId, handlePageChange, hasActivePackage]);
+
+    // Clear Facebook Page if user doesn't have an active premium package
+    useEffect(() => {
+      if (!hasActivePackage && adset.facebookPageId) {
+        setAdset((prev) => ({
+          ...prev,
+          facebookPageId: null,
+          facebookPage: null,
+          promoted_object: {
+            ...(prev.promoted_object || {}),
+            page_id: null,
+          },
+        }));
+      }
+    }, [hasActivePackage, adset.facebookPageId, setAdset]);
 
     useImperativeHandle(
       ref,
@@ -872,9 +891,15 @@ const AdsetStepInner = forwardRef(
                 <h3 className="section-title-ads">{t('adset_step.facebook_page')}</h3>
               </div>
               <div
-                className="facebook-page-selector"
-                style={{ cursor: "pointer", position: "relative" }}
-                onClick={() => setShowPageSelect((prev) => !prev)}
+                className={`facebook-page-selector ${!hasActivePackage ? "disabled-premium" : ""}`}
+                style={{ cursor: !hasActivePackage ? "not-allowed" : "pointer", position: "relative" }}
+                onClick={() => {
+                  if (!hasActivePackage) {
+                    toast.info("Vui lòng nâng cấp gói để sử dụng chức năng");
+                    return;
+                  }
+                  setShowPageSelect((prev) => !prev);
+                }}
               >
                 {facebookPages.length > 0 ? (
                   (() => {

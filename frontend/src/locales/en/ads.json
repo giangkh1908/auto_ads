@@ -62,7 +62,8 @@
     "PAUSED": "Paused",
     "DELETED": "Deleted",
     "ARCHIVED": "Archived",
-    "DRAFT": "Draft"
+    "DRAFT": "Draft",
+    "FAILED": "Failed"
   },
   "labels": {
     "campaign": "Campaign",
@@ -73,6 +74,8 @@
       "PAUSED": "Paused",
       "DELETED": "Deleted",
       "ARCHIVED": "Archived",
+      "DRAFT": "Draft",
+      "FAILED": "Failed",
       "CAMPAIGN_PAUSED": "Paused",
       "CAMPAIGN_ACTIVE": "Active",
       "ADSET_ACTIVE": "Active",

@@ -38,9 +38,9 @@ export function useEditMode({
       }
 
       // Tìm ID trong các trường có thể có
-      let rawItemId = editingItem.id || editingItem._id || editingItem.campaign_id || 
-                     editingItem.adset_id || editingItem.ad_id || editingItem.creative_id || 
-                     editingItem.set_id;
+      let rawItemId = editingItem.id || editingItem._id || editingItem.campaign_id ||
+        editingItem.adset_id || editingItem.ad_id || editingItem.creative_id ||
+        editingItem.set_id;
 
       // Nếu không tìm thấy ID, thử tìm trong toàn bộ object
       if (!rawItemId) {
@@ -51,14 +51,14 @@ export function useEditMode({
       const itemId = extractObjectId(rawItemId);
 
       setLoading(true);
-      
+
       //  Mở progress popup nếu có openProgress callback
       openProgress?.({
         type: 'load',
         title: 'Đang tải dữ liệu quảng cáo',
         total: 4, // Campaign, AdSets, Ads, Creatives
       });
-      
+
       try {
         // Determine campaign ID based on editing item type
         let campaignId = null;
@@ -113,7 +113,7 @@ export function useEditMode({
         // ========================================
         // LOAD FULL HIERARCHY
         // ========================================
-        
+
         // Step 1: Fetch campaign data
         updateProgress?.({ current: 1, message: 'Đang tải thông tin campaign...' });
         const campaignRes = await axiosInstance.get("/api/campaigns/database", {
@@ -142,7 +142,7 @@ export function useEditMode({
         // Step 4: Fetch ALL creatives (parallel with error handling)
         const creativeIds = [...new Set(allAdsData.map(ad => ad.creative_id).filter(Boolean))];
         const creativesMap = {};
-        
+
         if (creativeIds.length > 0) {
           updateProgress?.({ current: 3.5, message: `Đang tải ${creativeIds.length} creatives...` });
           const creativesPromises = creativeIds.map(id =>
@@ -153,7 +153,7 @@ export function useEditMode({
               return null;
             })
           );
-          
+
           const creativesResults = await Promise.all(creativesPromises);
           creativesResults.forEach(res => {
             if (res?.data?.data) {
@@ -184,7 +184,7 @@ export function useEditMode({
                 primaryText: creative?.object_story_spec?.link_data?.message || "Hãy giới thiệu về nội dung quảng cáo của bạn",
                 headline: creative?.object_story_spec?.link_data?.name || "Chat trong Messenger",
                 description: creative?.object_story_spec?.link_data?.description || "Khám phá dịch vụ của chúng tôi ngay!",
-                cta: creative?.object_story_spec?.link_data?.call_to_action?.type 
+                cta: creative?.object_story_spec?.link_data?.call_to_action?.type
                   ? convertFacebookTypeToCTA(creative.object_story_spec.link_data.call_to_action.type)
                   : "Tìm hiểu thêm",
                 destinationUrl: creative?.object_story_spec?.link_data?.link || "https://fchat.vn",
@@ -234,13 +234,13 @@ export function useEditMode({
                 adsetDbData.targeting?.genders?.[0] === 1
                   ? "male"
                   : adsetDbData.targeting?.genders?.[0] === 2
-                  ? "female"
-                  : adsetDbData.targeting?.gender || "all",
+                    ? "female"
+                    : adsetDbData.targeting?.gender || "all",
               language:
                 adsetDbData.targeting?.locales?.[0]
                   ? convertLocaleIdToLanguageCode(
-                      adsetDbData.targeting.locales[0]
-                    ) || adsetDbData.targeting.locales[0]
+                    adsetDbData.targeting.locales[0]
+                  ) || adsetDbData.targeting.locales[0]
                   : adsetDbData.targeting?.language || "all",
               // NEW: Parse flexible_spec -> detailed_targeting for edit mode
               detailed_targeting: parseFlexibleSpecToFrontend(
@@ -299,14 +299,14 @@ export function useEditMode({
           }];
 
           setCampaignsList(fullHierarchy);
-          
+
           hasLoadedRef.current = true; // Mark as loaded
-          
-          console.log("HIERARCHY loaded successfully:", {
-            campaign: campaignData?.name,
-            adsets: adsetsWithAds.length,
-            totalAds: allAdsData.length,
-          });
+
+          // console.log("HIERARCHY loaded successfully:", {
+          //   campaign: campaignData?.name,
+          //   adsets: adsetsWithAds.length,
+          //   totalAds: allAdsData.length,
+          // });
 
           // Update progress: Success
           updateProgress?.({
@@ -319,16 +319,16 @@ export function useEditMode({
 
       } catch (e) {
         // console.log("Failed to load update data from database:", e);
-        
+
         // Update progress: Error
         updateProgress?.({
           status: 'error',
-          message: e?.response?.status === 401 
-            ? 'Phiên đăng nhập đã hết hạn' 
+          message: e?.response?.status === 401
+            ? 'Phiên đăng nhập đã hết hạn'
             : 'Không tải được dữ liệu',
           errors: [{ error: e.message || 'Unknown error' }],
         });
-        
+
         if (e?.response?.status === 401) {
           toast.error("Phiên đăng nhập đã hết hạn", {
             description: "Vui lòng đăng nhập lại để tiếp tục",
@@ -343,7 +343,7 @@ export function useEditMode({
       }
     };
     loadUpdateData();
-    
+
     // Simplified dependency array (thêm openProgress, updateProgress)
   }, [mode, editingItem, selectedAccountId, setCampaignsList, setLoading, toast, openProgress, updateProgress]);
 }

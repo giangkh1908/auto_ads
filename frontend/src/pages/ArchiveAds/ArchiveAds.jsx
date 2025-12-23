@@ -497,6 +497,11 @@ function ArchiveAds() {
           reach: campaign.reach || 0,
           results: campaign.results || 0,
           quality: campaign.quality_ranking || '-',
+          // Metrics mới
+          spend: campaign.insights?.spend || campaign.spend || 0,
+          clicks: campaign.insights?.clicks || campaign.clicks || 0,
+          cpc: campaign.insights?.cpc || campaign.cpc || 0,
+          ctr: campaign.insights?.ctr || campaign.ctr || 0,
         }));
 
         const merged = mapped;
@@ -545,6 +550,11 @@ function ArchiveAds() {
           reach: adset.reach || 0,
           results: adset.results || 0,
           quality: adset.quality_ranking || '-',
+          // Metrics mới
+          spend: adset.insights?.spend || adset.spend || 0,
+          clicks: adset.insights?.clicks || adset.clicks || 0,
+          cpc: adset.insights?.cpc || adset.cpc || 0,
+          ctr: adset.insights?.ctr || adset.ctr || 0,
         }));
 
         const merged = mapped;
@@ -588,6 +598,11 @@ function ArchiveAds() {
           reach: ad.reach || 0,
           results: ad.results || 0,
           quality: ad.quality_ranking || '-',
+          // Metrics mới
+          spend: ad.insights?.spend || ad.spend || 0,
+          clicks: ad.insights?.clicks || ad.clicks || 0,
+          cpc: ad.insights?.cpc || ad.cpc || 0,
+          ctr: ad.insights?.ctr || ad.ctr || 0,
         }));
 
         const merged = mapped;
@@ -633,6 +648,11 @@ function ArchiveAds() {
           reach: adset.reach || 0,
           results: adset.results || 0,
           quality: adset.quality_ranking || '-',
+          // Metrics mới
+          spend: adset.insights?.spend || adset.spend || 0,
+          clicks: adset.insights?.clicks || adset.clicks || 0,
+          cpc: adset.insights?.cpc || adset.cpc || 0,
+          ctr: adset.insights?.ctr || adset.ctr || 0,
         }));
 
         const merged = mapped;
@@ -675,6 +695,11 @@ function ArchiveAds() {
           reach: ad.reach || 0,
           results: ad.results || 0,
           quality: ad.quality_ranking || '-',
+          // Metrics mới
+          spend: ad.insights?.spend || ad.spend || 0,
+          clicks: ad.insights?.clicks || ad.clicks || 0,
+          cpc: ad.insights?.cpc || ad.cpc || 0,
+          ctr: ad.insights?.ctr || ad.ctr || 0,
         }));
 
         const merged = mapped;
@@ -980,6 +1005,10 @@ function ArchiveAds() {
                     <th>{t('management.impressions')}</th>
                     <th>{t('management.reach')}</th>
                     <th>{t('management.results')}</th>
+                    <th>Spend</th>
+                    <th>Clicks</th>
+                    <th>CPC</th>
+                    <th>CTR (%)</th>
                     {/* <th>{t('management.quality')}</th> */}
                     <th>{t('management.creator')}</th>
                     <th>{t('management.actions')}</th>
@@ -988,7 +1017,7 @@ function ArchiveAds() {
                 <tbody>
                   {(activeTab === "ads" || activeTab === "adsets" || activeTab === "campaigns") && rows.length === 0 && (
                     <tr>
-                      <td colSpan={activeTab === "adsets" ? 12 : activeTab === "campaigns" ? 11 : 10} style={{ textAlign: 'center', padding: '16px', color: '#6b7280' }}>
+                      <td colSpan={activeTab === "adsets" ? 16 : activeTab === "campaigns" ? 15 : 14} style={{ textAlign: 'center', padding: '16px', color: '#6b7280' }}>
                         {t('management.no_data')}
                       </td>
                     </tr>
@@ -1067,6 +1096,10 @@ function ArchiveAds() {
                       <td className="text-center">{row.impressions || "0"}</td>
                       <td className="text-center">{row.reach || "0"}</td>
                       <td className="text-center">{row.results || "0"}</td>
+                      <td className="text-center">{row.spend ? new Intl.NumberFormat('vi-VN').format(row.spend) : "0"}</td>
+                      <td className="text-center">{row.clicks || "0"}</td>
+                      <td className="text-center">{row.cpc ? new Intl.NumberFormat('vi-VN').format(row.cpc) : "0"}</td>
+                      <td className="text-center">{row.ctr ? Number(row.ctr).toFixed(2) : "0.00"}</td>
                       {/* <td className="text-center">{row.quality || "0"}</td> */}
                       <td className="text-center">
                         {row.created_by?.full_name || row.created_by?.email || t('labels.not_set')}
