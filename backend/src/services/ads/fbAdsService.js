@@ -210,12 +210,24 @@ export async function createAd(adAccountId, accessToken, body) {
     }, {});
   
   console.log('📢 Creating ad with filtered fields:', Object.keys(filteredBody));
+  console.log('📢 Creating ad payload:', JSON.stringify(filteredBody, null, 2));
   
   const { data } = await axios.post(
     `${FB_API}/${withPrefix}/ads`,
     filteredBody,  // ✅ Gửi filtered body
     { params: buildFbAuthParams(accessToken) }
   );
+  console.log('📢 Facebook Ad API response:', JSON.stringify(data, null, 2));
+  
+  // ✅ Validate response có id
+  if (!data?.id) {
+    console.error('❌ Facebook returned response without id:', data);
+    if (data?.error) {
+      throw new Error(`Facebook API Error: ${data.error.message || JSON.stringify(data.error)}`);
+    }
+    throw new Error('Facebook API did not return an ad id. Response: ' + JSON.stringify(data));
+  }
+  
   return data.id;
 }
 

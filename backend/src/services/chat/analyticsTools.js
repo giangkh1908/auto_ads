@@ -1326,11 +1326,11 @@ export const rankCampaignsTool = tool(
     schema: z.object({
       account_id: z.string().describe("Account ID"),
       level: z.enum(["campaign", "adset", "ad"]).describe("Level cần xếp hạng: campaign, adset, hoặc ad"),
-      objective: z.enum(["OUTCOME_SALES", "OUTCOME_LEADS", "OUTCOME_TRAFFIC", "OUTCOME_AWARENESS", "OUTCOME_ENGAGEMENT", "OUTCOME_APP_PROMOTION"]).nullable().describe("Objective cụ thể hoặc null để xếp hạng tất cả"),
+      objective: z.enum(["OUTCOME_SALES", "OUTCOME_LEADS", "OUTCOME_TRAFFIC", "OUTCOME_AWARENESS", "OUTCOME_ENGAGEMENT", "OUTCOME_APP_PROMOTION"]).nullable().optional().describe("Objective cụ thể hoặc null để xếp hạng tất cả"),
       date_from: z.string().describe("Ngày bắt đầu (YYYY-MM-DD)"),
       date_to: z.string().describe("Ngày kết thúc (YYYY-MM-DD)"),
-      top_n: z.number().optional().describe("Số lượng top entities cần trả về. Mặc định: 5"),
-      sort_by_metric: z.enum(["ctr", "cpc", "cpm", "cpa", "cpl", "spend"]).nullable().optional().describe("Metric để sort (ctr, cpc, cpm, cpa, cpl, spend). Nếu null thì sort theo score"),
+      top_n: z.number().nullable().optional().describe("Số lượng top entities cần trả về. Mặc định: 5"),
+      sort_by_metric: z.enum(["ctr", "cpc", "cpm", "cpa", "cpl", "spend", "reach", "impressions", "clicks", "duration", "frequency", "roas"]).nullable().optional().describe("Metric để sort (ctr, cpc, cpm, cpa, cpl, spend, reach, impressions, clicks, duration, frequency, roas). Nếu null thì sort theo score"),
     }),
   }
 );
