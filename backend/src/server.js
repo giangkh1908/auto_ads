@@ -53,8 +53,26 @@ const __dirname = path.resolve();
 const app = express();
 
 // Bật CORS cho frontend
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://auto-ads-frontend.vercel.app' // Thay bằng domain Vercel thật của bạn
+];
+
 app.use(cors({ 
-  origin: true,
+  origin: function (origin, callback) {
+    // Cho phép các request không có origin (như mobile apps hoặc curl)
+    if (!origin) return callback(null, true);
+    
+    // Kiểm tra xem origin có nằm trong danh sách cho phép không
+    // Hoặc cho phép tất cả trong môi trường dev bằng cách check !process.env.NODE_ENV
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin || origin.includes('vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: [
