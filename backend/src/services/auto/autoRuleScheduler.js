@@ -16,7 +16,7 @@ const resolveRuleOwnerId = (rule) => {
       if (ownerId) return ownerId.toString();
     }
   }
-  
+
   // Fallback: lấy từ subscriber_id hoặc created_by
   const candidate =
     rule.subscriber_id?._id ||
@@ -47,8 +47,8 @@ export function startAutoRuleScheduler() {
     success: true,
   }).catch(err => console.error('Error logging scheduler start:', err));
 
-  // Chạy mỗi phút: "* * * * *"
-  schedulerTask = cron.schedule("* * * * *", async () => {
+  // Chạy mỗi giờ: "0 * * * *"
+  schedulerTask = cron.schedule("0 * * * *", async () => {
     try {
       await processScheduledRules();
     } catch (error) {
@@ -66,7 +66,7 @@ export function stopAutoRuleScheduler() {
     schedulerTask.stop();
     schedulerTask = null;
     console.log("AutoRule scheduler stopped");
-    
+
     // Log scheduler stopped
     saveSystemLog({
       category: 'scheduler',
@@ -173,7 +173,7 @@ async function processScheduledRules() {
       console.log(
         `Processed ${eligibleRules.length} rule(s): ${successCount} success, ${errorCount} errors, ${triggeredCount} triggered`
       );
-      
+
       // Log batch processing results
       saveSystemLog({
         category: 'scheduler',

@@ -1,7 +1,10 @@
 import express from "express";
-import compression from "compression";
 import dotenv from "dotenv";
+dotenv.config();
+
+import compression from "compression";
 import { connectDB } from "./config/db.js";
+import redis from "./config/redis.js";
 import cors from "cors";
 import path from "path";
 import helmet from "helmet";
@@ -48,7 +51,7 @@ import invoiceRoutes from "./routes/invoice/invoiceRoutes.js";
 import syncRoutes from "./routes/ads/syncRoutes.js";
 
 //Load các biến môi trường
-dotenv.config();
+// dotenv.config(); // Moved to top
 
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
@@ -91,8 +94,8 @@ app.use(cors({
 
     // Kiểm tra xem origin có nằm trong danh sách cho phép không
     const isAllowed = allowedOrigins.includes(origin) ||
-                     origin.endsWith('.vercel.app') ||
-                     !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+      origin.endsWith('.vercel.app') ||
+      !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
     if (isAllowed) {
       callback(null, true);

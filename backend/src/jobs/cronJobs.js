@@ -21,7 +21,7 @@ export function startSyncCronJobs() {
           "sync_metadata.entities_status": "syncing",
           $or: [
             { "sync_metadata.entities_sync_started_at": { $lt: oneHourAgo } },
-            { 
+            {
               "sync_metadata.entities_sync_started_at": { $exists: false },
               "sync_metadata.entities_last_synced_at": { $exists: false }
             }
@@ -51,7 +51,7 @@ export function startSyncCronJobs() {
       let errorCount = 0;
 
       await Promise.all(
-        accounts.map(account => 
+        accounts.map(account =>
           limit(async () => {
             try {
               const accessToken = account.shop_admin_id?.facebookAccessToken;
@@ -64,11 +64,11 @@ export function startSyncCronJobs() {
               console.log(`🔄 [${account.external_id}] Starting entity sync...`);
               await syncEntitiesForAccount(account.external_id, accessToken);
               console.log(`✅ [${account.external_id}] Entity sync completed`);
-              
+
               console.log(`🔄 [${account.external_id}] Starting insights sync...`);
               await syncInsightsForAccount(account._id);
               console.log(`✅ [${account.external_id}] Insights sync completed`);
-              
+
               successCount++;
             } catch (err) {
               console.error(`❌ Failed to sync account ${account.external_id}:`, err.message);

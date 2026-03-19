@@ -6,6 +6,7 @@ import AdsCampaign from "../../models/ads/adsCampaign.model.js";
 import AdPerformance from "../../models/ads/adPerformance.model.js";
 import { fetchLifetimeInsightsForAds, fetchLifetimeInsightsForAdsets, fetchLifetimeInsightsForCampaigns } from "../ads/fbAdsService.js";
 import User from "../../models/user/user.model.js";
+import redis from "../../config/redis.js";
 
 const BATCH_SIZE = 500;
 
@@ -89,9 +90,9 @@ async function updateAdsModelWithInsights(insights) {
 async function syncAdSetsInsights(accessToken, accountExternalId) {
   try {
     const insightsData = await fetchLifetimeInsightsForAdsets(accessToken, accountExternalId);
-    
+
     if (insightsData.length === 0) return;
-    
+
     const bulkOps = insightsData
       .filter(item => item.adset_id)
       .map(item => ({
@@ -121,9 +122,9 @@ async function syncAdSetsInsights(accessToken, accountExternalId) {
 async function syncCampaignsInsights(accessToken, accountExternalId) {
   try {
     const insightsData = await fetchLifetimeInsightsForCampaigns(accessToken, accountExternalId);
-    
+
     if (insightsData.length === 0) return;
-    
+
     const bulkOps = insightsData
       .filter(item => item.campaign_id)
       .map(item => ({
@@ -147,13 +148,50 @@ async function syncCampaignsInsights(accessToken, accountExternalId) {
   }
 }
 
-/**
- * Lưu lifetime insights vào AdPerformance cho TẤT CẢ ads trong account.
- */
+
+export async function pushToBuffer(bulkOpsArray) {
+  if (!bulkOpsArray || bulkOpsArray.length === 0) return;
+
+  // Biến mảng object thành mảng chuỗi JSON
+  const stringOps = bulkOpsArray.map(op => JSON.stringify(op));
+
+  // Đẩy vào đuôi danh sách (Right Push). Dấu ... để đẩy nhiều phần tử cùng lúc
+  await redis.rpush("buffer:ads:bulkops", ...stringOps);
+}
+
+export async function flushAdPerformanceBuffer() {
+  const bufferKey = "buffer:ads:bulkops";
+
+  // Dùng Transaction để lấy data ra và xóa kho cùng 1 chớp mắt
+  const multi = redis.multi();
+  multi.lrange(bufferKey, 0, -1);
+  multi.del(bufferKey);
+  const results = await multi.exec();
+
+  const rawOps = results[0][1]; // Mảng các chuỗi JSON
+  if (!rawOps || rawOps.length === 0) {
+    return; // Kho trống thì thôi không làm gì cả
+  }
+
+  console.log(`📤 Bắt đầu xả ${rawOps.length} bản ghi từ Redis Buffer vào MongoDB...`);
+
+  // Phục hồi lại thành mảng Object cho MongoDB
+  const bulkOps = rawOps.map(str => JSON.parse(str));
+
+  try {
+    // Gọi MongoDB đúng 1 lần duy nhất cho TẤT CẢ dữ liệu
+    const res = await AdPerformance.bulkWrite(bulkOps, { ordered: false });
+    console.log(`✅ Xả Buffer thành công! Upserted: ${res.upsertedCount}, Modified: ${res.modifiedCount}`);
+  } catch (error) {
+    console.error("❌ Lỗi khi xả Buffer vào MongoDB:", error.message);
+    // Nếu lỗi có thể code thêm logic ném ngược lại vào Redis ở đây (tùy độ cẩn thận)
+  }
+}
+
 async function saveLifetimeInsightsToAdPerformance(insightsData, account) {
   const today = normalizeToVietnamMidnight(new Date());
   const accountObjectId = account._id;
-  
+
   const rawAccountId = account.external_id;
   const withoutPrefix = rawAccountId.replace(/^act_/, '');
   const withPrefix = rawAccountId.startsWith('act_') ? rawAccountId : `act_${rawAccountId}`;
@@ -203,48 +241,48 @@ async function saveLifetimeInsightsToAdPerformance(insightsData, account) {
       external_adset_id: item.adset_id || null,
       external_campaign_id: item.campaign_id || null,
       date: today,
-      
+
       // Core metrics
       impressions: safeNumberOrZero(item.impressions),
       reach: safeNumberOrZero(item.reach),
       clicks: safeNumberOrZero(item.clicks),
       spend: safeNumberOrZero(item.spend),
       frequency: safeNumberOrZero(item.frequency),
-      
+
       // Calculated metrics
       cpc: safeNumber(item.cpc),
       cpm: safeNumber(item.cpm),
       ctr: safeNumber(item.ctr),
-      
+
       // Conversions & Results
       conversions: safeNumberOrZero(item.conversions),
       cost_per_conversion: safeNumber(item.cost_per_conversion),
       results: safeNumberOrZero(item.results),
       cost_per_result: safeNumber(item.cost_per_result),
-      
+
       // Metadata
       campaign_name: item.campaign_name || null,
       adset_name: item.adset_name || null,
       ad_name: item.ad_name || ad.name || null,
       objective: item.objective || null,
-      
+
       // Link metrics
       link_clicks: safeNumberOrZero(item.link_clicks),
       link_cpc: safeNumber(item.link_cpc),
       link_ctr: safeNumber(item.link_ctr),
-      
+
       // ROAS
       website_purchase_roas: safeNumber(item.website_purchase_roas),
-      
+
       // Additional metrics
       website_purchases: safeNumberOrZero(item.website_purchases),
       leads: safeNumberOrZero(item.leads),
       mobile_app_install: safeNumberOrZero(item.mobile_app_install),
       post_engagement: safeNumberOrZero(item.post_engagement),
-      
+
       // Quality
       quality_ranking: item.quality_ranking || null,
-      
+
       // Total spend
       total_amount_spent: safeNumberOrZero(item.spend),
     };
@@ -264,17 +302,13 @@ async function saveLifetimeInsightsToAdPerformance(insightsData, account) {
       let totalUpserted = 0;
       let totalModified = 0;
       let totalMatched = 0;
-      
+
       for (let i = 0; i < bulkOps.length; i += BATCH_SIZE) {
         const batch = bulkOps.slice(i, i + BATCH_SIZE);
-        const batchResult = await AdPerformance.bulkWrite(batch, { ordered: false });
-        
-        totalUpserted += batchResult.upsertedCount || 0;
-        totalModified += batchResult.modifiedCount || 0;
-        totalMatched += batchResult.matchedCount || 0;
+        await pushToBuffer(batch);
       }
-      
-      console.log(`✅ AdPerformance: ${totalUpserted} upserted, ${totalModified} modified, ${totalMatched} matched (${withInsights} with insights, ${withoutInsights} without)`);
+
+      console.log(`✅ Đã đẩy ${bulkOps.length} records vào Redis Buffer (Chờ xe rác tới hốt).`);
     } catch (err) {
       console.error('❌ BulkWrite error:', err.message);
     }
@@ -287,67 +321,69 @@ async function saveLifetimeInsightsToAdPerformance(insightsData, account) {
  * Main function: Sync insights for an account
  */
 export async function syncInsightsForAccount(accountId) {
-  const account = await AdsAccount.findById(accountId);
-  if (!account) {
-    throw new Error("AdsAccount not found");
-  }
+  const lockKey = `lock:sync:account:${accountId}`;
+  const acquired = await redis.set(lockKey, "LOCKED", "NX", "EX", 300);
 
-  const accessToken = await getAccessTokenForAccount(account);
-  if (!accessToken) {
-    throw new Error("Missing Facebook access token for account");
-  }
-
-  await AdsAccount.updateOne(
-    { _id: account._id },
-    {
-      $set: {
-        "sync_metadata.insights_status": "syncing",
-        "sync_metadata.insights_error": null,
-      },
-    }
-  );
-
-  const withPrefix = account.external_id.startsWith('act_') 
-    ? account.external_id 
-    : `act_${account.external_id}`;
-
-  let hasError = null;
+  if (!acquired) return;
 
   try {
-    const lifetimeInsights = await fetchLifetimeInsightsForAds(accessToken, account.external_id);
+    const account = await AdsAccount.findById(accountId);
+    if (!account) throw new Error("AdsAccount not found");
 
-    await saveLifetimeInsightsToAdPerformance(lifetimeInsights, account);
-    
-    if (lifetimeInsights.length > 0) {
-      await updateAdsModelWithInsights(lifetimeInsights);
+    const accessToken = await getAccessTokenForAccount(account);
+    if (!accessToken) throw new Error("Missing Facebook access token for account");
+
+    await AdsAccount.updateOne(
+      { _id: account._id },
+      {
+        $set: {
+          "sync_metadata.insights_status": "syncing",
+          "sync_metadata.insights_error": null,
+        },
+      }
+    );
+
+    let hasError = null;
+
+    try {
+      const lifetimeInsights = await fetchLifetimeInsightsForAds(accessToken, account.external_id);
+
+      await saveLifetimeInsightsToAdPerformance(lifetimeInsights, account);
+
+      if (lifetimeInsights.length > 0) {
+        await updateAdsModelWithInsights(lifetimeInsights);
+      }
+
+      await AdsAccount.updateOne(
+        { _id: account._id },
+        {
+          $set: {
+            "sync_metadata.insights_status": "done",
+            "sync_metadata.insights_last_synced_at": new Date(),
+          },
+        }
+      );
+
+    } catch (err) {
+      hasError = err;
+      console.error(`❌ [syncInsightsForAccount] Error for ${account.external_id}:`, err.message);
+
+      await AdsAccount.updateOne(
+        { _id: account._id },
+        {
+          $set: {
+            "sync_metadata.insights_status": "failed",
+            "sync_metadata.insights_error": err.message || String(err),
+          },
+        }
+      );
     }
 
-    await AdsAccount.updateOne(
-      { _id: account._id },
-      {
-        $set: {
-          "sync_metadata.insights_status": "done",
-          "sync_metadata.insights_last_synced_at": new Date(),
-        },
-      }
-    );
-    
-  } catch (err) {
-    hasError = err;
-    console.error(`❌ [syncInsightsForAccount] Error for ${account.external_id}:`, err.message);
-    
-    await AdsAccount.updateOne(
-      { _id: account._id },
-      {
-        $set: {
-          "sync_metadata.insights_status": "failed",
-          "sync_metadata.insights_error": err.message || String(err),
-        },
-      }
-    );
-  }
+    if (hasError) {
+      throw hasError;
+    }
 
-  if (hasError) {
-    throw hasError;
+  } finally {
+    await redis.del(lockKey);
   }
 }
