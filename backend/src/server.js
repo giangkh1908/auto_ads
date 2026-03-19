@@ -58,6 +58,20 @@ app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for now if it interferes with some integrations, or configure it carefully
   crossOriginEmbedderPolicy: false,
 }));
+
+// Fix for express-mongo-sanitize in Express 5 (req.query is getter-only by default)
+app.use((req, res, next) => {
+  if (req.query) {
+    Object.defineProperty(req, 'query', {
+      value: { ...req.query },
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
+  }
+  next();
+});
+
 app.use(mongoSanitize());
 app.use(compression());
 
@@ -77,8 +91,8 @@ app.use(cors({
 
     // Kiểm tra xem origin có nằm trong danh sách cho phép không
     const isAllowed = allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+                     origin.endsWith('.vercel.app') ||
+                     !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
     if (isAllowed) {
       callback(null, true);
