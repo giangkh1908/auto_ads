@@ -7,6 +7,7 @@ import "./Bank.css";
 import axiosInstance from "../../../utils/api/axios.js";
 import { toast } from "sonner";
 import paymentTransactionService from "../../../services/shop/paymentTransactionService";
+import { sanitizeHTML } from "../../../utils/security/securityUtils";
 // import { STORAGE_KEYS } from "../../constants/app.constants";
 
 function Bank() {
@@ -266,7 +267,7 @@ function Bank() {
 
         {/* Confirmation Section */}
         <div className="bk-confirm-section">
-          <p className="bk-confirm-text" dangerouslySetInnerHTML={{ __html: t("bank.confirm.text") }} />
+          <p className="bk-confirm-text" dangerouslySetInnerHTML={{ __html: sanitizeHTML(t("bank.confirm.text")) }} />
           <button className="bk-confirm-btn" onClick={handleConfirm}>
             {t("bank.buttons.confirm")}
           </button>

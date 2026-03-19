@@ -1,8 +1,11 @@
 import express from "express";
+import compression from "compression";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 import path from "path";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
 
 // import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js"; // Deprecated: Now using AdPerformance from cronJobs.js
 import { startAutoRuleScheduler } from "./services/auto/autoRuleScheduler.js";
@@ -51,6 +54,12 @@ const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
 const app = express();
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now if it interferes with some integrations, or configure it carefully
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(mongoSanitize());
+app.use(compression());
 
 // Bật CORS cho frontend
 const allowedOrigins = [

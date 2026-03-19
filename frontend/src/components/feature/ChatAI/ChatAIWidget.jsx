@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, Send, Minimize2 } from 'lucide-react'
 import { useChat } from '../../../hooks/chat/useChat'
+import { sanitizeHTML } from '../../../utils/security/securityUtils'
 import './ChatAIWidget.css'
 
 function ChatAIWidget({ accountId, accountName }) {
@@ -100,7 +101,7 @@ function ChatAIWidget({ accountId, accountName }) {
                     <div className="chat-widget-message-role">{m.role === 'user' ? '👤' : 'AI'}</div>
                     <div
                       className="chat-widget-message-content"
-                      dangerouslySetInnerHTML={{ __html: m.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(m.content) }}
                     />
                     {m.timestamp && (
                       <div className="chat-widget-message-time">

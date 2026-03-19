@@ -9,6 +9,12 @@ import Ads from "../../models/ads/ads.model.js";
 import { agentExecutor } from "../../services/chat/agentExecutor.js";
 import { v4 as uuidv4 } from "uuid";
 import { userHasFeature, FEATURE_KEYS } from "../../services/admin/entitlementService.js";
+import validator from "validator";
+
+const sanitizeInput = (str) => {
+  if (typeof str !== 'string') return str;
+  return validator.escape(str);
+};
 
 // ============================================
 // HELPERS: DATE PARSER, NORMALIZERS, ENTITY RESOLUTION, LOGGING
@@ -275,7 +281,7 @@ export const chatAnalyze = async (req, res) => {
     conversation.messages.push({
       message_id: uuidv4(),
       role: "user",
-      content: message,
+      content: sanitizeInput(message),
       timestamp: new Date(),
     });
 

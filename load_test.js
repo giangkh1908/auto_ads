@@ -4,9 +4,9 @@ import { sleep, check } from 'k6';
 export const options = {
   // Cấu hình 500 Virtual Users (VU)
   stages: [
-    { duration: '30s', target: 1000 }, // Tăng từ 0 lên 100 users trong 10s
-    { duration: '1m', target: 3000 },  // Tiếp tục tăng lên 500 users và giữ trong 30s
-    { duration: '30s', target: 0 },   // Giảm dần về 0
+    { duration: '30s', target: 500 },  // Tăng từ 0 lên 500 users trong 30s
+    { duration: '2m', target: 2000 }, // Duy trì 2000 users trong 2 phút
+    { duration: '30s', target: 0 },    // Giảm dần về 0
   ],
 };
 

@@ -17,6 +17,7 @@ import {
   // convertScheduleToFE,
 } from "../../constants/autoRuleConstants";
 import { buildApplyToText } from "../../utils/business-logic/autoRuleUtils";
+import { sanitizeHTML } from "../../utils/security/securityUtils";
 import LoadingOverlay from "../../components/common/LoadingOverlay/LoadingOverlay";
 
 function AutomationRule() {
@@ -528,7 +529,7 @@ function AutomationRule() {
                     <td>{rule.appliedTo}</td>
                     <td
                       className="action-condition-cell"
-                      dangerouslySetInnerHTML={{ __html: rule.actionConditionHTML }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(rule.actionConditionHTML) }}
                     />
                     <td className="rule-result-cell">{rule.result}</td>
                     <td>{rule.frequency}</td>
