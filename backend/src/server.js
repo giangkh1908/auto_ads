@@ -66,27 +66,32 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://auto-ads-frontend.vercel.app' // Thay bằng domain Vercel thật của bạn
+  'https://auto-ads-frontend.vercel.app',
+  'https://auto-ads-ai.vercel.app'
 ];
 
-app.use(cors({ 
+app.use(cors({
   origin: function (origin, callback) {
     // Cho phép các request không có origin (như mobile apps hoặc curl)
     if (!origin) return callback(null, true);
-    
+
     // Kiểm tra xem origin có nằm trong danh sách cho phép không
-    // Hoặc cho phép tất cả trong môi trường dev bằng cách check !process.env.NODE_ENV
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin || origin.includes('vercel.app')) {
+    const isAllowed = allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`CORS blocked for origin: ${origin}`);
+      callback(null, false); // Trả về false thay vì Error để tránh làm sập request preflight một cách im lặng
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'Cache-Control',
     'X-Requested-With',
     'Accept',
@@ -137,7 +142,7 @@ app.get("/", (req, res) => {
 
 // Health check endpoint cho monitoring services (UptimeRobot, Cron-Job, etc.)
 app.get("/health", (req, res) => {
-  res.json({ 
+  res.json({
     status: "healthy",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
