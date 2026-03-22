@@ -48,7 +48,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           envs: GITHUB_TOKEN
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            set -e
             # Di chuyển tới thư mục dự án
             cd ${{ secrets.VPS_PATH }}
             
