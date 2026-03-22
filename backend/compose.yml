@@ -1,23 +1,55 @@
 services:
   backend:
     image: ghcr.io/giangkh1908/auto-ads-backend:latest
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: '0.4'       # 4 con x 0.4 = 1.6 nhân (Dư 0.4 cho OS/Worker)
+          memory: 512M
+      restart_policy:
+        condition: on-failure
     ports:
-      - "5001:5001"
-    env_file:
-      - .env
+      - "5001-5004:5001"
+    env_file: .env
     environment:
       - NODE_ENV=production
+      - CRON_ENABLED=false
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - redis
-    restart: unless-stopped
+    networks:
+      - app_net
+
+  worker:
+    image: ghcr.io/giangkh1908/auto-ads-backend:latest
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 512M
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - CRON_ENABLED=true
+      - REDIS_HOST=redis
+    networks:
+      - app_net
 
   redis:
     image: redis:7-alpine
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - app_net
     volumes:
       - redis_data:/data
-    restart: unless-stopped
+    restart: always
+
+networks:
+  app_net:
+    driver: bridge
 
 volumes:
   redis_data:

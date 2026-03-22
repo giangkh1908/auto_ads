@@ -173,11 +173,16 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    startAutoRuleScheduler();
-    // startAnalyticsSnapshotCron(); // Deprecated: Now using AdPerformance from cronJobs.js
-    startCancelExpiredPaymentsCron();
-    startSyncCronJobs();
-    startUserPackageExpiryCron();
+    // CHỈ CHẠY CRON JOB NẾU BIẾN CRON_ENABLED = true
+    if (process.env.CRON_ENABLED === "true") {
+      console.log("--- CRON JOBS STARTED ON THIS INSTANCE ---");
+      startAutoRuleScheduler();
+      startCancelExpiredPaymentsCron();
+      startSyncCronJobs();
+      startUserPackageExpiryCron();
+    } else {
+      console.log("--- CRON JOBS DISABLED ON THIS INSTANCE ---");
+    }
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
