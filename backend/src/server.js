@@ -79,12 +79,14 @@ app.use(mongoSanitize());
 app.use(compression());
 
 // Bật CORS cho frontend
+// Chuẩn hóa FRONTEND_URL: xóa dấu cách thừa và dấu / ở cuối
+const frontendUrl = (process.env.FRONTEND_URL || "").trim().replace(/\/$/, "");
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  frontendUrl,
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://auto-ads-frontend.vercel.app',
-  'https://auto-ads-ai.vercel.app'
+  'https://auto-ads-ai.vercel.app/'
 ];
 
 app.use(cors({
