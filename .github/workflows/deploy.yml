@@ -58,8 +58,9 @@ jobs:
             # Khắc phục lỗi "dubious ownership" của Git
             git config --global --add safe.directory ${{ secrets.VPS_PATH }} || true
             
-            # Đồng bộ lại mã nguồn
-            git pull origin main
+            # Đồng bộ lại mã nguồn (reset cứng để tránh lỗi local changes)
+            git fetch origin main
+            git reset --hard origin/main
             
             # Chuyển vào thư mục backend chứa compose.yml
             cd backend
