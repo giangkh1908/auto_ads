@@ -47,18 +47,22 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          envs: GITHUB_TOKEN
           script: |
             # Di chuyển tới thư mục dự án
             cd ${{ secrets.VPS_PATH }}
             
-            # Khắc phục lỗi "dubious ownership" của Git (nếu user SSH khác user sở hữu folder)
+            # Khắc phục lỗi "dubious ownership" của Git
             git config --global --add safe.directory ${{ secrets.VPS_PATH }} || true
             
-            # Đồng bộ lại mã nguồn (để cập nhật file compose.yml mới)
+            # Đồng bộ lại mã nguồn
             git pull origin main
             
             # Chuyển vào thư mục backend chứa compose.yml
             cd backend
+            
+            # Đăng nhập vào GHCR trên VPS để có quyền tải image (Sửa lỗi unauthorized)
+            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Tắt ứng dụng PM2 cũ (nếu có) để giải phóng port 5001
             pm2 stop all || true
