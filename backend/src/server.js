@@ -86,7 +86,7 @@ const allowedOrigins = [
   frontendUrl,
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://auto-ads-ai.vercel.app/'
+  'https://auto-ads-ai.vercel.app'
 ];
 
 app.use(cors({
