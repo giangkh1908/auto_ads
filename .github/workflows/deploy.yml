@@ -48,8 +48,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            # Di chuyển tới thư mục chứa compose.yml
+            # Di chuyển tới thư mục dự án
             cd ${{ secrets.VPS_PATH }}
+            
+            # Đồng bộ lại mã nguồn (để cập nhật file compose.yml mới)
+            git pull origin main
+            
+            # Chuyển vào thư mục backend chứa compose.yml
+            cd backend
             
             # Tắt ứng dụng PM2 cũ (nếu có) để giải phóng port 5001
             pm2 stop all || true
