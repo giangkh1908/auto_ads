@@ -1,20 +1,45 @@
-name: Deploy Backend to VPS
+name: Build and Deploy Backend
 
 on:
   push:
     branches:
-      - main # Chạy khi có push vào branch main
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Bỏ qua cảnh báo Node.js 20
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/auto-ads-backend:latest
+            ghcr.io/${{ github.repository_owner }}/auto-ads-backend:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.2.1
         with:
@@ -23,8 +48,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            # Di chuyển tới thư mục chứa compose.yml
             cd ${{ secrets.VPS_PATH }}
-            git pull origin main
-            cd backend
-            npm install --production
-            pm2 restart ${{ secrets.PM2_NAME }} || pm2 start src/server.js --name "${{ secrets.PM2_NAME }}"
+            
+            # Tắt ứng dụng PM2 cũ (nếu có) để giải phóng port 5001
+            pm2 stop all || true
+            
+            # Tải image mới từ Registry
+            docker compose pull
+            
+            # Restart các container
+            docker compose up -d
+            
+            # Dọn dẹp các image cũ để tiết kiệm dung lượng
+            docker image prune -f
