@@ -51,6 +51,9 @@ jobs:
             # Di chuyển tới thư mục dự án
             cd ${{ secrets.VPS_PATH }}
             
+            # Khắc phục lỗi "dubious ownership" của Git (nếu user SSH khác user sở hữu folder)
+            git config --global --add safe.directory ${{ secrets.VPS_PATH }} || true
+            
             # Đồng bộ lại mã nguồn (để cập nhật file compose.yml mới)
             git pull origin main
             
