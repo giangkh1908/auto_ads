@@ -159,6 +159,25 @@ app.get("/", (req, res) => {
   res.send("Backend deployed successfully!");
 });
 
+app.get("/heavy", (req, res) => {
+  // Tăng lên 100 triệu hoặc 1 tỷ vòng lặp để kéo dài thời gian xử lý khoảng 500ms - 1s
+  const iterations = 100_000_000;
+  const start = Date.now();
+
+  let result = 0;
+  for (let i = 0; i < iterations; i++) {
+    // Thực hiện phép toán phức tạp hơn một chút để CPU phải làm việc thực sự
+    result += Math.sqrt(i) * Math.tan(i);
+  }
+
+  const elapsed = Date.now() - start;
+  res.json({
+    message: "CPU was blocked!",
+    elapsedMs: elapsed,
+    result: result.toFixed(2)
+  });
+});
+
 // Health check endpoint cho monitoring services (UptimeRobot, Cron-Job, etc.)
 app.get("/health", (req, res) => {
   res.json({

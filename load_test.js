@@ -4,14 +4,14 @@ import { sleep, check } from 'k6';
 export const options = {
   // Cấu hình 500 Virtual Users (VU)
   stages: [
-    { duration: '30s', target: 300 },  // Tăng từ 0 lên 500 users trong 30s
-    { duration: '2m', target: 1000 }, // Duy trì 2000 users trong 2 phút
+    { duration: '30s', target: 500 },  // Tăng từ 0 lên 500 users trong 30s
+    { duration: '1m', target: 800 }, // Duy trì 2000 users trong 2 phút
     { duration: '30s', target: 0 },    // Giảm dần về 0
   ],
 };
 
 export default function () {
-  const url = 'https://auto-ads-ai.vercel.app/';
+  const url = 'https://api.vibestoneoficial.store/health';
   const res = http.get(url);
 
   check(res, {
