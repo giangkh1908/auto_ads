@@ -1,136 +1,266 @@
-# Facebook Ads Manager
+# AAMS — Auto Ads Management System
 
-Ứng dụng full-stack hiện đại để quản lý chiến dịch quảng cáo Facebook, đi kèm giao diện đẹp, đáp ứng tốt trên nhiều thiết bị và hỗ trợ đầy đủ thao tác CRUD.
+Hệ thống SaaS quản lý quảng cáo Facebook Ads full-stack: tạo campaign, theo dõi performance, automation rules, AI chat phân tích, thanh toán đa kênh.
 
-## 📦 Cài đặt
+---
 
-### Yêu cầu trước khi cài
-- Node.js (v16 trở lên)
-- npm hoặc yarn
-- Tài khoản Facebook Developer có quyền truy cập Marketing API
+## 🏗️ Kiến trúc hệ thống
 
-### Thiết lập Backend
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Frontend   │────▶│   Backend    │────▶│  MongoDB    │
+│  React 18   │◀────│  Express 5   │◀────│  Mongoose    │
+│  Vite 7     │     │  Port: 5001  │     └─────────────┘
+└─────────────┘     └──────┬───────┘     ┌─────────────┐
+                           │              │   Redis     │
+                    ┌──────┴───────┐      │  Cache/Lock │
+                    │ Facebook     │      └─────────────┘
+                    │ Marketing    │
+                    │ API          │      ┌─────────────┐
+                    └──────────────┘      │  AI (LLM)   │
+                                          │ OpenAI/     │
+                     ┌──────────────┐     │ Gemini      │
+                     │ Payment      │     └─────────────┘
+                     │ Stripe/VNPay │
+                     │ ZaloPay      │     ┌─────────────┐
+                     └──────────────┘     │ Cloudinary  │
+                                          │ Storage     │
+                                          └─────────────┘
+```
 
-1. Di chuyển vào thư mục backend:
+## 🧩 Tính năng chính
+
+| Module | Mô tả |
+|---|---|
+| **Ads Management** | CRUD campaign/adset/ad qua Facebook Marketing API, wizard tạo ads 4 bước |
+| **Analytics** | Dashboard thống kê performance, biểu đồ Recharts, filter theo ngày/campaign/ad |
+| **Automation Rules** | Tự động bật/tắt ads theo điều kiện (spend, CTR, ROAS, conversions...) |
+| **AI Chat** | Chat phân tích analytics, generate ad content (GPT-4, Gemini) |
+| **Shop Management** | Quản lý shop, nhân viên, Facebook pages, phân quyền |
+| **Payment** | Gói dịch vụ, thanh toán Stripe/VNPay/ZaloPay, invoice |
+| **Admin Panel** | 3 role (System Admin, CS Staff, Accountant) với các trang quản lý riêng |
+| **i18n** | Hỗ trợ tiếng Việt và tiếng Anh |
+
+## 🛠️ Tech Stack
+
+### Backend
+| Component | Technology |
+|---|---|
+| Runtime | Node.js 20 |
+| Framework | Express 5 |
+| Database | MongoDB + Mongoose 8 |
+| Cache/Queue | Redis (ioredis + @node-redis) |
+| Auth | JWT (jsonwebtoken) |
+| AI | Langchain + OpenAI + Google Gemini |
+| Payment | Stripe, VNPay, ZaloPay |
+| Storage | Cloudinary |
+| Security | Helmet, CORS, express-mongo-sanitize, rate limiter |
+| Cron | node-cron |
+| Testing | Jest |
+
+### Frontend
+| Component | Technology |
+|---|---|
+| Framework | React 18 + Vite 7 |
+| Routing | React Router 6 |
+| State | React Context + Custom Hooks |
+| i18n | i18next (VI/EN, 8 namespaces) |
+| Charts | Recharts |
+| Maps | Mapbox GL + react-map-gl |
+| Animation | Framer Motion |
+| Icons | Lucide React |
+| Forms | React Hook Form |
+| Testing | Vitest + Testing Library |
+
+### Infrastructure
+| Component | Technology |
+|---|---|
+| Container | Docker + Docker Compose |
+| CI/CD | GitHub Actions |
+| Registry | GitHub Container Registry (ghcr.io) |
+| Deploy | VPS Ubuntu + Nginx + SSL (Certbot) |
+| Monitoring | Health check endpoint `/health` |
+
+## 📂 Cấu trúc project
+
+```
+D:\auto_ads/
+├── backend/
+│   ├── src/
+│   │   ├── config/           # DB, Redis config
+│   │   ├── controllers/      # 30 controllers (ads, auth, admin, payments...)
+│   │   ├── middlewares/      # JWT auth, RBAC, rate limiter, feature gate
+│   │   ├── models/           # 25 MongoDB models
+│   │   │   ├── user/         # User, UserRole
+│   │   │   ├── shop/         # Shop, ShopUser
+│   │   │   ├── ads/          # AdsAccount, Campaign, AdSet, Ad, Creative, AdPerformance
+│   │   │   └── admin/        # Package, Log, Note, Lead, SystemLog
+│   │   ├── routes/           # 24 route files
+│   │   ├── services/
+│   │   │   ├── ads/          # FB sync (entities, insights), fbAdsService
+│   │   │   ├── auto/         # Automation rules engine + scheduler
+│   │   │   ├── chat/         # AI chat context, analytics tools
+│   │   │   └── payment/      # Stripe, VNPay, ZaloPay
+│   │   ├── jobs/             # Cron: sync, payment expiry, package expiry
+│   │   ├── utils/            # Helpers, formatters, validators
+│   │   └── server.js         # Entry point
+│   ├── Dockerfile
+│   ├── compose.yml           # Docker Compose (backend + worker + redis)
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # Layout, AdsWizard, AutoRule, ChatAI, Admin...
+│   │   ├── pages/            # 25+ pages (Home, Dashboard, Ads, Analytics, Admin...)
+│   │   ├── hooks/            # 20+ custom hooks
+│   │   ├── services/         # API service layer (axios)
+│   │   ├── contexts/         # AuthContext
+│   │   ├── locales/          # i18n (vi/en, 8 namespaces)
+│   │   └── App.jsx           # Router + guards
+│   └── vite.config.js
+└── .github/workflows/deploy.yml
+```
+
+## 🚀 Cài đặt & Chạy local
+
+### Yêu cầu
+- Node.js 20+
+- MongoDB (local hoặc Atlas)
+- Redis
+- Facebook Developer Account (Marketing API access)
+
+### Backend
+
 ```bash
 cd backend
-```
 
-2. Cài đặt dependencies:
-```bash
+# Cài dependencies
 npm install
-```
 
-3. Tạo file `.env` trong thư mục backend:
-```env
-ACCESS_TOKEN=your_facebook_access_token
-AD_ACCOUNT_ID=your_ad_account_id
-PORT=3001
-```
+# Tạo file .env từ mẫu
+cp .env.example .env
+# → Điền thông tin MongoDB, JWT, Facebook App, payment keys...
 
-4. Khởi chạy backend server:
-```bash
-npm start
-# hoặc chạy môi trường phát triển
+# Chạy development
 npm run dev
+
+# Chạy production
+npm start
 ```
 
-Backend sẽ chạy tại `http://localhost:5001`
+Backend chạy tại `http://localhost:5001`
 
-### Thiết lập Frontend
+### Frontend
 
-1. Di chuyển vào thư mục frontend:
 ```bash
 cd frontend
-```
 
-2. Cài đặt dependencies:
-```bash
+# Cài dependencies
 npm install
-```
 
-3. Khởi chạy development server:
-```bash
+# Chạy development
 npm run dev
+
+# Build production
+npm run build
 ```
 
-Frontend sẽ chạy tại `http://localhost:5173`
+Frontend chạy tại `http://localhost:5173`
 
-## 🔐 Tài khoản test
+## 🐳 Docker Deployment
 
-- Email: `quangvu1922@gmail.com`
-- Mật khẩu: `19082003`
+### Cấu trúc Docker
 
-### Scripts có sẵn
+```
+compose.yml
+├── backend (4 replicas)  → API server, CRON_ENABLED=false
+├── worker (1 replica)    → Cron jobs, CRON_ENABLED=true
+└── redis (1 replica)     → Cache + distributed locks
+```
 
-**Backend:**
-- `npm start` - Chạy server ở môi trường production
-- `npm run dev` - Chạy server phát triển với nodemon
+### Chạy với Docker Compose
 
-**Frontend:**
-- `npm run dev` - Chạy development server
-- `npm run build` - Build cho production
-- `npm run preview` - Xem trước bản build production
+```bash
+cd backend
 
-## 🚀 Triển khai & CI/CD
-Hệ thống đã được thiết lập quy trình tự động hóa chuyên nghiệp:
-- **GitHub Actions**: Tự động Build và Deploy Backend lên VPS mỗi khi có code mới trên branch `main`.
-- **VPS (Ubuntu 22.04)**: Tối ưu hóa môi trường với Nginx Reverse Proxy, SSL miễn phí (Certbot).
-- **Docker + Docker Compose**: Container hóa toàn bộ stack, dễ dàng scale và rollback.
+# Đảm bảo có file .env
+# CRON_ENABLED=true  → cho worker
+# CRON_ENABLED=false → cho backend replicas
 
-## ⚡ Kết quả Load Test (k6 trên VPS)
+docker compose up -d
+```
 
-Bài kiểm tra tải được chạy thực tế trên VPS với **k6**, tấn công vào route `/health` - endpoint monitoring dùng để kiểm tra độ ổn định và khả năng chịu tải của server.
+### CI/CD Pipeline
 
-### Kịch bản (Scenario)
+Mỗi khi push lên branch `main`:
+1. **Build** Docker image từ `backend/`
+2. **Push** lên GitHub Container Registry (ghcr.io)
+3. **Deploy** lên VPS qua SSH → `docker compose pull && docker compose up -d`
 
-| Giai đoạn | Thời gian | Virtual Users |
-|-----------|-----------|---------------|
-| Ramp-up   | 30s       | 0 → 1,000 VUs  |
-| Sustained | 1m        | 1,000 → 3,000 VUs  |
-| Ramp-down | 30s       | 3,000 → 0 VUs   |
+## ⚙️ Cron Jobs
 
-### Kết quả
+| Job | Tần suất | Mô tả |
+|---|---|---|
+| **Ads Insights Sync** | Mỗi giờ | Sync daily breakdown từ Facebook → AdPerformance + entity insights |
+| **Entity Sync** | Mỗi 4 giờ | Sync campaigns/adsets/ads từ Facebook |
+| **Auto Rules** | Mỗi 5 phút | Evaluate automation rules → bật/tắt ads |
+| **Payment Expiry** | Mỗi giờ | Hủy thanh toán quá hạn |
+| **Package Expiry** | Mỗi giờ | Xử lý gói dịch vụ hết hạn |
+
+### Distributed Lock
+
+Mỗi account có Redis lock (`lock:sync:account:{id}`) → tránh sync trùng lặp khi chạy nhiều worker.
+
+### Cache
+
+- **Ads mapping**: Redis cache 55 phút → giảm MongoDB query
+- **Insights endpoints**: DB-first với TTL 1 giờ → chỉ gọi Facebook khi data stale
+
+## 📊 Data Flow — Insights Sync
+
+```
+Facebook API (daily breakdown, time_increment=1)
+    ↓
+Cron Job (mỗi giờ)
+    ↓
+saveDailyInsightsToAdPerformance()
+    → Redis buffer → flush → MongoDB AdPerformance (1 record = 1 ngày)
+    ↓
+AdsCampaign/AdsSet/Ad.insights (lifetime totals)
+    ↓
+Frontend:
+    → AdsManagement: đọc entity.insights (lifetime)
+    → Analytics: query AdPerformance, SUM theo khoảng thời gian
+    → Insights API: DB-first (TTL 1h), chỉ gọi Facebook khi stale
+```
+
+## 🔐 Bảo mật
+
+- **JWT** authentication với access + refresh tokens
+- **RBAC** (Role-Based Access Control): System Admin, CS Staff, Accountant, Shop Admin, Shop User
+- **Rate limiting** per IP
+- **MongoDB sanitization** chống NoSQL injection
+- **Helmet** security headers
+- **CORS** whitelist origins
+
+## ⚡ Load Test (k6)
 
 | Chỉ số | Giá trị |
-|--------|---------|
-| Tổng requests | **125,470** |
-| Throughput | **~1,039 req/s** |
-| HTTP lỗi | **0.00%** (không có request nào fail) |
-| Checks thành công | **92.35%** (231,746 / 250,940) |
-| Checks thất bại (`response < 500ms`) | **7.64%** (19,194 checks) |
-| Avg latency | **452 ms** |
-| Median latency | **33 ms** |
-| p(90) latency | **1.22 s** |
-| p(95) latency | **3.02 s** |
-| Max latency | **10.09 s** |
-| Dữ liệu nhận | **110 MB** (906 kB/s) |
-| Dữ liệu gửi | **19 MB** (154 kB/s) |
+|---|---|
+| Total requests | 125,470 |
+| Throughput | ~1,039 req/s |
+| HTTP errors | 0.00% |
+| Median latency | 33 ms |
+| p95 latency | 3.02 s |
 
-### Nhận xét
-
-- **Không có request nào bị lỗi** (`http_req_failed: 0.00%`), server ổn định dưới tải cao.
-- **Median latency chỉ 33ms** - hầu hết các request được xử lý rất nhanh.
-- Latency cao ở p(90)-p(95) cho thấy server bắt đầu bị áp lực khi số VUs tăng cao, các request phải xếp hàng chờ.
-- Đây là kết quả tốt cho `/health` - endpoint nhẹ, không có logic phức tạp, thể hiện khả năng xử lý concurrency cao của stack.
-
+```bash
 # Chạy load test
 k6 run load_test.js
 ```
 
-## 📄 Giấy phép
-Dự án này được phát hành theo giấy phép MIT.
+## 📄 License
 
-## 🤝 Đóng góp
-1. Fork repository
-2. Tạo feature branch
-3. Thực hiện thay đổi
-4. Kiểm thử kỹ lưỡng
-5. Gửi pull request
-
-## 📞 Hỗ trợ
-Nếu cần hỗ trợ hoặc có câu hỏi, vui lòng mở issue trên repository.
+MIT
 
 ---
 
-**Được xây dựng bằng ❤️ với React, Node.js và Facebook Marketing API**
+**Built with React, Express, MongoDB, Redis & Facebook Marketing API**

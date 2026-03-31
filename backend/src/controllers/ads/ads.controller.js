@@ -354,8 +354,10 @@ export async function getAdsLiveCtrl(req, res) {
 
 /**
  * GET /api/ads/insights
- * Lấy insights cho danh sách ads (ids=comma,separated) VÀ LƯU VÀO DB
+ * DB-first: trả về từ DB nếu TTL còn, chỉ gọi Facebook khi stale/missing
  */
+const INSIGHTS_TTL_MS = 60 * 60 * 1000; // 1 giờ
+
 export async function getAdsInsightsCtrl(req, res) {
   try {
     const { ids } = req.query;
@@ -363,38 +365,67 @@ export async function getAdsInsightsCtrl(req, res) {
       return res.status(400).json({ message: "Thiếu danh sách ids" });
     }
 
-    // Lấy access token từ query hoặc từ user hiện tại
-    let accessToken = req.query.access_token;
-    if (!accessToken) {
-      const user = await User.findById(req.user?._id).select("+facebookAccessToken");
-      accessToken = user?.facebookAccessToken || null;
-    }
-    if (!accessToken) {
-      return res.status(400).json({
-        message: "Không tìm thấy Facebook access_token. Vui lòng đăng nhập lại.",
-        missingToken: true,
-      });
-    }
-
     const adIds = String(ids)
       .split(",")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    const insightsData = await fetchInsightsForAdIds(accessToken, adIds);
-    
-    console.log(`📊 Fetched insights for ${insightsData.length} ads from FB`);
-    
-    // Map lại data để FE dễ xử lý và để lưu DB
-    // KHÔNG cần extract .data?.[0] vì service đã làm rồi
-    const items = insightsData.map(item => ({
-      id: item.id,
-      insights: item.insights || {}
-    }));
+    // 1. Query DB trước
+    const dbAds = await Ads.find({
+      external_id: { $in: adIds }
+    }).select('external_id insights insights_updated_at').lean();
 
-    // LƯU INSIGHTS VÀO DB (background, không block response)
-    if (items.length > 0) {
-      const bulkOps = items
+    const dbMap = new Map();
+    const staleIds = [];
+    const now = Date.now();
+
+    for (const ad of dbAds) {
+      const updatedAt = ad.insights_updated_at ? new Date(ad.insights_updated_at).getTime() : 0;
+      const isFresh = (now - updatedAt) < INSIGHTS_TTL_MS && ad.insights && Object.keys(ad.insights).length > 0;
+      dbMap.set(ad.external_id, { id: ad.external_id, insights: ad.insights || {} });
+      if (!isFresh) {
+        staleIds.push(ad.external_id);
+      }
+    }
+
+    // Thêm missing ids vào stale
+    for (const id of adIds) {
+      if (!dbMap.has(id)) {
+        staleIds.push(id);
+      }
+    }
+
+    // 2. Nếu tất cả fresh → trả về từ DB
+    if (staleIds.length === 0) {
+      const items = adIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, total: items.length, source: 'db' });
+    }
+
+    // 3. Gọi Facebook cho stale/missing items
+    let accessToken = req.query.access_token;
+    if (!accessToken) {
+      try {
+        const user = await User.findById(req.user?._id).select("+facebookAccessToken");
+        accessToken = user?.facebookAccessToken || null;
+      } catch (e) { /* ignore */ }
+    }
+
+    if (!accessToken) {
+      const items = adIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, total: items.length, source: 'db_stale' });
+    }
+
+    try {
+      const insightsData = await fetchInsightsForAdIds(accessToken, staleIds);
+      const fbMap = new Map();
+      for (const item of insightsData) {
+        fbMap.set(item.id, { id: item.id, insights: item.insights || {} });
+      }
+
+      const items = adIds.map(id => fbMap.get(id) || dbMap.get(id) || { id, insights: {} });
+
+      // Save FB data vào DB (background)
+      const bulkOps = insightsData
         .filter(item => item.insights && Object.keys(item.insights).length > 0)
         .map(item => ({
           updateOne: {
@@ -408,9 +439,14 @@ export async function getAdsInsightsCtrl(req, res) {
           .then(() => console.log(`✅ Saved insights for ${bulkOps.length} ads to DB`))
           .catch(err => console.error("Error saving ad insights to DB:", err.message));
       }
+
+      return res.status(200).json({ items, total: items.length, source: 'facebook' });
+    } catch (fbErr) {
+      console.error("Facebook fetch failed, falling back to DB:", fbErr.message);
+      const items = adIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, total: items.length, source: 'db_stale' });
     }
 
-    return res.status(200).json({ items, total: items.length });
   } catch (err) {
     console.error("GET Ads insights error:", err);
     return res.status(500).json({ message: "Lỗi lấy insights từ Facebook", error: err.message });

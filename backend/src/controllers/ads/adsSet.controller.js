@@ -521,8 +521,10 @@ export async function copyAdsetCascadeCtrl(req, res) {
 
 /**
  * GET /api/adsets/insights
- * Lấy insights cho nhiều adsets từ Facebook VÀ LƯU VÀO DB
+ * DB-first: trả về từ DB nếu TTL còn, chỉ gọi Facebook khi stale/missing
  */
+const INSIGHTS_TTL_MS = 60 * 60 * 1000; // 1 giờ
+
 export async function getAdsetInsightsCtrl(req, res) {
   try {
     const { ids } = req.query;
@@ -532,28 +534,60 @@ export async function getAdsetInsightsCtrl(req, res) {
 
     const adsetIds = ids.split(',').map(id => id.trim()).filter(Boolean);
 
-    // Lấy token người dùng hiện tại
-    const user = await User.findById(req.user?._id).select("+facebookAccessToken");
-    const accessToken = user?.facebookAccessToken;
-    if (!accessToken) {
-      return res.status(401).json({ message: "Thiếu access token Facebook" });
+    // 1. Query DB trước
+    const dbAdsets = await AdsSet.find({
+      external_id: { $in: adsetIds }
+    }).select('external_id insights insights_updated_at').lean();
+
+    const dbMap = new Map();
+    const staleIds = [];
+    const now = Date.now();
+
+    for (const a of dbAdsets) {
+      const updatedAt = a.insights_updated_at ? new Date(a.insights_updated_at).getTime() : 0;
+      const isFresh = (now - updatedAt) < INSIGHTS_TTL_MS && a.insights && Object.keys(a.insights).length > 0;
+      dbMap.set(a.external_id, { id: a.external_id, insights: a.insights || {} });
+      if (!isFresh) {
+        staleIds.push(a.external_id);
+      }
     }
 
-    // Gọi service để lấy insights từ Facebook
-    const insightsData = await fetchInsightsForAdsetIds(accessToken, adsetIds);
-    
-    console.log(`📊 Fetched insights for ${insightsData.length} adsets from FB`);
+    // Thêm missing ids vào stale
+    for (const id of adsetIds) {
+      if (!dbMap.has(id)) {
+        staleIds.push(id);
+      }
+    }
 
-    // Map lại data để FE dễ xử lý: { id: '...', insights: {...} }
-    // KHÔNG cần extract .data?.[0] vì service đã làm rồi
-    const items = insightsData.map(item => ({
-      id: item.id,
-      insights: item.insights || {}
-    }));
+    // 2. Nếu tất cả fresh → trả về từ DB
+    if (staleIds.length === 0) {
+      const items = adsetIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, source: 'db' });
+    }
 
-    // LƯU INSIGHTS VÀO DB (background, không block response)
-    if (items.length > 0) {
-      const bulkOps = items
+    // 3. Gọi Facebook cho stale/missing items
+    let accessToken = null;
+    try {
+      const user = await User.findById(req.user?._id).select("+facebookAccessToken");
+      accessToken = user?.facebookAccessToken;
+    } catch (e) { /* ignore */ }
+
+    if (!accessToken) {
+      const items = adsetIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, source: 'db_stale' });
+    }
+
+    try {
+      const insightsData = await fetchInsightsForAdsetIds(accessToken, staleIds);
+      const fbMap = new Map();
+      for (const item of insightsData) {
+        fbMap.set(item.id, { id: item.id, insights: item.insights || {} });
+      }
+
+      const items = adsetIds.map(id => fbMap.get(id) || dbMap.get(id) || { id, insights: {} });
+
+      // Save FB data vào DB (background)
+      const bulkOps = insightsData
         .filter(item => item.insights && Object.keys(item.insights).length > 0)
         .map(item => ({
           updateOne: {
@@ -567,15 +601,19 @@ export async function getAdsetInsightsCtrl(req, res) {
           .then(() => console.log(`✅ Saved insights for ${bulkOps.length} adsets to DB`))
           .catch(err => console.error("Error saving adset insights to DB:", err.message));
       }
-    }
 
-    return res.status(200).json({ items });
+      return res.status(200).json({ items, source: 'facebook' });
+    } catch (fbErr) {
+      console.error("Facebook fetch failed, falling back to DB:", fbErr.message);
+      const items = adsetIds.map(id => dbMap.get(id) || { id, insights: {} });
+      return res.status(200).json({ items, source: 'db_stale' });
+    }
 
   } catch (err) {
     console.error("GET Adset Insights error:", err.response?.data || err.message);
-    return res.status(500).json({ 
-      message: "Không thể lấy dữ liệu insights", 
-      detail: err.response?.data || err.message 
+    return res.status(500).json({
+      message: "Không thể lấy dữ liệu insights",
+      detail: err.response?.data || err.message
     });
   }
 }
