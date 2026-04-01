@@ -2,6 +2,7 @@
 
 Hệ thống SaaS quản lý quảng cáo Facebook Ads full-stack: tạo campaign, theo dõi performance, automation rules, AI chat phân tích, thanh toán đa kênh.
 
+Hệ thống được phát triển tiếp dựa trên đồ án nhóm đã làm. 
 ---
 
 ## 🏗️ Kiến trúc hệ thống
