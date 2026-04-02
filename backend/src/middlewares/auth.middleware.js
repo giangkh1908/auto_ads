@@ -1,30 +1,32 @@
 import { verifyAccessToken } from '../utils/jwt.js';
+import redis from '../config/redis.js';
 import User from '../models/user/user.model.js';
 import UserRole from '../models/user/userRole.model.js';
 import Role from '../models/admin/role.model.js';
 import Shop from '../models/shops/shop.model.js';
 import UserPackage from "../models/package/userPackage.model.js"
 import ShopUser from "../models/shops/shopUser.model.js"
-/**
- * 🧩 Middleware xác thực Access Token
- */
-export const authenticate = async (req, res, next) => {
+
+async function authenticateWithToken(token, req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    // Verify JWT
     const decoded = verifyAccessToken(token);
 
-    // Lấy thông tin user
-    const user = await User.findById(decoded.id).select('-password -facebookAccessToken -facebookRefreshToken');
+    // Check token blacklist
+    if (decoded.jti) {
+      const isBlacklisted = await redis.get(`blacklist:${decoded.jti}`);
+      if (isBlacklisted) {
+        return res.status(401).json({ success: false, message: 'Token đã bị thu hồi.' });
+      }
+    }
 
+    // Check token version
+    const user = await User.findById(decoded.id).select('-password -facebookAccessToken -facebookRefreshToken +tokenVersion');
     if (!user || user.deleted_at) {
       return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc người dùng không tồn tại.' });
+    }
+
+    if (decoded.tv !== user.tokenVersion) {
+      return res.status(401).json({ success: false, message: 'Token đã lỗi thời. Vui lòng đăng nhập lại.' });
     }
 
     if (user.status !== 'active') {
@@ -51,52 +53,23 @@ export const authenticate = async (req, res, next) => {
     console.error('Auth middleware error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi xác thực hệ thống.' });
   }
+}
+
+export const authenticate = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
+  }
+  const token = authHeader.split(' ')[1];
+  return authenticateWithToken(token, req, res, next);
 };
 
-/**
- * 🧩 Middleware xác thực Access Token cho SSE (từ query parameter)
- */
 export const authenticateSSE = async (req, res, next) => {
-  try {
-    const token = req.query.token;
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
-    }
-
-    // Verify JWT
-    const decoded = verifyAccessToken(token);
-
-    // Lấy thông tin user
-    const user = await User.findById(decoded.id).select('-password -facebookAccessToken -facebookRefreshToken');
-
-    if (!user || user.deleted_at) {
-      return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc người dùng không tồn tại.' });
-    }
-
-    if (user.status !== 'active') {
-      return res.status(403).json({ success: false, message: 'Tài khoản chưa được kích hoạt hoặc đã bị khóa.' });
-    }
-
-    if (!user.emailVerified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Vui lòng xác nhận email trước khi truy cập hệ thống.',
-        code: 'EMAIL_NOT_VERIFIED',
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ success: false, message: 'Token không hợp lệ.' });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ success: false, message: 'Token đã hết hạn.' });
-    }
-    console.error('SSE Auth middleware error:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi xác thực hệ thống.' });
+  const token = req.query.token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
   }
+  return authenticateWithToken(token, req, res, next);
 };
 
 /**

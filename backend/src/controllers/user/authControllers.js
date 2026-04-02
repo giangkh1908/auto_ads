@@ -4,6 +4,8 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import axios from "axios";
 import { generateTokens, verifyRefreshToken } from "../../utils/jwt.js";
+import jwt from "jsonwebtoken";
+import redis from "../../config/redis.js";
 import Shop from "../../models/shops/shop.model.js";
 import ShopUser from "../../models/shops/shopUser.model.js";
 import UserRole from "../../models/user/userRole.model.js";
@@ -220,7 +222,9 @@ export const verifyEmail = async (req, res) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const { accessToken, refreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
+    user.currentRefreshTokenJti = refreshJti;
+    await user.save();
 
     // Log email verification
     await saveSystemLog({
@@ -372,7 +376,8 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Tài khoản chưa được kích hoạt." });
     }
 
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const { accessToken, refreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
+    user.currentRefreshTokenJti = refreshJti;
     user.last_login_at = Date.now();
     await user.save();
     user.password = undefined;
@@ -697,7 +702,9 @@ export const facebookLogin = async (req, res) => {
     }
 
     // Tạo token đăng nhập
-    const { accessToken: at, refreshToken: rt } = generateTokens(user._id);
+    const { accessToken: at, refreshToken: rt, refreshJti } = generateTokens(user._id, user.tokenVersion);
+    user.currentRefreshTokenJti = refreshJti;
+    await user.save();
 
     // Log successful Facebook login
     await saveSystemLog({
@@ -751,17 +758,32 @@ export const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
     const decoded = verifyRefreshToken(refreshToken);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select('+currentRefreshTokenJti +tokenVersion');
     if (!user)
       return res
         .status(401)
         .json({ success: false, message: "Refresh token không hợp lệ." });
 
-    const tokens = generateTokens(user._id);
+    // Check if this refresh token is still valid (rotation)
+    if (user.currentRefreshTokenJti && decoded.jti !== user.currentRefreshTokenJti) {
+      // Refresh token bị steal → khóa tài khoản
+      user.status = 'inactive';
+      await user.save();
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token không hợp lệ. Tài khoản đã bị khóa do nghi ngờ bị tấn công.",
+      });
+    }
+
+    // Tạo token mới
+    const { accessToken, refreshToken: newRefreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
+    user.currentRefreshTokenJti = refreshJti;
+    await user.save();
+
     res.status(200).json({
       success: true,
       message: "Làm mới token thành công.",
-      data: { tokens },
+      data: { tokens: { accessToken, refreshToken: newRefreshToken } },
     });
   } catch {
     res.status(401).json({
@@ -817,7 +839,7 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// Đặt lại mật khẩu
+// Reset password
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
@@ -836,6 +858,8 @@ export const resetPassword = async (req, res) => {
     user.password = await bcrypt.hash(password, 10);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    // Increment tokenVersion → invalidate tất cả token cũ
+    user.tokenVersion = (user.tokenVersion || 1) + 1;
     await user.save();
 
     // Log password reset success
@@ -961,10 +985,9 @@ export const updateProfile = async (req, res) => {
 // Đổi mật khẩu
 export const changePassword = async (req, res) => {
   try {
-    const userId = req.user._id; // Lấy user từ middleware xác thực JWT
+    const userId = req.user._id;
     const { currentPassword, newPassword } = req.body;
 
-    // Kiểm tra đầu vào
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
@@ -972,7 +995,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Lấy user có chứa trường password
     const user = await User.findById(userId).select("+password");
     if (!user) {
       return res
@@ -980,7 +1002,6 @@ export const changePassword = async (req, res) => {
         .json({ success: false, message: "Không tìm thấy người dùng." });
     }
 
-    // Kiểm tra mật khẩu cũ
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -989,7 +1010,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Kiểm tra mật khẩu mới khác mật khẩu cũ
     if (await bcrypt.compare(newPassword, user.password)) {
       return res.status(400).json({
         success: false,
@@ -997,9 +1017,10 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Hash và lưu mật khẩu mới
     const hashed = await bcrypt.hash(newPassword, 10);
     user.password = hashed;
+    // Increment tokenVersion → invalidate tất cả token cũ
+    user.tokenVersion = (user.tokenVersion || 1) + 1;
     await user.save();
 
     res.status(200).json({
@@ -1071,6 +1092,21 @@ export const resendVerificationEmail = async (req, res) => {
 // Logout
 export const logout = async (req, res) => {
   try {
+    // Blacklist access token
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.decode(token);
+        if (decoded?.jti && decoded?.exp) {
+          const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+          if (ttl > 0) {
+            await redis.set(`blacklist:${decoded.jti}`, '1', 'EX', ttl);
+          }
+        }
+      } catch (e) { /* ignore decode errors */ }
+    }
+
     // Log logout if user is authenticated
     if (req.user) {
       await saveSystemLog({
@@ -1090,7 +1126,6 @@ export const logout = async (req, res) => {
     }
   } catch (error) {
     console.error('Error logging logout:', error);
-    // Không block logout flow nếu log lỗi
   }
   res.status(200).json({ success: true, message: "Đăng xuất thành công." });
 };

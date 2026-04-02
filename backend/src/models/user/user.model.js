@@ -100,6 +100,10 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
 
+    // 🔐 JWT Security
+    tokenVersion: { type: Number, default: 1 },
+    currentRefreshTokenJti: { type: String, select: false },
+
     // 🧠 Audit
     last_login_at: {type: Date},
 
