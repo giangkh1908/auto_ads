@@ -20,7 +20,11 @@ async function authenticateWithToken(token, req, res, next) {
     }
 
     // Check token version
-    const user = await User.findById(decoded.id).select('-password -facebookAccessToken -facebookRefreshToken +tokenVersion');
+    const user = await User.findById(decoded.id).select({
+      password: 0,
+      facebookAccessToken: 0,
+      facebookRefreshToken: 0
+    });
     if (!user || user.deleted_at) {
       return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc người dùng không tồn tại.' });
     }
