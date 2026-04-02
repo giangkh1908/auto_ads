@@ -57,9 +57,47 @@ const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
 const app = express();
+
+// ============================================
+// CORS CONFIGURATION - MUST BE FIRST
+// ============================================
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://auto-ads-ai.vercel.app',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.trim().replace(/\/$/, '')] : [])
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow in development for any origin
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Check allowed origins in production
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    console.warn(`CORS blocked for origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['X-Request-ID']
+}));
+
+// ============================================
+// SECURITY MIDDLEWARE (AFTER CORS)
+// ============================================
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for now if it interferes with some integrations, or configure it carefully
-  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
 // Fix for express-mongo-sanitize in Express 5 (req.query is getter-only by default)
@@ -78,45 +116,9 @@ app.use((req, res, next) => {
 app.use(mongoSanitize());
 app.use(compression());
 
-// Bật CORS cho frontend
-// Chuẩn hóa FRONTEND_URL: xóa dấu cách thừa và dấu / ở cuối
-const frontendUrl = (process.env.FRONTEND_URL || "").trim().replace(/\/$/, "");
-
-const allowedOrigins = [
-  frontendUrl,
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://auto-ads-ai.vercel.app'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Cho phép các request không có origin (như mobile apps hoặc curl)
-    if (!origin) return callback(null, true);
-
-    // Kiểm tra xem origin có nằm trong danh sách cho phép không
-    const isAllowed = allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked for origin: ${origin}`);
-      callback(null, false); // Trả về false thay vì Error để tránh làm sập request preflight một cách im lặng
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Cache-Control',
-    'X-Requested-With',
-    'Accept',
-    'Origin'
-  ]
-}));
+// ============================================
+// BODY PARSERS
+// ============================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
