@@ -68,9 +68,6 @@ jobs:
             # Đăng nhập vào GHCR trên VPS để có quyền tải image (Sửa lỗi unauthorized)
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Tắt ứng dụng PM2 cũ (nếu có) để giải phóng port 5001
-            pm2 stop all || true
-            
             # Tải image mới từ Registry
             docker compose pull
             

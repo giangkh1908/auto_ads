@@ -68,6 +68,9 @@ const allowedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.trim().replace(/\/$/, '')] : [])
 ];
 
+// Handle CORS preflight OPTIONS requests explicitly
+app.options('*', cors());
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -84,7 +87,8 @@ app.use(cors({
     }
     
     console.warn(`CORS blocked for origin: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
+    // Return false instead of Error to properly handle preflight
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
