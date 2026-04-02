@@ -68,9 +68,6 @@ const allowedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.trim().replace(/\/$/, '')] : [])
 ];
 
-// Handle CORS preflight OPTIONS requests explicitly
-app.options('*', cors());
-
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -87,7 +84,6 @@ app.use(cors({
     }
     
     console.warn(`CORS blocked for origin: ${origin}`);
-    // Return false instead of Error to properly handle preflight
     callback(null, false);
   },
   credentials: true,
@@ -95,6 +91,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['X-Request-ID']
 }));
+
+// Handle OPTIONS preflight manually (Express 5 compatible)
+app.options((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
 
 // ============================================
 // SECURITY MIDDLEWARE (AFTER CORS)
