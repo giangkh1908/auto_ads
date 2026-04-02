@@ -4,7 +4,6 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import axios from "axios";
 import { generateTokens, verifyRefreshToken } from "../../utils/jwt.js";
-import jwt from "jsonwebtoken";
 import redis from "../../config/redis.js";
 import Shop from "../../models/shops/shop.model.js";
 import ShopUser from "../../models/shops/shopUser.model.js";
