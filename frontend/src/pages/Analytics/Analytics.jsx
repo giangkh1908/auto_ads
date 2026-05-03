@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { Search, RefreshCw, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ChatAIWidget from "../../components/feature/ChatAI/ChatAIWidget";
 import axiosInstance from "../../utils/api/axios";
+import { formatValue } from "../../utils/formatters";
 import "./Analytics.css";
 import { useMyPackage } from "../../hooks/shop/useMyPackage";
 import { toast } from "sonner";
@@ -80,6 +81,16 @@ const DATA_COLUMNS_BY_OBJECTIVE = {
     { key: 'ctr', labelKey: 'dataColumns.ctr', format: 'percent' },
   ],
 };
+
+const AnalyticsCell = memo(({ value, format, isHighlighted, isFixed }) => {
+  return (
+    <td className={`${isFixed ? 'analytics-breakdown-column' : ''} ${isHighlighted ? 'analytics-highlight-cell' : ''}`}>
+      {isHighlighted && <span> </span>}
+      {formatValue(value, format)}
+    </td>
+  );
+});
+AnalyticsCell.displayName = 'AnalyticsCell';
 
 function Analytics() {
   const { t } = useTranslation('analytics');
@@ -176,20 +187,21 @@ function Analytics() {
     fetchAdAccounts();
   }, []);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 and fetch ads when filters change
   useEffect(() => {
     if (selectedAccount) {
       setPagination(prev => ({ ...prev, page: 1 }));
+      fetchAds();
     }
   }, [selectedAccount, selectedObjective, debouncedSearchQuery, dateRange]);
 
-  // Fetch ads when account, filters, or pagination changes
+  // Fetch ads when pagination changes
   useEffect(() => {
     if (selectedAccount) {
       fetchAds();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccount, selectedObjective, debouncedSearchQuery, dateRange, pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit]);
 
   const fetchAdAccounts = async () => {
     try {
@@ -215,7 +227,7 @@ function Analytics() {
     }
   };
 
-  const fetchAds = async () => {
+  const fetchAds = useCallback(async () => {
     if (!selectedAccount) return;
 
     setLoading(true);
@@ -237,6 +249,8 @@ function Analytics() {
       const responsePage = response.data?.page || pagination.page;
       const responseLimit = response.data?.limit || pagination.limit;
 
+      const formattedDate = responseDataDate ? new Date(responseDataDate).toLocaleDateString('vi-VN') : 'N/A';
+
       // Process data
       const processedAds = snapshotsData.map(snapshot => ({
         id: snapshot._id,
@@ -248,7 +262,7 @@ function Analytics() {
         page_name: snapshot.page_name || 'N/A',
         ad_text: 'N/A',
         age_range: snapshot.age_range || 'N/A',
-        date: responseDataDate ? new Date(responseDataDate).toLocaleDateString('vi-VN') : 'N/A',
+        date: formattedDate,
         spend: snapshot.spend,
         impressions: snapshot.impressions,
         clicks: snapshot.clicks,
@@ -294,7 +308,7 @@ function Analytics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAccount, selectedObjective, debouncedSearchQuery, dateRange, pagination.page, pagination.limit]);
 
   // Sync analytics snapshots from Facebook
   const syncAnalytics = async () => {
@@ -352,14 +366,13 @@ function Analytics() {
   // Only need client-side search filter for immediate response
   const filteredAds = ads;
 
-  // Calculate highlighters
-  const highlighters = (() => {
+  const highlighters = useMemo(() => {
     if (selectedObjective === "ALL") return new Set();
 
     const groups = {}; // Key: campaign_name + adset_name
 
     // Group ads
-    filteredAds.forEach(ad => {
+    ads.forEach(ad => {
       const key = `${ad.campaign_name}|${ad.adset_name}`;
       if (!groups[key]) groups[key] = [];
       groups[key].push(ad);
@@ -369,7 +382,6 @@ function Analytics() {
 
     // Determine metric to highlight based on objective
     let metricKey = "";
-    // Map legacy objectives to current keys if needed, similar to getDefaultDataColumns
     let objectiveKey = selectedObjective;
     if (selectedObjective === "OUTCOME_TRAFFIC" || selectedObjective === "LINK_CLICKS") {
       metricKey = "link_clicks";
@@ -378,7 +390,7 @@ function Analytics() {
     } else if (selectedObjective === "OUTCOME_ENGAGEMENT" || selectedObjective === "POST_ENGAGEMENT" || selectedObjective === "PAGE_LIKES" || selectedObjective === "EVENT_RESPONSES") {
       metricKey = "post_engagement";
     } else if (selectedObjective === "OUTCOME_LEADS" || selectedObjective === "LEAD_GENERATION" || selectedObjective === "MESSAGES") {
-      metricKey = "leads"; // Fallback to conversions if leads is 0? Let's stick to primary for now.
+      metricKey = "leads";
     } else if (selectedObjective === "OUTCOME_SALES" || selectedObjective === "CONVERSIONS" || selectedObjective === "CATALOG_SALES" || selectedObjective === "STORE_VISITS") {
       metricKey = "website_purchases";
     } else if (selectedObjective === "OUTCOME_APP_PROMOTION" || selectedObjective === "APP_INSTALLS") {
@@ -410,7 +422,7 @@ function Analytics() {
     });
 
     return highlights;
-  })();
+  }, [selectedObjective, ads]);
 
   // Hardcoded 6 objectives (not from data)
   const AVAILABLE_OBJECTIVES = [
@@ -422,8 +434,7 @@ function Analytics() {
     { value: 'OUTCOME_APP_PROMOTION', labelKey: 'objectives.OUTCOME_APP_PROMOTION' },
   ];
 
-  // Get columns to display
-  const getColumns = () => {
+  const columns = useMemo(() => {
     const breakdownCols = BREAKDOWN_OPTIONS
       .filter(opt => selectedBreakdowns.includes(opt.key))
       .map(opt => ({ key: opt.key, label: t(opt.labelKey), fixed: true }));
@@ -434,9 +445,7 @@ function Analytics() {
       .map(col => ({ key: col.key, label: t(col.labelKey), format: col.format }));
 
     return [...breakdownCols, ...dataCols];
-  };
-
-  const columns = getColumns();
+  }, [t, selectedBreakdowns, selectedDataColumns]);
 
   // Toggle breakdown
   const toggleBreakdown = (key) => {
@@ -457,24 +466,7 @@ function Analytics() {
   };
 
   // Format value
-  const formatValue = (value, format) => {
-    if (value === null || value === undefined) return '-';
-
-    switch (format) {
-      case 'currency':
-        return new Intl.NumberFormat('vi-VN', {
-          style: 'currency',
-          currency: 'VND'
-        }).format(value);
-      case 'number':
-        return new Intl.NumberFormat('vi-VN').format(value);
-      case 'percent':
-        return `${Number(value).toFixed(2)}%`;
-      case 'text':
-      default:
-        return value;
-    }
-  };
+  // This is now handled by the imported formatValue from ../../utils/formatters
 
   return (
     <div className="analytics-container">

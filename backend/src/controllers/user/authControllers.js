@@ -240,6 +240,13 @@ export const verifyEmail = async (req, res) => {
       success: true,
     });
 
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+    });
+
     res.status(200).json({
       success: true,
       message: "Xác nhận email thành công!",
@@ -250,7 +257,7 @@ export const verifyEmail = async (req, res) => {
           email: user.email,
           status: user.status,
         },
-        tokens: { accessToken, refreshToken },
+        tokens: { accessToken },
       },
     });
   } catch (error) {
@@ -377,7 +384,6 @@ export const login = async (req, res) => {
 
     const { accessToken, refreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
     user.currentRefreshTokenJti = refreshJti;
-    user.last_login_at = Date.now();
     await user.save();
     user.password = undefined;
 
@@ -397,14 +403,22 @@ export const login = async (req, res) => {
       success: true,
     });
 
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000, // Convert 7d to ms
+    });
+
     res.status(200).json({
       success: true,
       message: "Đăng nhập thành công!",
       data: {
         user,
-        tokens: { accessToken, refreshToken },
+        tokens: { accessToken },
       },
     });
+
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
@@ -726,11 +740,18 @@ export const facebookLogin = async (req, res) => {
       },
     });
 
+    res.cookie('refreshToken', rt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+    });
+
     // Gửi trả về FE cả user, tokens và pages
     return res.status(200).json({
       success: true,
       message: "Đăng nhập Facebook thành công.",
-      data: { user, tokens: { accessToken: at, refreshToken: rt }, pages },
+      data: { user, tokens: { accessToken: at }, pages },
     });
   } catch (error) {
     console.error("Facebook login error:", error);
@@ -755,7 +776,14 @@ export const facebookLogin = async (req, res) => {
 // Làm mới token
 export const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token không được cung cấp.",
+      });
+    }
+
     const decoded = verifyRefreshToken(refreshToken);
     const user = await User.findById(decoded.id).select('+currentRefreshTokenJti +tokenVersion');
     if (!user)
@@ -779,12 +807,19 @@ export const refreshToken = async (req, res) => {
     user.currentRefreshTokenJti = refreshJti;
     await user.save();
 
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+    });
+
     res.status(200).json({
       success: true,
       message: "Làm mới token thành công.",
-      data: { tokens: { accessToken, refreshToken: newRefreshToken } },
+      data: { tokens: { accessToken } },
     });
-  } catch {
+  } catch (error) {
     res.status(401).json({
       success: false,
       message: "Refresh token hết hạn hoặc không hợp lệ.",
@@ -1091,6 +1126,9 @@ export const resendVerificationEmail = async (req, res) => {
 // Logout
 export const logout = async (req, res) => {
   try {
+    // Clear refresh token cookie
+    res.clearCookie('refreshToken');
+
     // Blacklist access token
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {

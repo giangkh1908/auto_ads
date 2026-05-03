@@ -258,6 +258,9 @@ Frontend:
 k6 run load_test.js
 ```
 
+Workflow GitHub Actions đã có thể chạy tự động mỗi 15 phút sau khi bạn push lên `main`.
+Bạn có thể xem kết quả trong tab **Actions** của repository, hoặc bấm **Run workflow** để chạy thử ngay.
+
 ## 📄 License
 
 MIT

@@ -4,14 +4,14 @@ import { sleep, check } from 'k6';
 export const options = {
   // Cấu hình 500 Virtual Users (VU)
   stages: [
-    { duration: '30s', target: 500 },  // Tăng từ 0 lên 500 users trong 30s
-    { duration: '1m', target: 800 }, // Duy trì 2000 users trong 2 phút
+    { duration: '30s', target: 20000 },  // Tăng từ 0 lên 500 users trong 30s
+    { duration: '1m', target: 80000 }, // Duy trì 2000 users trong 2 phút
     { duration: '30s', target: 0 },    // Giảm dần về 0
   ],
 };
 
 export default function () {
-  const url = 'https://api.vibestoneoficial.store/health';
+  const url = 'https://trunggianviet.vn/';
   const res = http.get(url);
 
   check(res, {

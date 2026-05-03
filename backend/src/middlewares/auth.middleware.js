@@ -52,7 +52,11 @@ async function authenticateWithToken(token, req, res, next) {
       return res.status(401).json({ success: false, message: 'Token không hợp lệ.' });
     }
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ success: false, message: 'Token đã hết hạn.' });
+      return res.status(401).json({
+        success: false,
+        message: 'Token đã hết hạn.',
+        code: 'TOKEN_EXPIRED'
+      });
     }
     console.error('Auth middleware error:', error);
     return res.status(500).json({ success: false, message: 'Lỗi xác thực hệ thống.' });
