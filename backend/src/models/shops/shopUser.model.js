@@ -48,11 +48,5 @@ shopUserSchema.virtual("user_roles", {
   foreignField: "shop_user_id",
 });
 
-// Auto set manager
-shopUserSchema.pre("save", function (next) {
-  if (this.role_in_shop === "owner") this.is_manager = true;
-  next();
-});
-
 const ShopUser = mongoose.model("ShopUser", shopUserSchema);
 export default ShopUser;

@@ -55,7 +55,8 @@ export const assignRole = async (req, res) => {
     const populated = await userRole
       .populate("user_id", "full_name email")
       .populate("role_id", "role_name description")
-      .populate("shop_id", "shop_name");
+      .populate("shop_id", "shop_name")
+      .lean();
 
     return res.status(201).json({
       success: true,
@@ -79,7 +80,8 @@ export const getUserRoles = async (req, res) => {
     const data = await UserRole.find()
       .populate("user_id", "full_name email")
       .populate("role_id", "role_name description")
-      .populate("shop_id", "shop_name");
+      .populate("shop_id", "shop_name")
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -103,7 +105,8 @@ export const getUserRoleById = async (req, res) => {
     const userRole = await UserRole.findById(req.params.id)
       .populate("user_id", "full_name email")
       .populate("role_id", "role_name description")
-      .populate("shop_id", "shop_name");
+      .populate("shop_id", "shop_name")
+      .lean();
 
     if (!userRole) {
       return res.status(404).json({
@@ -130,7 +133,8 @@ export const getRolesByUser = async (req, res) => {
     const { userId } = req.params;
     const roles = await UserRole.find({ user_id: userId })
       .populate("role_id", "role_name description permissions")
-      .populate("shop_id", "shop_name");
+      .populate("shop_id", "shop_name")
+      .lean();
 
     if (!roles.length) {
       return res.status(404).json({ success: false, message: "Người dùng chưa được gán role nào." });
@@ -162,7 +166,8 @@ export const updateUserRole = async (req, res) => {
     const userRole = await UserRole.findByIdAndUpdate(req.params.id, updateData, { new: true })
       .populate("user_id", "full_name email")
       .populate("role_id", "role_name description")
-      .populate("shop_id", "shop_name");
+      .populate("shop_id", "shop_name")
+      .lean();
 
     if (!userRole) {
       return res.status(404).json({ success: false, message: "Không tìm thấy UserRole." });

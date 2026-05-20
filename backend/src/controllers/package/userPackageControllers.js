@@ -2,7 +2,7 @@ import UserPackage from "../../models/package/userPackage.model.js";
 import PaymentTransaction from "../../models/transaction/paymentTransaction.model.js";
 import Package from "../../models/package/package.model.js";
 import User from "../../models/user/user.model.js";
-import { getUserEntitlements } from "../../services/admin/entitlementService.js";
+import { getUserEntitlements, invalidateEntitlementCache } from "../../services/admin/entitlementService.js";
 
 /**
  * Helper: Compute segment for a user package (matches FE logic in mapUserPackageData)
@@ -39,6 +39,8 @@ export const createUserPackage = async (req, res) => {
             user_id: req.user?._id,
             created_by: req.user?._id,
         });
+
+        await invalidateEntitlementCache(data.user_id || req.user?._id);
 
         res.status(201).json({
             success: true,
@@ -351,6 +353,8 @@ export const updateUserPackage = async (req, res) => {
                 // Không throw error để không ảnh hưởng đến flow chính
             }
         }
+
+        await invalidateEntitlementCache(updated.user_id.toString());
 
         res.status(200).json({
             success: true,

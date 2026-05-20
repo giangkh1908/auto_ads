@@ -6,7 +6,6 @@ const adsSetSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: "AdsCampaign",
       required: true,  // Mỗi AdSet phải thuộc về một Campaign
-      index: true
     },
     external_account_id: { 
       type: String, 
@@ -15,7 +14,7 @@ const adsSetSchema = new mongoose.Schema(
     // ID ad set trên Facebook (có sau publish)
     external_id: { type: String, trim: true },
 
-    name: { type: String, trim: true },
+    name: { type: String, required: true, trim: true },
 
     // 📄 Thông tin trang Page chạy quảng cáo (di chuyển từ Campaign)
     page_id: { type: String, trim: true, default: null },
@@ -27,13 +26,43 @@ const adsSetSchema = new mongoose.Schema(
       enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT", "FAILED"],
       default: "DRAFT",
     },
-    configured_status: { type: String },
-    effective_status: { type: String },
+    configured_status: {
+      type: String,
+      enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT"],
+    },
+    effective_status: {
+      type: String,
+      enum: ["ACTIVE", "PAUSED", "DELETED", "ARCHIVED", "PENDING_REVIEW", "DISAPPROVED", "PREAPPROVED", "IN_PROCESS", "WITH_ISSUES"],
+    },
 
     // 🎯 Cài đặt tối ưu
-    optimization_goal: { type: String, trim: true },
-    billing_event: { type: String, trim: true },
-    bid_strategy: { type: String, trim: true },
+    optimization_goal: {
+      type: String,
+      enum: [
+        "NONE",
+        "DAILY_UNIQUE_ACTIONS",
+        "VISIT_PIXEL_EVENTS",
+        "OFFSITE_CONVERSIONS",
+        "APP_INSTALLS",
+        "APP_CUSTOM_EVENTS",
+        "LINK_CLICKS",
+        "LANDING_PAGE_VIEWS",
+        "IMPRESSIONS",
+        "REACH",
+        "VALUE",
+        "LEAD_GENERATION",
+        "CONVERSATIONS",
+        "REMOTE_FB_EVENT",
+      ],
+    },
+    billing_event: {
+      type: String,
+      enum: ["APP_INSTALLS", "CLICKS", "IMPRESSIONS", "LINK_CLICKS", "OFFERCLAIMS", "PURCHASE", "THRUPLAY", "LISTING_INTERACTION", "VIDEO_VIEWS", "NONE", "PAGE_LIKES"],
+    },
+    bid_strategy: {
+      type: String,
+      enum: ["LOWEST_COST_WITHOUT_CAP", "LOWEST_COST_WITH_BID_CAP", "COST_CAP", "TARGET_COST"],
+    },
     bid_amount: { type: Number, default: null },
 
     // Sự kiện chuyển dổi

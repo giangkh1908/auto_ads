@@ -20,7 +20,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     package_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Package",
-      require: true,
+      required: true,
     },
 
     // Số tiền

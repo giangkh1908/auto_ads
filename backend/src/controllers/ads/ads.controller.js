@@ -1,4 +1,5 @@
 // controllers/ads/ads.controller.js
+import mongoose from "mongoose";
 import Ads from "../../models/ads/ads.model.js";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import AdsAccount from "../../models/ads/adsAccount.model.js";
@@ -193,24 +194,64 @@ export async function listAdsCtrl(req, res) {
     const shouldFetchAll = fetch_all === 'true' || fetch_all === true || limitNum === 0 || limitNum > 10000;
     
     let items, total;
-    
+
+    const aggregationPipeline = [
+      { $match: filter },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'created_by_doc'
+        }
+      },
+      {
+        $lookup: {
+          from: 'adssets',
+          localField: 'set_id',
+          foreignField: '_id',
+          as: 'set_doc'
+        }
+      },
+      {
+        $lookup: {
+          from: 'adscampaigns',
+          localField: 'set_doc.campaign_id',
+          foreignField: '_id',
+          as: 'campaign_doc'
+        }
+      },
+      {
+        $addFields: {
+          created_by: { $arrayElemAt: ['$created_by_doc', 0] },
+          set_id: { $arrayElemAt: ['$set_doc', 0] },
+          campaign: { $arrayElemAt: ['$campaign_doc', 0] }
+        }
+      },
+      {
+        $project: {
+          created_by_doc: 0,
+          set_doc: 0,
+          campaign_doc: 0,
+          'created_by.password': 0,
+          'created_by.facebookAccessToken': 0,
+          'created_by.facebookRefreshToken': 0,
+          'set_id.targeting': 0,
+          'set_id.promoted_object': 0,
+          'set_id.meta': 0,
+          'campaign.targeting': 0,
+          'campaign.meta': 0
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ];
+
     if (shouldFetchAll) {
-      // Fetch tất cả (không phân trang) - để Frontend sort và phân trang
       [items, total] = await Promise.all([
-        Ads.find(filter)
-          .populate('created_by', 'full_name email')
-          .populate({
-            path: 'set_id',
-            select: 'name campaign_id daily_budget lifetime_budget',
-            populate: {
-              path: 'campaign_id',
-              select: 'name objective'
-            }
-          })
-          .sort({ createdAt: -1 }), // Sort ở Backend trước
+        Ads.aggregate(aggregationPipeline),
         Ads.countDocuments(filter)
       ]);
-      
+
       return res.status(200).json({
         items,
         total,
@@ -219,25 +260,18 @@ export async function listAdsCtrl(req, res) {
         pages: 1,
       });
     } else {
-      // Phân trang như cũ (nếu cần)
       const skip = (Number(page) - 1) * Number(limit);
+      const paginatedPipeline = [
+        ...aggregationPipeline,
+        { $skip: skip },
+        { $limit: Number(limit) }
+      ];
+
       [items, total] = await Promise.all([
-        Ads.find(filter)
-          .populate('created_by', 'full_name email')
-          .populate({
-            path: 'set_id',
-            select: 'name campaign_id daily_budget lifetime_budget',
-            populate: {
-              path: 'campaign_id',
-              select: 'name objective'
-            }
-          })
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(Number(limit)),
+        Ads.aggregate(paginatedPipeline),
         Ads.countDocuments(filter),
       ]);
-      
+
       return res.status(200).json({
         items,
         total,
@@ -478,11 +512,32 @@ export async function toggleAdStatusCtrl(req, res) {
 export async function deleteAdCtrl(req, res) {
   try {
     const { id } = req.params;
-    const ad = await Ads.findById(id).populate({
-      path: 'set_id',
-      select: 'campaign_id',
-      populate: { path: 'campaign_id', select: 'shop_id' }
-    });
+    const [ad] = await Ads.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: 'adssets',
+          localField: 'set_id',
+          foreignField: '_id',
+          as: 'set_doc'
+        }
+      },
+      {
+        $lookup: {
+          from: 'adscampaigns',
+          localField: 'set_doc.campaign_id',
+          foreignField: '_id',
+          as: 'campaign_doc'
+        }
+      },
+      {
+        $addFields: {
+          set_id: { $arrayElemAt: ['$set_doc', 0] },
+          campaign: { $arrayElemAt: ['$campaign_doc', 0] }
+        }
+      },
+      { $project: { set_doc: 0, campaign_doc: 0 } }
+    ]);
     if (!ad)
       return res.status(404).json({ message: "Không tìm thấy quảng cáo." });
 
@@ -523,7 +578,7 @@ export async function deleteAdCtrl(req, res) {
     await saveLog({
       user_id: req.user._id,
       user_name: req.user?.full_name,
-      shop_id: ad.set_id?.campaign_id?.shop_id || currentShopId,
+      shop_id: ad.campaign?.shop_id || currentShopId,
       action: "DELETE_AD",
       target_type: "Ad",
       target_id: ad._id.toString(),
@@ -553,11 +608,32 @@ export async function deleteAdCtrl(req, res) {
 export async function archiveAdCtrl(req, res) {
   try {
     const { id } = req.params;
-    const ad = await Ads.findById(id).populate({
-      path: 'set_id',
-      select: 'campaign_id',
-      populate: { path: 'campaign_id', select: 'shop_id' }
-    });
+    const [ad] = await Ads.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: 'adssets',
+          localField: 'set_id',
+          foreignField: '_id',
+          as: 'set_doc'
+        }
+      },
+      {
+        $lookup: {
+          from: 'adscampaigns',
+          localField: 'set_doc.campaign_id',
+          foreignField: '_id',
+          as: 'campaign_doc'
+        }
+      },
+      {
+        $addFields: {
+          set_id: { $arrayElemAt: ['$set_doc', 0] },
+          campaign: { $arrayElemAt: ['$campaign_doc', 0] }
+        }
+      },
+      { $project: { set_doc: 0, campaign_doc: 0 } }
+    ]);
     if (!ad)
       return res.status(404).json({ message: "Không tìm thấy quảng cáo." });
 
@@ -598,7 +674,7 @@ export async function archiveAdCtrl(req, res) {
     await saveLog({
       user_id: req.user._id,
       user_name: req.user?.full_name,
-      shop_id: ad.set_id?.campaign_id?.shop_id || currentShopId,
+      shop_id: ad.campaign?.shop_id || currentShopId,
       action: "ARCHIVE_AD",
       target_type: "Ad",
       target_id: ad._id.toString(),

@@ -56,13 +56,15 @@ const packageSchema = new mongoose.Schema(
     },
 
     conversations: {
-      type: String,
-      default: "∞",
+      type: Number,
+      default: -1, // -1 = unlimited
+      min: -1,
     },
 
     contacts: {
-      type: String,
-      default: "∞",
+      type: Number,
+      default: -1, // -1 = unlimited
+      min: -1,
     },
 
     features: {

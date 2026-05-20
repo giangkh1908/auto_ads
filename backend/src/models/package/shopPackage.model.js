@@ -49,4 +49,12 @@ shopPackageSchema.index({ status: 1 });
 shopPackageSchema.index({ salesman_id: 1 });
 
 const ShopPackage = mongoose.model("ShopPackage", shopPackageSchema);
+
+shopPackageSchema.pre("save", function (next) {
+  if (this.from_date && this.to_date && this.to_date <= this.from_date) {
+    return next(new Error("to_date phải sau from_date"));
+  }
+  next();
+});
+
 export default ShopPackage;

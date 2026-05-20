@@ -1,30 +1,59 @@
 import { verifyAccessToken } from '../utils/jwt.js';
-import redis from '../config/redis.js';
+import redis, { isRedisReady } from '../config/redis.js';
 import User from '../models/user/user.model.js';
 import UserRole from '../models/user/userRole.model.js';
 import Role from '../models/admin/role.model.js';
 import Shop from '../models/shops/shop.model.js';
-import UserPackage from "../models/package/userPackage.model.js"
-import ShopUser from "../models/shops/shopUser.model.js"
 
 async function authenticateWithToken(token, req, res, next) {
   try {
     const decoded = verifyAccessToken(token);
 
-    // Check token blacklist
+    // Check token blacklist (graceful degradation if Redis down)
     if (decoded.jti) {
-      const isBlacklisted = await redis.get(`blacklist:${decoded.jti}`);
-      if (isBlacklisted) {
-        return res.status(401).json({ success: false, message: 'Token đã bị thu hồi.' });
+      try {
+        if (isRedisReady()) {
+          const isBlacklisted = await redis.get(`blacklist:${decoded.jti}`);
+          if (isBlacklisted) {
+            return res.status(401).json({ success: false, message: 'Token đã bị thu hồi.' });
+          }
+        }
+      } catch (redisErr) {
+        console.warn('[Auth] Redis blacklist check failed, proceeding:', redisErr.message);
       }
     }
 
-    // Check token version
-    const user = await User.findById(decoded.id).select({
-      password: 0,
-      facebookAccessToken: 0,
-      facebookRefreshToken: 0
-    });
+    // Check token version (Cached in Redis for 10s to speed up concurrent frontend requests)
+    let user;
+    const sessionCacheKey = `user:session:${decoded.id}`;
+    
+    if (isRedisReady()) {
+      try {
+        const cachedUserStr = await redis.get(sessionCacheKey);
+        if (cachedUserStr) {
+          user = User.hydrate(JSON.parse(cachedUserStr));
+        }
+      } catch (redisErr) {
+        console.warn('[Auth Cache] Redis session read failed:', redisErr.message);
+      }
+    }
+    
+    if (!user) {
+      user = await User.findById(decoded.id).select({
+        password: 0,
+        facebookAccessToken: 0,
+        facebookRefreshToken: 0
+      });
+      
+      if (user && !user.deleted_at && isRedisReady()) {
+        try {
+          await redis.setex(sessionCacheKey, 10, JSON.stringify(user.toObject()));
+        } catch (redisErr) {
+          console.warn('[Auth Cache] Redis session write failed:', redisErr.message);
+        }
+      }
+    }
+    
     if (!user || user.deleted_at) {
       return res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc người dùng không tồn tại.' });
     }
@@ -69,14 +98,6 @@ export const authenticate = async (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
   }
   const token = authHeader.split(' ')[1];
-  return authenticateWithToken(token, req, res, next);
-};
-
-export const authenticateSSE = async (req, res, next) => {
-  const token = req.query.token;
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token không được cung cấp.' });
-  }
   return authenticateWithToken(token, req, res, next);
 };
 
@@ -148,10 +169,11 @@ export const authorizeInShop = (module, action) => {
         });
       }
 
-      // 1. Kiểm tra user có UserRole trong shop không
+      // 1. Kiểm tra user có UserRole trong shop không (loại role đã bị thu hồi)
       let userRole = await UserRole.findOne({
         user_id: userId,
         shop_id: shopId,
+        revoked_at: null,
       }).populate("role_id");
 
       // 2. Nếu không có UserRole, kiểm tra user có phải là owner không
@@ -168,7 +190,7 @@ export const authorizeInShop = (module, action) => {
         // Nếu user là owner, lấy role "Shop Owner" để kiểm tra permission
         if (shop.owner_id && shop.owner_id.toString() === userId.toString()) {
           const ownerRole = await Role.findOne({ role_name: "Shop Owner" });
-          
+
           if (ownerRole) {
             // Tạo object giả để kiểm tra permission
             userRole = {
@@ -176,9 +198,11 @@ export const authorizeInShop = (module, action) => {
               shop_id: shopId,
             };
           } else {
-            // Nếu không tìm thấy role "Shop Owner", cho phép owner luôn (bypass)
-            req.shopId = shopId;
-            return next();
+            // Không tìm thấy role "Shop Owner" — deny để tránh bypass quyền
+            return res.status(403).json({
+              success: false,
+              message: "Shop Owner role is not configured in the system.",
+            });
           }
         } else {
           // User không phải owner và không có UserRole
@@ -215,71 +239,6 @@ export const authorizeInShop = (module, action) => {
         message: "Internal authorization error.",
         error: error.message 
       });
-    }
-  };
-};
-
-export const checkFeature = (feature) => {
-  return async (req, res, next) => {
-    try {
-      const subscription = await Subscription.findOne({
-        user_id: req.user._id,
-        status: "active"
-      }).populate("package_id");
-
-      if (!subscription) {
-        return res.status(403).json({ message: "Không có gói dịch vụ" });
-      }
-
-      const hasFeature = subscription.package_id.features.includes(feature);
-      if (!hasFeature) {
-        return res.status(403).json({ message: "Tính năng không khả dụng trong gói của bạn" });
-      }
-
-      req.subscription = subscription; // truyền tiếp
-      next();
-    } catch (err) {
-      res.status(500).json({ message: "Lỗi server" });
-    }
-  };
-};
-
-export const checkPackageLimit = (resource) => {
-  return async (req, res, next) => {
-    try {
-      const userPackage = await UserPackage.findOne({
-        user_id: req.user._id,
-        status: "active",
-      });
-
-      if (!userPackage) {
-        return res.status(403).json({ message: "Không có gói dịch vụ" });
-      }
-
-      const limit = userPackage[resource];
-      let used = 0;
-
-      if (resource === "shops") {
-        used = await Shop.countDocuments({ owner_id: req.user._id, deleted_at: null });
-      } else if (resource === "employees") {
-        const shopIds = await Shop.find({ owner_id: req.user._id }).distinct("_id");
-        used = await ShopUser.countDocuments({
-          shop_id: { $in: shopIds },
-          user_id: { $ne: req.user._id },
-          status: "active",
-        });
-      }
-
-      if (used >= limit) {
-        return res.status(403).json({
-          message: `Đã đạt giới hạn ${resource}: ${used}/${limit}`,
-        });
-      }
-
-      req.packageLimit = { limit, used };
-      next();
-    } catch (err) {
-      res.status(500).json({ message: err.message });
     }
   };
 };

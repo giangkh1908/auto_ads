@@ -28,7 +28,7 @@ const analyticsSnapshotSchema = new mongoose.Schema(
     // Breakdown fields (for filtering/display)
     campaign_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Campaign",
+      ref: "AdsCampaign",
     },
     campaign_name: String,
     campaign_objective: {

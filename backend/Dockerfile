@@ -1,19 +1,14 @@
 FROM node:20-alpine
 
-# Set thư mục làm việc
 WORKDIR /app
 
-# Copy file package để cài đặt trước
+# Cài đặt dependencies trước để tận dụng layer cache
 COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
 
-# Cài đặt chỉ những dependencies cần thiết cho production
-RUN npm install --omit=dev
-
-# Copy toàn bộ mã nguồn vào container
+# Copy source code sau khi đã cài deps
 COPY . .
 
-# Mở port 5001
 EXPOSE 5001
 
-# Lệnh khởi động ứng dụng
 CMD ["node", "src/server.js"]

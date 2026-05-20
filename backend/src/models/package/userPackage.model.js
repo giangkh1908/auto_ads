@@ -32,8 +32,8 @@ const userPackageSchema = new mongoose.Schema(
 
 
     // Thời gian hiệu lực
-    from_date: { type: Date },
-    to_date: { type: Date },
+    from_date: { type: Date, required: true },
+    to_date: { type: Date, required: true },
 
     // Trạng thái
     status: {
@@ -63,4 +63,12 @@ userPackageSchema.index({ status: 1 });
 userPackageSchema.index({ user_id: 1 });
 
 const UserPackage = mongoose.model("UserPackage", userPackageSchema);
+
+userPackageSchema.pre("save", function (next) {
+  if (this.from_date && this.to_date && this.to_date <= this.from_date) {
+    return next(new Error("to_date phải sau from_date"));
+  }
+  next();
+});
+
 export default UserPackage;

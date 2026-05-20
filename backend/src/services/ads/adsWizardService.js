@@ -83,15 +83,13 @@ async function runWithConcurrencyLimit(tasks, limit = 8) {
 async function findExistingEntity(entity, Model) {
   if (!entity) return null;
 
-  // Priority 1: Tìm theo _id hoặc draftId
   if (entity._id || entity.draftId) {
-    const found = await Model.findById(entity._id || entity.draftId);
+    const found = await Model.findById(entity._id || entity.draftId).lean();
     if (found) return found;
   }
 
-  // Priority 2: Tìm theo external_id
   if (entity.external_id) {
-    const found = await Model.findOne({ external_id: entity.external_id });
+    const found = await Model.findOne({ external_id: entity.external_id }).lean();
     if (found) return found;
   }
 
@@ -512,7 +510,7 @@ async function updateOrCreateAd({
     // Cần lấy creative từ existingAd hoặc ad
     // Nếu có creative trong DB, lấy từ đó, nếu không lấy từ payload
     const existingCreative = existingAd.creative_id
-      ? await Creative.findById(existingAd.creative_id)
+      ? await Creative.findById(existingAd.creative_id).lean()
       : null;
 
     const creativeData =
@@ -633,7 +631,7 @@ export async function publishWizard({
 
   // 🧱 1) Khởi tạo draft (nháp) với đầy đủ thông tin
   const draftCamp = campaignDraftId
-    ? await AdsCampaign.findById(campaignDraftId)
+    ? await AdsCampaign.findById(campaignDraftId).lean()
     : await AdsCampaign.create({
         name: campaign?.name,
         objective: campaign?.objective,
@@ -650,7 +648,7 @@ export async function publishWizard({
       });
 
   const draftSet = adsetDraftId
-    ? await AdsSet.findById(adsetDraftId)
+    ? await AdsSet.findById(adsetDraftId).lean()
     : await AdsSet.create({
         campaign_id: draftCamp._id,
         name: adset?.name,
@@ -672,7 +670,7 @@ export async function publishWizard({
       });
 
   const draftCreative = creativeDraftId
-    ? await Creative.findById(creativeDraftId)
+    ? await Creative.findById(creativeDraftId).lean()
     : await Creative.create({
         name: creative?.name,
         title: creative?.object_story_spec?.link_data?.name,
@@ -685,7 +683,7 @@ export async function publishWizard({
       });
 
   const draftAd = adDraftId
-    ? await Ads.findById(adDraftId)
+    ? await Ads.findById(adDraftId).lean()
     : await Ads.create({
         set_id: draftSet._id,
         account_id: campaign?.account_id,
@@ -1209,7 +1207,7 @@ export async function publishCampaignService({
 
   if (campaignDraftId) {
     // ✅ VALIDATE DRAFT ID: Nếu có campaignDraftId, PHẢI tìm được draft
-    draftCamp = await AdsCampaign.findById(campaignDraftId);
+    draftCamp = await AdsCampaign.findById(campaignDraftId).lean();
     if (!draftCamp) {
       throw new Error(
         `Không tìm thấy draft campaign với ID: ${campaignDraftId}`
@@ -1457,7 +1455,7 @@ export async function publishAdsetService({
 
   if (adsetDraftId) {
     // ✅ VALIDATE DRAFT ID: Nếu có adsetDraftId, PHẢI tìm được draft
-    draftSet = await AdsSet.findById(adsetDraftId);
+    draftSet = await AdsSet.findById(adsetDraftId).lean();
     if (!draftSet) {
       throw new Error(`Không tìm thấy draft adset với ID: ${adsetDraftId}`);
     }
@@ -1668,7 +1666,7 @@ export async function publishAdsetService({
           ad_account_id.replace("act_", ""),
         ],
       },
-    });
+    }).lean();
 
     if (!adsAccount) {
       throw new Error(
@@ -1864,9 +1862,8 @@ export async function publishAdService({
 
   if (creativeDraftId) {
     console.log(`🔍 Tìm creative draft với ID: ${creativeDraftId}`);
-    draftCreative = await Creative.findById(creativeDraftId);
+    draftCreative = await Creative.findById(creativeDraftId).lean();
 
-    // Chỉ update nếu creative chưa được publish (chưa có external_id)
     if (draftCreative && !draftCreative.external_id) {
       console.log(`✏️ Update creative draft: ${creativeDraftId}`);
       await Creative.findByIdAndUpdate(creativeDraftId, {
@@ -1874,7 +1871,7 @@ export async function publishAdService({
         object_story_spec: creative?.object_story_spec,
         updated_at: now,
       });
-      draftCreative = await Creative.findById(creativeDraftId);
+      draftCreative = await Creative.findById(creativeDraftId).lean();
     } else if (draftCreative && draftCreative.external_id) {
       // Nếu creative đã publish, không thể update → tạo mới
       console.log(
@@ -1899,7 +1896,7 @@ export async function publishAdService({
 
   if (adDraftId) {
     // ✅ VALIDATE DRAFT ID: Nếu có adDraftId, PHẢI tìm được draft
-    draftAd = await Ads.findById(adDraftId);
+    draftAd = await Ads.findById(adDraftId).lean();
     if (!draftAd) {
       throw new Error(`Không tìm thấy draft ad với ID: ${adDraftId}`);
     }
@@ -1949,7 +1946,7 @@ export async function publishAdService({
         adId: draftAd.external_id,
         adDbId: draftAd._id,
         creativeId: draftAd.creative_id
-          ? (await Creative.findById(draftAd.creative_id))?.external_id
+          ? (await Creative.findById(draftAd.creative_id).lean())?.external_id
           : null,
         creativeDbId: draftAd.creative_id,
         draftId: draftAd._id,

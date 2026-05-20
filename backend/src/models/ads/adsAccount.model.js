@@ -7,7 +7,6 @@ const adsAccountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User",
       required: true,
-      index: true
     },
     
     // 👥 Danh sách tất cả users có quyền truy cập account này (bao gồm cả owner)
@@ -15,7 +14,6 @@ const adsAccountSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: "User",
       default: [],
-      index: true
     },
     
     shop_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "ShopUser" },

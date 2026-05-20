@@ -36,7 +36,7 @@ async function getAccessTokenForAccount(account) {
   if (!account?.shop_admin_id) {
     return null;
   }
-  const user = await User.findById(account.shop_admin_id).select("+facebookAccessToken");
+  const user = await User.findById(account.shop_admin_id).select("+facebookAccessToken").lean();
   return user?.facebookAccessToken || null;
 }
 
@@ -385,7 +385,7 @@ export async function syncInsightsForAccount(accountId) {
   if (!acquired) return;
 
   try {
-    const account = await AdsAccount.findById(accountId);
+    const account = await AdsAccount.findById(accountId).lean();
     if (!account) throw new Error("AdsAccount not found");
 
     const accessToken = await getAccessTokenForAccount(account);

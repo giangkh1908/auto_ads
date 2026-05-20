@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import UserPackage from "../../models/package/userPackage.model.js";
 import Shop from "../../models/shops/shop.model.js";
 import ShopUser from "../../models/shops/shopUser.model.js";
+import redis, { isRedisReady } from "../../config/redis.js";
 
 export const FEATURE_KEYS = {
   ANALYTICS_CHAT_AI: "analytics_chat_ai",
@@ -16,28 +17,44 @@ const FEATURE_LABELS = {
 };
 
 const ACTIVE_STATUSES = ["active", "expiring soon", "new signup"];
-const CACHE_TTL_MS = 30 * 1000;
+const CACHE_TTL_SEC = 30;
 
-const entitlementCache = new Map();
+const buildCacheKey = (userId) => `entitlement:${userId?.toString()}`;
 
-const buildCacheKey = (userId) => userId?.toString();
-
-const readCache = (key) => {
-  if (!key || !entitlementCache.has(key)) return null;
-  const record = entitlementCache.get(key);
-  if (!record || record.expiresAt < Date.now()) {
-    entitlementCache.delete(key);
-    return null;
+const readCache = async (key) => {
+  if (!key) return undefined;
+  try {
+    if (!isRedisReady()) return undefined;
+    const raw = await redis.get(key);
+    if (!raw) return undefined;
+    if (raw === "__null__") return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('[Entitlement] Redis cache read failed:', err.message);
+    return undefined;
   }
-  return record.value;
 };
 
-const writeCache = (key, value) => {
+const writeCache = async (key, value) => {
   if (!key) return;
-  entitlementCache.set(key, {
-    value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  try {
+    if (!isRedisReady()) return;
+    const raw = value === null ? "__null__" : JSON.stringify(value);
+    await redis.set(key, raw, "EX", CACHE_TTL_SEC);
+  } catch (err) {
+    console.warn('[Entitlement] Redis cache write failed:', err.message);
+  }
+};
+
+export const invalidateEntitlementCache = async (userId) => {
+  const key = buildCacheKey(userId);
+  try {
+    if (isRedisReady()) {
+      await redis.del(key);
+    }
+  } catch (err) {
+    console.warn('[Entitlement] Redis cache invalidation failed:', err.message);
+  }
 };
 
 const FEATURE_MAPPING = {
@@ -146,8 +163,8 @@ export const getUserEntitlements = async (
 
   const cacheKey = buildCacheKey(userId);
   if (!forceRefresh) {
-    const cached = readCache(cacheKey);
-    if (cached) return cached;
+    const cached = await readCache(cacheKey);
+    if (cached !== undefined) return cached;
   }
 
   const userPackage = await UserPackage.findOne({
@@ -156,10 +173,11 @@ export const getUserEntitlements = async (
     deleted_at: null,
   })
     .populate("package_id")
-    .sort({ created_at: -1 });
+    .sort({ created_at: -1 })
+    .lean();
 
   if (!userPackage || !isPackageActive(userPackage) || !userPackage.package_id) {
-    writeCache(cacheKey, null);
+    await writeCache(cacheKey, null);
     return null;
   }
 
@@ -181,7 +199,7 @@ export const getUserEntitlements = async (
     status: userPackage.status,
   };
 
-  writeCache(cacheKey, entitlements);
+  await writeCache(cacheKey, entitlements);
   return entitlements;
 };
 

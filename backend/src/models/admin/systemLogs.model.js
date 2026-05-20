@@ -155,7 +155,6 @@ const systemLogSchema = new mongoose.Schema({
   created_at: {
     type: Date,
     default: Date.now,
-    index: true,
   },
 }, {
   timestamps: false, // Sử dụng created_at thủ công

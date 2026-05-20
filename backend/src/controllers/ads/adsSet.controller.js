@@ -1,4 +1,5 @@
 // controllers/ads/adsSet.controller.js
+import mongoose from "mongoose";
 import AdsSet from "../../models/ads/adsSet.model.js";
 import { fetchAdsetsFromFacebook, updateAdsetStatus, deleteEntity, fetchInsightsForAdsetIds } from "../../services/ads/fbAdsService.js";
 import User from "../../models/user/user.model.js";
@@ -74,11 +75,12 @@ export async function getAdsetFromDatabase(req, res) {
 
     let adset;
     if (cleanAdsetId) {
-      adset = await AdsSet.findById(cleanAdsetId).populate('created_by', 'full_name email');
+      adset = await AdsSet.findById(cleanAdsetId).populate('created_by', 'full_name email').lean();
     } else if (cleanCampaignId) {
       const adsets = await AdsSet.find({ campaign_id: cleanCampaignId })
         .populate('created_by', 'full_name email')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
       return res.status(200).json({
         success: true,
         data: adsets
@@ -154,11 +156,11 @@ export async function listAdSetsCtrl(req, res) {
     let items, total;
     
     if (shouldFetchAll) {
-      // Fetch tất cả (không phân trang) - để Frontend sort và phân trang
       [items, total] = await Promise.all([
         AdsSet.find(filter)
           .populate('created_by', 'full_name email')
-          .sort({ createdAt: -1 }), // Sort ở Backend trước
+          .sort({ createdAt: -1 })
+          .lean(),
         AdsSet.countDocuments(filter)
       ]);
       
@@ -177,7 +179,8 @@ export async function listAdSetsCtrl(req, res) {
           .populate('created_by', 'full_name email')
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(Number(limit)),
+          .limit(Number(limit))
+          .lean(),
         AdsSet.countDocuments(filter),
       ]);
       
@@ -315,7 +318,23 @@ export async function getAdSetsLiveCtrl(req, res) {
 export async function deleteAdsetCascadeCtrl(req, res) {
   try {
     const { id } = req.params;
-    const adset = await AdsSet.findById(id).populate('campaign_id', 'shop_id');
+    const [adset] = await AdsSet.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: 'adscampaigns',
+          localField: 'campaign_id',
+          foreignField: '_id',
+          as: 'campaign_doc'
+        }
+      },
+      {
+        $addFields: {
+          campaign: { $arrayElemAt: ['$campaign_doc', 0] }
+        }
+      },
+      { $project: { campaign_doc: 0 } }
+    ]);
     if (!adset) return res.status(404).json({ message: "Không tìm thấy nhóm quảng cáo." });
 
     // ✅ Lấy access_token từ user hoặc query
@@ -331,7 +350,7 @@ export async function deleteAdsetCascadeCtrl(req, res) {
     }
 
     // Lấy toàn bộ ads con trong adset
-    const ads = await Ads.find({ set_id: adset._id });
+    const ads = await Ads.find({ set_id: adset._id }).lean();
 
     // ✅ Xóa thật trên Facebook nếu có token
     if (accessToken) {
@@ -362,7 +381,7 @@ export async function deleteAdsetCascadeCtrl(req, res) {
     await saveLog({
       user_id: req.user._id,
       user_name: req.user?.full_name,
-      shop_id: adset.campaign_id?.shop_id || currentShopId,
+      shop_id: adset.campaign?.shop_id || currentShopId,
       action: "DELETE_ADSET",
       target_type: "AdSet",
       target_id: adset._id.toString(),
@@ -392,7 +411,23 @@ export async function deleteAdsetCascadeCtrl(req, res) {
 export async function archiveAdsetCascadeCtrl(req, res) {
   try {
     const { id } = req.params;
-    const adset = await AdsSet.findById(id).populate('campaign_id', 'shop_id');
+    const [adset] = await AdsSet.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: 'adscampaigns',
+          localField: 'campaign_id',
+          foreignField: '_id',
+          as: 'campaign_doc'
+        }
+      },
+      {
+        $addFields: {
+          campaign: { $arrayElemAt: ['$campaign_doc', 0] }
+        }
+      },
+      { $project: { campaign_doc: 0 } }
+    ]);
     if (!adset) return res.status(404).json({ message: "Không tìm thấy nhóm quảng cáo." });
 
     // ✅ Lấy access_token từ user hoặc query
@@ -412,7 +447,7 @@ export async function archiveAdsetCascadeCtrl(req, res) {
     }
 
     // Lấy toàn bộ ads con trong adset
-    const ads = await Ads.find({ set_id: adset._id });
+    const ads = await Ads.find({ set_id: adset._id }).lean();
 
     // ✅ Xóa thật trên Facebook nếu có token (giống delete)
     if (accessToken) {
@@ -443,7 +478,7 @@ export async function archiveAdsetCascadeCtrl(req, res) {
     await saveLog({
       user_id: req.user._id,
       user_name: req.user?.full_name,
-      shop_id: adset.campaign_id?.shop_id || currentShopId,
+      shop_id: adset.campaign?.shop_id || currentShopId,
       action: "ARCHIVE_ADSET",
       target_type: "AdSet",
       target_id: adset._id.toString(),

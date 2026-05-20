@@ -17,6 +17,7 @@ const userRoleSchema = new mongoose.Schema(
 
 // Index
 userRoleSchema.index({ user_id: 1, role_id: 1, shop_id: 1 }, { unique: true });
+userRoleSchema.index({ shop_id: 1 });
 
 userRoleSchema.virtual("roles", {
   ref: "Role",
@@ -29,6 +30,7 @@ userRoleSchema.virtual("roles", {
 userRoleSchema.statics.hasPermission = async function (userId, shopId, module, action) {
   const roles = await this.find({
     user_id: userId,
+    revoked_at: null,
     $or: [{ shop_id: shopId }, { shop_id: null }],
   }).populate("role_id");
 

@@ -7,12 +7,14 @@ const adsSchema = new mongoose.Schema(
 
     external_account_id: {
       type: String,
+      required: true,
+      trim: true,
       index: true,
     },
     // ID ad trên Facebook (có sau publish)
     external_id: { type: String, trim: true },
 
-    name: { type: String, trim: true },
+    name: { type: String, required: true, trim: true },
 
     // Creative gắn với Ad (trước khi ACTIVE nên validate phải có)
     creative_id: { type: mongoose.Schema.Types.ObjectId, ref: "Creative" },
@@ -23,8 +25,14 @@ const adsSchema = new mongoose.Schema(
       enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT", "FAILED"],
       default: "DRAFT",
     },
-    configured_status: { type: String },
-    effective_status: { type: String },
+    configured_status: {
+      type: String,
+      enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT"],
+    },
+    effective_status: {
+      type: String,
+      enum: ["ACTIVE", "PAUSED", "DELETED", "ARCHIVED", "PENDING_REVIEW", "DISAPPROVED", "PREAPPROVED", "IN_PROCESS", "WITH_ISSUES"],
+    },
 
     // Insights từ Facebook (đầy đủ các chỉ số như AdPerformance)
     insights: {

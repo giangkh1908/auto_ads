@@ -3,13 +3,16 @@ import mongoose from "mongoose";
 const creativeSchema = new mongoose.Schema(
   {
     external_id: { type: String, trim: true, default: null },
-    ads_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ads" },
+    ads_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ads", required: true },
 
     // 🧱 Cấu trúc nội dung
-    name: { type: String, trim: true },
+    name: { type: String, required: true, trim: true },
     title: { type: String, trim: true },
     body: { type: String },
-    creative_type: { type: String, trim: true }, // LINK, VIDEO, CAROUSEL, IMAGE
+    creative_type: {
+      type: String,
+      enum: ["LINK", "VIDEO", "CAROUSEL", "IMAGE", "COLLECTION"],
+    },
     page_id: { type: String, default: null },
     object_story_spec: { type: mongoose.Schema.Types.Mixed, default: {} },
     image_hash: { type: String },

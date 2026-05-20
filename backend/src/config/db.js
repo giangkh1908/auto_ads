@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dns from "node:dns";
+import logger from "../utils/logger.js";
 
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
@@ -8,9 +9,9 @@ export const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URL, {
       maxPoolSize: 1500,
     });
-    console.log("Liên kết DB thành công!");
+    logger.info("DB connected successfully!");
   } catch (error) {
-    console.error("Lỗi khi kết nối DB:", error);
+    logger.error("DB connection error:", error);
     process.exit(1);
   }
 };

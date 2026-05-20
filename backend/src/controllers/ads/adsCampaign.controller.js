@@ -71,11 +71,11 @@ export async function listCampaignsCtrl(req, res) {
     let items, total;
     
     if (shouldFetchAll) {
-      // Fetch tất cả (không phân trang) - để Frontend sort và phân trang
       [items, total] = await Promise.all([
         AdsCampaign.find(filter)
           .populate('created_by', 'full_name email')
-          .sort({ createdAt: -1 }), // Sort ở Backend trước
+          .sort({ createdAt: -1 })
+          .lean(),
         AdsCampaign.countDocuments(filter)
       ]);
       
@@ -94,7 +94,8 @@ export async function listCampaignsCtrl(req, res) {
           .populate('created_by', 'full_name email')
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(Number(limit)),
+          .limit(Number(limit))
+          .lean(),
         AdsCampaign.countDocuments(filter)
       ]);
       
@@ -139,7 +140,8 @@ export async function getCampaignFromDatabase(req, res) {
     }
 
     const campaign = await AdsCampaign.findById(cleanCampaignId)
-      .populate('created_by', 'full_name email');
+      .populate('created_by', 'full_name email')
+      .lean();
     
     if (!campaign) {
       return res.status(404).json({
@@ -325,10 +327,10 @@ export async function deleteCampaignCascadeCtrl(req, res) {
       });
     }
 
-    // Lấy adset + ads liên quan
-    const adsets = await AdsSet.find({ campaign_id: campaign._id });
+    // Lấy adset + ads liên quan (batch với .lean())
+    const adsets = await AdsSet.find({ campaign_id: campaign._id }).lean();
     const adsetIds = adsets.map((a) => a._id);
-    const ads = await Ads.find({ set_id: { $in: adsetIds } });
+    const ads = await Ads.find({ set_id: { $in: adsetIds } }).lean();
 
     // ✅ Nếu có token → xoá thật trên Facebook
     if (accessToken) {
@@ -426,10 +428,10 @@ export async function archiveCampaignCascadeCtrl(req, res) {
       });
     }
 
-    // Lấy adset + ads liên quan
-    const adsets = await AdsSet.find({ campaign_id: campaign._id });
+    // Lấy adset + ads liên quan (batch với .lean())
+    const adsets = await AdsSet.find({ campaign_id: campaign._id }).lean();
     const adsetIds = adsets.map((a) => a._id);
-    const ads = await Ads.find({ set_id: { $in: adsetIds } });
+    const ads = await Ads.find({ set_id: { $in: adsetIds } }).lean();
 
     // ✅ Nếu có token → Xóa thật trên Facebook (giống delete)
     if (accessToken) {

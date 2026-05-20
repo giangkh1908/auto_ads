@@ -39,7 +39,7 @@ async function findAdsAccountByExternalId(accountId) {
   const { withPrefix, withoutPrefix } = normalizeAccountPair(accountId);
   return AdsAccount.findOne({
     external_id: { $in: [withPrefix, withoutPrefix] },
-  });
+  }).lean();
 }
 
 /* =========================
@@ -1500,7 +1500,7 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
   console.log(`[fbAdsService] 💾 Preparing to save ${insightsData.length} performance records to database...`);
 
   try {
-    const account = await AdsAccount.findById(accountId);
+    const account = await AdsAccount.findById(accountId).lean();
     if (!account) {
       console.warn(`⚠️ Account ${accountId} not found, skipping save`);
       return { saved: 0, skipped: insightsData.length };
@@ -1511,9 +1511,9 @@ export async function saveInsightsToAdPerformance(insightsData, accountId) {
     const campaignExternalIds = [...new Set(insightsData.map(item => item.campaign_id).filter(Boolean))];
 
     const [adsDocs, adsetsDocs, campaignsDocs] = await Promise.all([
-      Ads.find({ external_id: { $in: adExternalIds } }),
-      AdsSet.find({ external_id: { $in: adsetExternalIds } }),
-      AdsCampaign.find({ external_id: { $in: campaignExternalIds } })
+      Ads.find({ external_id: { $in: adExternalIds } }).lean(),
+      AdsSet.find({ external_id: { $in: adsetExternalIds } }).lean(),
+      AdsCampaign.find({ external_id: { $in: campaignExternalIds } }).lean()
     ]);
 
     const adsMap = new Map(adsDocs.map(ad => [ad.external_id, ad]));

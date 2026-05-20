@@ -25,7 +25,6 @@ const userSchema = new mongoose.Schema(
      
     email: {
       type: String,
-      sparse: true,
       lowercase: true,
       trim: true,
       validate: {
@@ -49,8 +48,15 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
+      minlength: [10, "Mật khẩu phải có ít nhất 10 ký tự"],
       select: false,
+      validate: {
+        validator: function (v) {
+          if (!v) return true; // skip on update if not provided
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(v);
+        },
+        message: "Mật khẩu phải chứa chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)",
+      },
     },
 
     username: {
@@ -85,7 +91,7 @@ const userSchema = new mongoose.Schema(
     },
 
     // 🔗 Facebook Integration
-    facebookId: { type: String, sparse: true },
+    facebookId: { type: String },
     facebookAccessToken: { type: String, select: false },
     facebookRefreshToken: { type: String, select: false },
     facebookTokenExpires: { type: Date },

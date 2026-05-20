@@ -17,6 +17,10 @@ const leadSchema = new mongoose.Schema(
       required: true,
       trim: true,
       index: true,
+      validate: {
+        validator: (v) => /^(\+)?\d{9,11}$/.test(v.trim()),
+        message: "Số điện thoại không hợp lệ (9-11 chữ số)",
+      },
     },
 
     // Trạng thái xử lý lead

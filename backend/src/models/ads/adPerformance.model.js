@@ -13,7 +13,7 @@ const adPerformanceSchema = new mongoose.Schema(
     external_adset_id: { type: String, index: true },    // Facebook AdSet ID
     external_ad_id: { type: String, index: true },       // Facebook Ad ID
     
-    date: { type: Date, required: true, index: true },
+    date: { type: Date, required: true },
     
     impressions: { type: Number, default: 0 },
     reach: { type: Number, default: 0 },

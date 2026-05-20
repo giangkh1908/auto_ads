@@ -5,11 +5,16 @@ dotenv.config();
 
 import compression from "compression";
 import { connectDB } from "./config/db.js";
-import redis from "./config/redis.js";
+import redis, { closeRedis } from "./config/redis.js";
 import cors from "cors";
 import path from "path";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
+
+// Import Logging & Performance Middlewares
+import logger from "./utils/logger.js";
+import requestLogger from "./middlewares/requestLogger.js";
+import { performanceTracker } from "./middlewares/performanceTracker.js";
 
 // import { startAnalyticsSnapshotCron } from "./jobs/analyticsSnapshot.job.js"; // Deprecated: Now using AdPerformance from cronJobs.js
 import { startAutoRuleScheduler } from "./services/auto/autoRuleScheduler.js";
@@ -24,6 +29,7 @@ import userRoleRoutes from './routes/user/userRoleRoutes.js';
 import shopRoutes from './routes/shops/shopRoutes.js';
 import shopUserRoutes from './routes/shops/shopUserRoutes.js';
 import authRoutes from './routes/user/authRoutes.js';
+import sessionRoutes from './routes/user/sessionRoutes.js';
 import adsAccountRoutes from "./routes/ads/adsAccountRoutes.js";
 import adsWizardRoutes from "./routes/ads/adsWizardRoutes.js";
 import adsCampaignRoutes from "./routes/ads/adsCampaignRoutes.js";
@@ -58,6 +64,11 @@ const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
 const app = express();
+
+// Apply Logging and Performance tracking at the absolute top
+app.use(requestLogger);
+app.use(performanceTracker);
+
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for now if it interferes with some integrations, or configure it carefully
   crossOriginEmbedderPolicy: false,
@@ -129,6 +140,7 @@ app.use("/api/user-roles", userRoleRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/shop-users", shopUserRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/sessions", sessionRoutes);
 app.use("/api/ads-accounts", adsAccountRoutes);
 app.use("/api/campaigns", adsCampaignRoutes);
 app.use("/api/adsets", adsSetRoutes);
@@ -190,30 +202,55 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  logger.error("Unhandled Error Caught By Global Middleware:", err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    error: process.env.NODE_ENV === "production" ? {} : err,
+  });
+});
+
 const startServer = async () => {
   try {
     await connectDB();
 
     // CHỈ CHẠY CRON JOB NẾU BIẾN CRON_ENABLED = true
     if (process.env.CRON_ENABLED === "true") {
-      console.log("--- CRON JOBS STARTED ON THIS INSTANCE ---");
+      logger.info("--- CRON JOBS STARTED ON THIS INSTANCE ---");
       startAutoRuleScheduler();
       startCancelExpiredPaymentsCron();
       startSyncCronJobs();
       startUserPackageExpiryCron();
     } else {
-      console.log("--- CRON JOBS DISABLED ON THIS INSTANCE ---");
+      logger.info("--- CRON JOBS DISABLED ON THIS INSTANCE ---");
     }
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      logger.info(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error("Failed to start server:", error);
     process.exit(1);
   }
 };
 
 startServer();
+
+async function gracefulShutdown(signal) {
+  console.log(`\n[Server] ${signal} received. Shutting down gracefully...`);
+  try {
+    await closeRedis();
+    console.log("[Server] Graceful shutdown complete.");
+    process.exit(0);
+  } catch (err) {
+    console.error("[Server] Error during shutdown:", err);
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 export default app;

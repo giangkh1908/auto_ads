@@ -52,16 +52,16 @@ describe('calculateNextRunAt', () => {
 
   /**
    * calN002: CONTINUOUS
-   * Expected: new Date(now + 30min)
+   * Expected: new Date(now + 1min)
    */
-  test('calN002: should return +30 minutes for CONTINUOUS schedule', () => {
+  test('calN002: should return +1 minute for CONTINUOUS schedule', () => {
     const mockNow = mockCurrentTime(2024, 12, 6, 10, 0);
     
     const schedule = createContinuousSchedule();
     const result = calculateNextRunAt(schedule);
 
     expect(result).not.toBeNull();
-    expect(result.getTime()).toBe(mockNow.getTime() + 30 * 60 * 1000);
+    expect(result.getTime()).toBe(mockNow.getTime() + 1 * 60 * 1000);
   });
 
   /**

@@ -1,7 +1,7 @@
 import User from "../../models/user/user.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { queueStaffCredentialsEmail } from "../../services/email/emailService.js";
+import { queueStaffCredentialsEmail, queueVerificationEmail } from "../../services/email/emailService.js";
 import UserRole from "../../models/user/userRole.model.js";
 import Shop from "../../models/shops/shop.model.js";
 import Role from "../../models/admin/role.model.js";
@@ -75,7 +75,8 @@ export const getCustomers = async (req, res) => {
       .select("-password -facebookAccessToken -facebookRefreshToken")
       .sort({ created_at: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
     const total = await User.countDocuments(query);
 
@@ -160,7 +161,8 @@ export const getInternalStaff = async (req, res) => {
       .select("-password -facebookAccessToken -facebookRefreshToken")
       .sort({ created_at: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
     const total = await User.countDocuments(filter);
 
@@ -212,7 +214,7 @@ export const getInternalRoles = async (req, res) => {
 // 📄 Lấy thông tin user theo ID
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select("-password").lean();
     if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy user." });
     res.status(200).json({ success: true, data: user });
   } catch (error) {
@@ -236,7 +238,7 @@ export const getUserShops = async (req, res) => {
     const userRoles = await UserRole.find({
       user_id: id,
       revoked_at: null,
-      shop_id: { $ne: null }, // Chỉ lấy role có shop_id (bỏ qua global roles)
+      shop_id: { $ne: null },
     })
       .populate("shop_id", "shop_name status")
       .populate("role_id", "role_name")
@@ -257,22 +259,24 @@ export const getUserShops = async (req, res) => {
       deleted_at: null,
     }).lean();
 
-    for (const shop of shopsOwned) {
-      // Kiểm tra xem shop này đã có trong danh sách chưa
-      const exists = shopsWithRoles.some(
-        (swr) => swr.shop_id && swr.shop_id.toString() === shop._id.toString()
-      );
+    if (shopsOwned.length > 0) {
+      // ✅ Fetch Role "Shop Owner" MỘT LẦN thay vì trong loop
+      const shopOwnerRole = await Role.findOne({ role_name: "Shop Owner" }).lean();
 
-      if (!exists) {
-        // Tìm role "Shop Owner"
-        const shopOwnerRole = await Role.findOne({ role_name: "Shop Owner" }).lean();
-        shopsWithRoles.push({
-          shop: shop.shop_name,
-          role: shopOwnerRole?.role_name || "Shop Owner",
-          shop_id: shop._id,
-          role_id: shopOwnerRole?._id || null,
-          is_current: false,
-        });
+      for (const shop of shopsOwned) {
+        const exists = shopsWithRoles.some(
+          (swr) => swr.shop_id && swr.shop_id.toString() === shop._id.toString()
+        );
+
+        if (!exists) {
+          shopsWithRoles.push({
+            shop: shop.shop_name,
+            role: shopOwnerRole?.role_name || "Shop Owner",
+            shop_id: shop._id,
+            role_id: shopOwnerRole?._id || null,
+            is_current: false,
+          });
+        }
       }
     }
 
@@ -296,6 +300,13 @@ export const createUser = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ full_name, email, password: hashed, phone, status, provider: "local" });
 
+    // Gửi email xác minh để user có thể đăng nhập
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    user.emailVerificationToken = crypto.createHash("sha256").update(verifyToken).digest("hex");
+    user.emailVerificationExpires = Date.now() + 3600000; // 1 giờ
+    await user.save({ validateBeforeSave: false });
+    queueVerificationEmail(user.email, user.full_name, verifyToken);
+
     // Log user creation (admin action)
     await saveSystemLog({
       category: 'admin',
@@ -312,7 +323,7 @@ export const createUser = async (req, res) => {
       success: true,
     });
 
-    res.status(201).json({ success: true, message: "Tạo user thành công!", data: user });
+    res.status(201).json({ success: true, message: "Tạo user thành công! Email xác minh đã được gửi.", data: user });
   } catch (error) {
     console.error("❌ Create user error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });

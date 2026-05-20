@@ -21,7 +21,7 @@ async function findAdsAccountByExternalId(accountId) {
   const { withPrefix, withoutPrefix } = normalizeAccountPair(accountId);
   return AdsAccount.findOne({
     external_id: { $in: [withPrefix, withoutPrefix] },
-  });
+  }).lean();
 }
 
 async function* fetchPagedEntities(url, accessToken, params = {}) {
@@ -141,7 +141,7 @@ async function syncAdSetsWithPagination(adsAccount, accessToken) {
     const campaignExternalIds = [...new Set(page.map((s) => s.campaign_id).filter(Boolean))];
     const campaigns = await AdsCampaign.find({
       external_id: { $in: campaignExternalIds },
-    }).select("_id external_id");
+    }).select("_id external_id").lean();
     const campaignsMap = new Map(campaigns.map((c) => [c.external_id, c._id]));
 
     const bulkOps = [];
@@ -208,7 +208,7 @@ async function syncAdsWithPagination(adsAccount, accessToken) {
     const adsetExternalIds = [...new Set(page.map((a) => a.adset_id).filter(Boolean))];
     const adsets = await AdsSet.find({
       external_id: { $in: adsetExternalIds },
-    }).select("_id external_id");
+    }).select("_id external_id").lean();
     const adsetsMap = new Map(adsets.map((a) => [a.external_id, a._id]));
 
     const bulkOps = [];

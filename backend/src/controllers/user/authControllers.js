@@ -3,40 +3,69 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import fetch from "node-fetch";
 import axios from "axios";
-import { generateTokens, verifyRefreshToken } from "../../utils/jwt.js";
-import redis from "../../config/redis.js";
+import { generateTokens, verifyRefreshToken, getRefreshCookieMaxAge, verifyAccessToken, getRefreshExpirySeconds } from "../../utils/jwt.js";
+import redis, { isRedisReady } from "../../config/redis.js";
 import Shop from "../../models/shops/shop.model.js";
 import ShopUser from "../../models/shops/shopUser.model.js";
 import UserRole from "../../models/user/userRole.model.js";
-import { RoleEnum } from "../../constants/enum.js";
+import Role from "../../models/admin/role.model.js";
+import UserSession from "../../models/user/userSession.model.js";
+import { createDefaultShopAndRole } from "../../services/user/onboardingService.js";
 import { ErrorCode, getErrorMessage } from "../../constants/errorCode.js";
 import {
   queueVerificationEmail,
   queuePasswordResetEmail,
 } from "../../services/email/emailService.js";
-import jwt from "jsonwebtoken";
 import { saveSystemLog, getClientIp, getUserAgent } from "../../utils/systemLog.js";
 
 // Hàm xác thực CAPTCHA bằng axios
 async function verifyCaptcha(token) {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const url = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`;
+  const response = await fetch(url, { method: "POST" });
+  return response.json();
+}
+
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 phút
+
+const getLoginAttemptKey = (email) => `login:fail:${email.toLowerCase()}`;
+
+async function checkLoginLockout(email) {
+  if (!isRedisReady()) return { locked: false };
   try {
-    const secret = process.env.RECAPTCHA_SECRET_KEY;
-    if (!secret) {
-      throw new Error("RECAPTCHA_SECRET_KEY not configured");
+    const key = getLoginAttemptKey(email);
+    const attempts = await redis.get(key);
+    if (attempts && parseInt(attempts, 10) >= LOGIN_MAX_ATTEMPTS) {
+      const ttl = await redis.ttl(key);
+      return { locked: true, ttl };
     }
+  } catch (err) {
+    console.warn('[Auth] Redis lockout check failed, allowing login:', err.message);
+  }
+  return { locked: false };
+}
 
-    const response = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
-    );
+async function recordFailedLogin(email) {
+  if (!isRedisReady()) return;
+  try {
+    const key = getLoginAttemptKey(email);
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.expire(key, Math.floor(LOGIN_LOCKOUT_MS / 1000));
+    }
+  } catch (err) {
+    console.warn('[Auth] Redis failed login record failed:', err.message);
+  }
+}
 
-    return {
-      success: response.data.success,
-      errorCodes: response.data["error-codes"] || [],
-      hostname: response.data.hostname,
-    };
-  } catch (error) {
-    console.error("CAPTCHA verification request failed:", error.message);
-    throw error;
+async function resetFailedLogin(email) {
+  if (!isRedisReady()) return;
+  try {
+    const key = getLoginAttemptKey(email);
+    await redis.del(key);
+  } catch (err) {
+    console.warn('[Auth] Redis reset failed login failed:', err.message);
   }
 }
 
@@ -103,63 +132,8 @@ export const register = async (req, res) => {
     });
 
     // Tạo shop mặc định cho user mới
-    const shop = await Shop.create({
-      shop_name: full_name,
-      owner_id: user._id,
-      status: "active",
-      settings: {
-        currency: "VND",
-        timezone: "Asia/Ho_Chi_Minh",
-        language: "vi",
-      },
-      created_by: user._id,
-      updated_by: user._id,
-    });
-    console.log("Shop created:", shop._id);
-
-    // Tạo ShopUser với status "active" để được tính vào employee count
-    let shopUser;
-    try {
-      shopUser = await ShopUser.create({
-        user_id: user._id,
-        shop_id: shop._id,
-        is_manager: true,
-        status: "active", // Đảm bảo status là "active" để được tính vào employee count
-      });
-      console.log("ShopUser created:", shopUser._id);
-    } catch (shopUserError) {
-      console.error("Error creating ShopUser:", shopUserError);
-      console.error("ShopUser error details:", {
-        message: shopUserError.message,
-        code: shopUserError.code,
-        keyPattern: shopUserError.keyPattern,
-        keyValue: shopUserError.keyValue,
-      });
-      throw shopUserError;
-    }
-
-    // Tạo UserRole với role Shop Owner
-    try {
-      await UserRole.create({
-        user_id: user._id,
-        role_id: RoleEnum.SHOP_OWNER,
-        shop_id: shop._id,
-        shop_user_id: shopUser._id,
-        is_current: true,
-        source: "system", // Đánh dấu là được tạo tự động từ hệ thống
-      });
-      console.log("UserRole created successfully");
-    } catch (userRoleError) {
-      console.error("Error creating UserRole:", userRoleError);
-      console.error("UserRole error details:", {
-        message: userRoleError.message,
-        code: userRoleError.code,
-        name: userRoleError.name,
-        keyPattern: userRoleError.keyPattern,
-        keyValue: userRoleError.keyValue,
-      });
-      throw userRoleError;
-    }
+    const { shop, shopUser } = await createDefaultShopAndRole(user);
+    console.log("Shop created:", shop._id, "ShopUser created:", shopUser._id);
 
     // Tạo token xác minh email
     const token = crypto.randomBytes(32).toString("hex");
@@ -221,9 +195,18 @@ export const verifyEmail = async (req, res) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    const { accessToken, refreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
-    user.currentRefreshTokenJti = refreshJti;
-    await user.save();
+    const { accessToken, refreshToken, refreshJti, familyId } = generateTokens(user._id, user.tokenVersion);
+
+    // Tạo session mới
+    await UserSession.createSession({
+      userId: user._id,
+      jti: refreshJti,
+      familyId,
+      device: {
+        userAgent: getUserAgent(req),
+        ip: getClientIp(req),
+      },
+    });
 
     // Log email verification
     await saveSystemLog({
@@ -244,7 +227,7 @@ export const verifyEmail = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+      maxAge: getRefreshCookieMaxAge(),
     });
 
     res.status(200).json({
@@ -270,9 +253,32 @@ export const verifyEmail = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Kiểm tra account lockout
+    const lockout = await checkLoginLockout(email);
+    if (lockout.locked) {
+      await saveSystemLog({
+        category: 'security',
+        level: 'warning',
+        action: 'LOGIN_LOCKED',
+        description: `Đăng nhập bị khóa do quá nhiều lần thử (${email})`,
+        ip_address: getClientIp(req),
+        user_agent: getUserAgent(req),
+        success: false,
+        error_message: `Account locked, ${lockout.ttl}s remaining`,
+      });
+      return res.status(429).json({
+        success: false,
+        message: `Tài khoản đã bị khóa tạm thời do quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau ${Math.ceil(lockout.ttl / 60)} phút.`,
+        code: "ACCOUNT_LOCKED",
+        retryAfter: lockout.ttl,
+      });
+    }
+
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
       // Log failed login attempt
+      await recordFailedLogin(email);
       await saveSystemLog({
         category: 'security',
         level: 'warning',
@@ -292,6 +298,10 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       // Log failed login attempt
+      await recordFailedLogin(email);
+      const attempts = await redis.get(getLoginAttemptKey(email));
+      const remaining = LOGIN_MAX_ATTEMPTS - (parseInt(attempts, 10) || 0);
+      // Log failed login attempt
       await saveSystemLog({
         category: 'security',
         level: 'warning',
@@ -308,9 +318,9 @@ export const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Email hoặc mật khẩu không chính xác.",
+        remainingAttempts: Math.max(0, remaining),
       });
     }
-
     // Kiểm tra status của user
     if (user.status === "inactive") {
       // Log failed login attempt
@@ -382,9 +392,19 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Tài khoản chưa được kích hoạt." });
     }
 
-    const { accessToken, refreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
-    user.currentRefreshTokenJti = refreshJti;
-    await user.save();
+    const { accessToken, refreshToken, refreshJti, familyId } = generateTokens(user._id, user.tokenVersion);
+
+    // Tạo session mới
+    await UserSession.createSession({
+      userId: user._id,
+      jti: refreshJti,
+      familyId,
+      device: {
+        userAgent: getUserAgent(req),
+        ip: getClientIp(req),
+      },
+    });
+
     user.password = undefined;
 
     // Log successful login
@@ -403,11 +423,14 @@ export const login = async (req, res) => {
       success: true,
     });
 
+    // Reset failed login counter on success
+    await resetFailedLogin(user.email);
+
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000, // Convert 7d to ms
+      maxAge: getRefreshCookieMaxAge(),
     });
 
     res.status(200).json({
@@ -430,38 +453,39 @@ export const facebookLogin = async (req, res) => {
   try {
     console.log("Bắt đầu đăng nhập bằng Facebook");
 
-    const { facebookId, name, email, accessToken } = req.body;
-    if (!facebookId || !accessToken) {
+    const { accessToken } = req.body;
+    if (!accessToken) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu Facebook ID hoặc access token.",
+        message: "Thiếu access token.",
       });
     }
 
     console.log("Đang xác thực ...");
 
-    // Lấy thông tin user
+    // Lấy thông tin user từ Facebook Graph API — facebookId luôn từ server-side
     const fbResp = await fetch(
       `https://graph.facebook.com/me?access_token=${accessToken}&fields=id,name,email,picture.width(200).height(200)`
     );
     const fbData = await fbResp.json();
 
-    if (!fbData.id || fbData.id !== facebookId) {
-      // Log failed Facebook authentication
+    if (!fbData.id) {
       await saveSystemLog({
         category: 'security',
         level: 'warning',
         action: 'FACEBOOK_LOGIN_FAILED',
-        description: `Đăng nhập Facebook thất bại: Xác thực Facebook thất bại (facebookId: ${facebookId})`,
+        description: `Đăng nhập Facebook thất bại: Không lấy được Facebook ID từ Graph API`,
         ip_address: getClientIp(req),
         user_agent: getUserAgent(req),
         success: false,
-        error_message: 'Facebook authentication failed',
+        error_message: 'Facebook Graph API returned no ID',
       });
       return res
         .status(400)
         .json({ success: false, message: "Xác thực Facebook thất bại." });
     }
+
+    const facebookId = fbData.id;
 
     // Đổi short-lived token thành long-lived token
     let longLivedToken = accessToken;
@@ -497,37 +521,8 @@ export const facebookLogin = async (req, res) => {
       });
 
       // Tạo shop mặc định cho user Facebook lần đầu
-      const shop = await Shop.create({
-        shop_name: fbData.name,
-        owner_id: user._id,
-        status: "active",
-        settings: {
-          currency: "VND",
-          timezone: "Asia/Ho_Chi_Minh",
-          language: "vi",
-        },
-        created_by: user._id,
-        updated_by: user._id,
-      });
-
-      // Tạo ShopUser với status "active" để được tính vào employee count
-      const shopUser = await ShopUser.create({
-        user_id: user._id,
-        shop_id: shop._id,
-        is_manager: true,
-        status: "active", // Đảm bảo status là "active" để được tính vào employee count
-      });
+      const { shop, shopUser } = await createDefaultShopAndRole(user);
       console.log("✅ ShopUser created for Facebook user:", shopUser._id);
-
-      // Tạo UserRole với role Shop Owner
-      await UserRole.create({
-        user_id: user._id,
-        role_id: RoleEnum.SHOP_OWNER,
-        shop_id: shop._id,
-        shop_user_id: shopUser._id,
-        is_current: true,
-        source: "system", // Đánh dấu là được tạo tự động từ hệ thống
-      });
       console.log("✅ UserRole created for Facebook user");
 
       // Log Facebook registration (new user created)
@@ -658,33 +653,39 @@ export const facebookLogin = async (req, res) => {
             user_id: user._id,
             shop_id: shop._id,
             is_manager: true,
-            status: "active", // Đảm bảo status là "active" để được tính vào employee count
+            status: "active",
           });
           console.log("✅ ShopUser created for existing Facebook user:", shopUser._id);
 
           // Tạo UserRole nếu chưa có
           if (!existingUserRole) {
-            await UserRole.create({
-              user_id: user._id,
-              role_id: RoleEnum.SHOP_OWNER,
-              shop_id: shop._id,
-              shop_user_id: shopUser._id,
-              is_current: true,
-              source: "system", // Đánh dấu là được tạo tự động từ hệ thống
-            });
-            console.log("✅ UserRole created for existing Facebook user");
+            const ownerRole = await Role.findOne({ role_name: "Shop Owner" });
+            if (ownerRole) {
+              await UserRole.create({
+                user_id: user._id,
+                role_id: ownerRole._id,
+                shop_id: shop._id,
+                shop_user_id: shopUser._id,
+                is_current: true,
+                source: "system",
+              });
+              console.log("✅ UserRole created for existing Facebook user");
+            }
           }
         } else if (!existingUserRole) {
           // Chỉ thiếu UserRole
-          await UserRole.create({
-            user_id: user._id,
-            role_id: RoleEnum.SHOP_OWNER,
-            shop_id: existingShopUser.shop_id,
-            shop_user_id: existingShopUser._id,
-            is_current: true,
-            source: "system", // Đánh dấu là được tạo tự động từ hệ thống
-          });
-          console.log("✅ UserRole created for existing Facebook user");
+          const ownerRole = await Role.findOne({ role_name: "Shop Owner" });
+          if (ownerRole) {
+            await UserRole.create({
+              user_id: user._id,
+              role_id: ownerRole._id,
+              shop_id: existingShopUser.shop_id,
+              shop_user_id: existingShopUser._id,
+              is_current: true,
+              source: "system",
+            });
+            console.log("✅ UserRole created for existing Facebook user");
+          }
         }
       }
     }
@@ -715,9 +716,18 @@ export const facebookLogin = async (req, res) => {
     }
 
     // Tạo token đăng nhập
-    const { accessToken: at, refreshToken: rt, refreshJti } = generateTokens(user._id, user.tokenVersion);
-    user.currentRefreshTokenJti = refreshJti;
-    await user.save();
+    const { accessToken: at, refreshToken: rt, refreshJti, familyId } = generateTokens(user._id, user.tokenVersion);
+
+    // Tạo session mới
+    await UserSession.createSession({
+      userId: user._id,
+      jti: refreshJti,
+      familyId,
+      device: {
+        userAgent: getUserAgent(req),
+        ip: getClientIp(req),
+      },
+    });
 
     // Log successful Facebook login
     await saveSystemLog({
@@ -744,7 +754,7 @@ export const facebookLogin = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
-      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+      maxAge: getRefreshCookieMaxAge(),
     });
 
     // Gửi trả về FE cả user, tokens và pages
@@ -773,7 +783,7 @@ export const facebookLogin = async (req, res) => {
   }
 };
 
-// Làm mới token
+// Làm mới token — rotation + family tracking
 export const refreshToken = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
@@ -785,33 +795,99 @@ export const refreshToken = async (req, res) => {
     }
 
     const decoded = verifyRefreshToken(refreshToken);
-    const user = await User.findById(decoded.id).select('+currentRefreshTokenJti +tokenVersion');
-    if (!user)
-      return res
-        .status(401)
-        .json({ success: false, message: "Refresh token không hợp lệ." });
+    const { id: userId, jti, tv: tokenVersion, fid: familyId } = decoded;
 
-    // Check if this refresh token is still valid (rotation)
-    if (user.currentRefreshTokenJti && decoded.jti !== user.currentRefreshTokenJti) {
-      // Refresh token bị steal → khóa tài khoản
-      user.status = 'inactive';
-      await user.save();
+    const user = await User.findById(userId).select("+tokenVersion");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Refresh token không hợp lệ." });
+    }
+
+    // Check token version — invalidate nếu password change / force logout
+    if (tokenVersion !== user.tokenVersion) {
       return res.status(401).json({
         success: false,
-        message: "Refresh token không hợp lệ. Tài khoản đã bị khóa do nghi ngờ bị tấn công.",
+        message: "Token đã lỗi thời. Vui lòng đăng nhập lại.",
+        code: "TOKEN_VERSION_MISMATCH",
       });
     }
 
-    // Tạo token mới
-    const { accessToken, refreshToken: newRefreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion);
-    user.currentRefreshTokenJti = refreshJti;
-    await user.save();
+    // Check user status — deny nếu bị ban/inactive sau khi token được cấp
+    if (user.status !== "active") {
+      return res.status(403).json({
+        success: false,
+        message: "Tài khoản đã bị khóa hoặc chưa kích hoạt.",
+        code: "ACCOUNT_INACTIVE",
+      });
+    }
 
-    res.cookie('refreshToken', newRefreshToken, {
+    // Family tracking: kiểm tra replay attack (graceful degradation if Redis down)
+    const redisKey = `refresh:${jti}`;
+    let wasUsed = null;
+    try {
+      if (isRedisReady()) {
+        wasUsed = await redis.get(redisKey);
+      }
+    } catch (redisErr) {
+      console.warn('[Auth] Redis replay check failed, proceeding:', redisErr.message);
+    }
+
+    if (wasUsed === "used") {
+      // Replay attack detected — revoke toàn bộ family
+      await UserSession.revokeByFamily(familyId);
+      user.status = "inactive";
+      await user.save();
+
+      await saveSystemLog({
+        category: "security",
+        level: "critical",
+        action: "REFRESH_TOKEN_REPLAY",
+        user_id: userId,
+        user_name: user.full_name,
+        description: `Replay attack detected — family ${familyId.slice(0, 8)} revoked`,
+        ip_address: getClientIp(req),
+        success: false,
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: "Phát hiện tấn công token. Tài khoản đã bị khóa.",
+        code: "TOKEN_REPLAY_DETECTED",
+      });
+    }
+
+    // Mark current token as used (rotation)
+    try {
+      const ttl = getRefreshExpirySeconds();
+      if (isRedisReady()) {
+        await redis.set(redisKey, "used", "EX", ttl);
+      }
+    } catch (redisErr) {
+      console.warn('[Auth] Redis rotation mark failed, proceeding:', redisErr.message);
+    }
+
+    // Tạo token mới với cùng familyId
+    const { accessToken, refreshToken: newRefreshToken, refreshJti } = generateTokens(user._id, user.tokenVersion, familyId);
+
+    // Update session
+    await UserSession.findOneAndUpdate(
+      { jti, user_id: userId },
+      { $set: { isActive: false, revokedAt: new Date() } }
+    );
+    await UserSession.createSession({
+      userId,
+      jti: refreshJti,
+      familyId,
+      device: {
+        userAgent: req.headers["user-agent"],
+        ip: getClientIp(req),
+      },
+    });
+
+    res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES || '7d') * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: getRefreshCookieMaxAge(),
     });
 
     res.status(200).json({
@@ -832,11 +908,13 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(400).json({
-        success: true,
-        message: "Email không tồn tại trong hệ thống",
-      });
+
+    // Luôn trả về message giống nhau — tránh email enumeration
+    const genericMessage = "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.";
+
+    if (!user) {
+      return res.status(200).json({ success: true, message: genericMessage });
+    }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.passwordResetToken = crypto
@@ -866,7 +944,7 @@ export const forgotPassword = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Email đặt lại mật khẩu đã được gửi!" });
+      .json({ success: true, message: genericMessage });
   } catch (error) {
     console.error("Forgot password error:", error);
     res.status(500).json({ success: false, message: "Lỗi hệ thống." });
@@ -895,6 +973,12 @@ export const resetPassword = async (req, res) => {
     // Increment tokenVersion → invalidate tất cả token cũ
     user.tokenVersion = (user.tokenVersion || 1) + 1;
     await user.save();
+
+    // Thu hồi tất cả sessions — buộc đăng nhập lại ở mọi thiết bị
+    await UserSession.updateMany(
+      { user_id: user._id, isActive: true },
+      { isActive: false, revokedAt: new Date() }
+    );
 
     // Log password reset success
     await saveSystemLog({
@@ -929,28 +1013,33 @@ export const getCurrentUser = async (req, res) => {
     let shopId = null;
     let shopUser = null;
 
-    // Ưu tiên 1: Lấy shop_id từ UserRole với is_current = true (shop đang active)
-    const currentUserRole = await UserRole.findOne({
-      user_id: user._id,
-      is_current: true,
-      shop_id: { $ne: null },
-      revoked_at: null,
-    }).lean();
-
-    if (currentUserRole?.shop_id) {
-      // Nếu có UserRole với is_current = true, lấy shop từ shop_id đó
-      shopId = currentUserRole.shop_id;
-      shop = await Shop.findOne({
-        _id: shopId,
-        deleted_at: null,
-      }).lean();
-    } else {
-      // Fallback: Tìm shop mà user là owner (theo đề xuất)
-      shop = await Shop.findOne({
+    // Tối ưu hóa: Chạy song song tìm UserRole hiện tại và Shop do user làm owner
+    const [currentUserRole, fallbackOwnerShop] = await Promise.all([
+      UserRole.findOne({
+        user_id: user._id,
+        is_current: true,
+        shop_id: { $exists: true, $ne: null },
+        revoked_at: null,
+      }).lean(),
+      Shop.findOne({
         owner_id: user._id,
         deleted_at: null,
-      }).lean();
+      }).lean()
+    ]);
 
+    if (currentUserRole?.shop_id) {
+      shopId = currentUserRole.shop_id;
+      // Nếu shop hiện tại trùng với shop do user sở hữu, dùng luôn thông tin đã fetch song song trước đó để giảm 1 query
+      if (fallbackOwnerShop && fallbackOwnerShop._id.toString() === shopId.toString()) {
+        shop = fallbackOwnerShop;
+      } else {
+        shop = await Shop.findOne({
+          _id: shopId,
+          deleted_at: null,
+        }).lean();
+      }
+    } else {
+      shop = fallbackOwnerShop;
       if (shop) {
         shopId = shop._id;
       }
@@ -962,11 +1051,6 @@ export const getCurrentUser = async (req, res) => {
         shop_id: shopId,
         status: "active",
       }).lean();
-      
-      // ✅ Đảm bảo shop được populate với facebook_pages
-      if (!shop) {
-        shop = await Shop.findById(shopId).lean();
-      }
     }
 
     // Thêm shop_id vào user object để frontend dùng
@@ -1057,6 +1141,12 @@ export const changePassword = async (req, res) => {
     user.tokenVersion = (user.tokenVersion || 1) + 1;
     await user.save();
 
+    // Thu hồi tất cả sessions — buộc đăng nhập lại ở mọi thiết bị
+    await UserSession.updateMany(
+      { user_id: userId, isActive: true },
+      { isActive: false, revokedAt: new Date() }
+    );
+
     res.status(200).json({
       success: true,
       message: "Đổi mật khẩu thành công!",
@@ -1129,19 +1219,31 @@ export const logout = async (req, res) => {
     // Clear refresh token cookie
     res.clearCookie('refreshToken');
 
-    // Blacklist access token
+    // Blacklist access token + revoke session
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
-        const decoded = jwt.decode(token);
+        const decoded = verifyAccessToken(token);
         if (decoded?.jti && decoded?.exp) {
           const ttl = decoded.exp - Math.floor(Date.now() / 1000);
-          if (ttl > 0) {
+          if (ttl > 0 && isRedisReady()) {
             await redis.set(`blacklist:${decoded.jti}`, '1', 'EX', ttl);
           }
         }
-      } catch (e) { /* ignore decode errors */ }
+      } catch (e) { /* ignore decode errors — token may already be expired */ }
+    }
+
+    // Revoke current session nếu có refresh token
+    const rtCookie = req.cookies.refreshToken;
+    if (rtCookie) {
+      try {
+        const rtDecoded = verifyRefreshToken(rtCookie);
+        await UserSession.revokeByJti(rtDecoded.jti);
+        if (isRedisReady()) {
+          await redis.del(`refresh:${rtDecoded.jti}`);
+        }
+      } catch (e) { /* ignore */ }
     }
 
     // Log logout if user is authenticated
@@ -1171,27 +1273,29 @@ export const logout = async (req, res) => {
 export const linkFacebook = async (req, res) => {
   try {
     const currentUser = req.user;
-    const { facebookId, accessToken } = req.body;
+    const { accessToken } = req.body;
 
-    if (!facebookId || !accessToken) {
+    if (!accessToken) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu Facebook ID hoặc access token.",
+        message: "Thiếu access token.",
       });
     }
 
-    // Xác thực Facebook token
+    // Xác thực Facebook token — facebookId luôn từ server-side
     const fbResp = await axios.get(
       `https://graph.facebook.com/me?access_token=${accessToken}&fields=id,name,email,picture.width(200).height(200)`
     );
     const fbData = fbResp.data;
 
-    if (!fbData.id || fbData.id !== facebookId) {
+    if (!fbData.id) {
       return res.status(400).json({
         success: false,
         message: "Xác thực Facebook thất bại.",
       });
     }
+
+    const facebookId = fbData.id;
 
     // Kiểm tra facebookId đã được sử dụng bởi user khác chưa
     const existingUser = await User.findOne({ facebookId });

@@ -35,7 +35,17 @@ const adsCampaignSchema = new mongoose.Schema(
     page_name: { type: String, trim: true, default: null },
 
     // Cấu hình chiến dịch
-    objective: { type: String, trim: true },
+    objective: {
+      type: String,
+      enum: [
+        "AWARENESS",
+        "TRAFFIC",
+        "ENGAGEMENT",
+        "LEADS",
+        "APP_PROMOTION",
+        "SALES",
+      ],
+    },
     buying_type: { type: String, default: "AUCTION" },
     bid_strategy: { type: String, trim: true },
 
@@ -57,8 +67,14 @@ const adsCampaignSchema = new mongoose.Schema(
       enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT", "FAILED"],
       default: "DRAFT",
     },
-    configured_status: { type: String },
-    effective_status: { type: String },
+    configured_status: {
+      type: String,
+      enum: ["PAUSED", "ACTIVE", "DELETED", "ARCHIVED", "DRAFT"],
+    },
+    effective_status: {
+      type: String,
+      enum: ["ACTIVE", "PAUSED", "DELETED", "ARCHIVED", "PENDING_REVIEW", "DISAPPROVED", "PREAPPROVED", "IN_PROCESS", "WITH_ISSUES"],
+    },
 
     // 🧭 Orchestrator helpers
     // publish_request_id để tránh trùng khi gửi request publish — có thể null

@@ -168,47 +168,49 @@ export const getShopsByOwner = async (req, res) => {
     // Lấy danh sách shop_id mà user có quyền
     const shopIds = userRoles.map((ur) => ur.shop_id);
 
-    // Lấy thông tin chi tiết của các shop
-    const shops = await Shop.find({ _id: { $in: shopIds } })
-      .populate({
-        path: "owner_id",
-        select: "full_name email phone",
-      })
-      .populate({
-        path: "current_package_id",
-        select: "name price duration_days month_period planType",
-      })
-      .populate({
-        path: "user_roles",
-        populate: { path: "role_id", select: "role_name" },
-      });
+    // Tối ưu hóa: Chạy song song Shop.find (bỏ populate user_roles không dùng) và ShopUser.find
+    const [shops, activeShopUsers] = await Promise.all([
+      Shop.find({ _id: { $in: shopIds } })
+        .populate({
+          path: "owner_id",
+          select: "full_name email phone",
+        })
+        .populate({
+          path: "current_package_id",
+          select: "name price duration_days month_period planType",
+        }),
+      ShopUser.find({
+        shop_id: { $in: shopIds },
+        status: "active"
+      }).lean()
+    ]);
 
-    // 👉 Đếm số lượng employee trong mỗi shop (từ bảng ShopUser)
-    // Đếm bao gồm cả owner
-    const shopEmployeesCount = await Promise.all(
-      shops.map(async (shop) => {
-        const ownerId = shop.owner_id?._id || shop.owner_id;
-        const shopUserCount = await ShopUser.countDocuments({
-          shop_id: shop._id,
-          status: "active", // chỉ tính nhân viên đang hoạt động
-        });
-        
-        // Kiểm tra xem owner có trong ShopUser chưa, nếu chưa thì +1
-        let count = shopUserCount;
-        if (ownerId) {
-          const ownerInShopUser = await ShopUser.findOne({
-            shop_id: shop._id,
-            user_id: ownerId,
-            status: "active",
-          });
-          if (!ownerInShopUser) {
-            count = shopUserCount + 1; // +1 cho owner
-          }
+    const shopUsersMap = new Map();
+    activeShopUsers.forEach((su) => {
+      const shopIdStr = su.shop_id.toString();
+      if (!shopUsersMap.has(shopIdStr)) {
+        shopUsersMap.set(shopIdStr, []);
+      }
+      shopUsersMap.get(shopIdStr).push(su);
+    });
+
+    const shopEmployeesCount = shops.map((shop) => {
+      const shopIdStr = shop._id.toString();
+      const ownerId = shop.owner_id?._id || shop.owner_id;
+      const usersInShop = shopUsersMap.get(shopIdStr) || [];
+      const shopUserCount = usersInShop.length;
+      
+      let count = shopUserCount;
+      if (ownerId) {
+        const ownerIdStr = ownerId.toString();
+        const ownerInShopUser = usersInShop.some(su => su.user_id.toString() === ownerIdStr);
+        if (!ownerInShopUser) {
+          count = shopUserCount + 1; // +1 cho owner
         }
-        
-        return { shop_id: shop._id.toString(), employee_count: count };
-      })
-    );
+      }
+      
+      return { shop_id: shopIdStr, employee_count: count };
+    });
 
     // Lấy package của các owner (có thể có nhiều owner khác nhau)
     const ownerIds = [...new Set(shops.map(shop => shop.owner_id?._id?.toString()).filter(Boolean))];
@@ -216,13 +218,21 @@ export const getShopsByOwner = async (req, res) => {
     const ownerShopCountsMap = new Map();
     
     if (ownerIds.length > 0) {
-      const ownerPackages = await UserPackage.find({
-        user_id: { $in: ownerIds },
-        status: { $in: ["active", "expiring soon", "new signup"] },
-        deleted_at: null,
-      })
-        .populate("package_id")
-        .sort({ created_at: -1 });
+      const ownerObjectIds = ownerIds.map(id => new mongoose.Types.ObjectId(id));
+      
+      // Tối ưu hóa: Chạy song song UserPackage.find và UserRole.find của các owners để giảm thiểu round-trip
+      const [ownerPackages, allOwnerRoles] = await Promise.all([
+        UserPackage.find({
+          user_id: { $in: ownerIds },
+          status: { $in: ["active", "expiring soon", "new signup"] },
+          deleted_at: null,
+        })
+          .populate("package_id")
+          .sort({ created_at: -1 }),
+        UserRole.find({
+          user_id: { $in: ownerObjectIds }
+        }).lean()
+      ]);
 
       // Tạo map: ownerId -> package (lấy package mới nhất của mỗi owner)
       ownerPackages.forEach(up => {
@@ -233,18 +243,17 @@ export const getShopsByOwner = async (req, res) => {
         }
       });
 
-      // Đếm số shop của mỗi owner (bao gồm cả shop được mời vào)
-      const shopCounts = await Promise.all(
-        ownerIds.map(async (ownerId) => {
-          // Đếm shop mà user có role (bao gồm cả owner và được mời)
-          const userRoleShops = await UserRole.find({
-            user_id: new mongoose.Types.ObjectId(ownerId),
-          }).distinct("shop_id");
-          return { ownerId, count: userRoleShops.length };
-        })
-      );
+      const ownerShopIdsMap = new Map();
+      allOwnerRoles.forEach(ur => {
+        const userIdStr = ur.user_id.toString();
+        if (!ownerShopIdsMap.has(userIdStr)) {
+          ownerShopIdsMap.set(userIdStr, new Set());
+        }
+        ownerShopIdsMap.get(userIdStr).add(ur.shop_id.toString());
+      });
 
-      shopCounts.forEach(({ ownerId, count }) => {
+      ownerIds.forEach(ownerId => {
+        const count = ownerShopIdsMap.get(ownerId.toString())?.size || 0;
         ownerShopCountsMap.set(ownerId, count);
       });
     }
@@ -550,17 +559,17 @@ export const getCurrentShopPackage = async (req, res) => {
           
           // Đếm usage riêng cho shop này
           // Đếm số employee trong shop này (bao gồm cả owner)
-          const shopUserCount = await ShopUser.countDocuments({
-            shop_id: shopId,
-            status: "active",
-          });
-          
-          // Kiểm tra xem owner có trong ShopUser chưa, nếu chưa thì +1
-          const ownerInShopUser = await ShopUser.findOne({
-            shop_id: shopId,
-            user_id: ownerId,
-            status: "active",
-          });
+          const [shopUserCount, ownerInShopUser] = await Promise.all([
+            ShopUser.countDocuments({
+              shop_id: shopId,
+              status: "active",
+            }),
+            ShopUser.findOne({
+              shop_id: shopId,
+              user_id: ownerId,
+              status: "active",
+            })
+          ]);
           
           const shopEmployeeCount = ownerInShopUser ? shopUserCount : shopUserCount + 1;
           
